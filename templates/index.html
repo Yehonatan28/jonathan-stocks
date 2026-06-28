@@ -3,195 +3,342 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מנתח מניות AI</title>
+<title>Jonathan Stocks</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', sans-serif; direction: rtl; }
-  .header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .header h1 { font-size: 20px; color: #58a6ff; }
-  .header span { font-size: 13px; color: #8b949e; }
-  .main { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
-  .search-box { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; }
-  .search-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-  .search-row input { flex: 1; min-width: 200px; padding: 10px 14px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; color: #e6edf3; font-size: 15px; }
-  .search-row input:focus { outline: none; border-color: #58a6ff; }
-  .search-row button { padding: 10px 24px; background: #238636; border: none; border-radius: 8px; color: white; font-size: 15px; cursor: pointer; font-weight: 600; }
-  .search-row button:hover { background: #2ea043; }
-  .btn-preset { background: #21262d !important; border: 1px solid #30363d !important; }
-  .btn-preset:hover { background: #30363d !important; }
-  .stats-row { display: flex; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 12px 20px; min-width: 120px; }
-  .stat-card .lbl { font-size: 12px; color: #8b949e; margin-bottom: 4px; }
-  .stat-card .val { font-size: 22px; font-weight: 700; }
-  .buy-color { color: #3fb950; }
-  .sell-color { color: #f85149; }
-  .wait-color { color: #d29922; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-  .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 1.25rem; transition: border-color .2s; cursor: pointer; }
-  .card:hover { border-color: #58a6ff; }
-  .card.buy-card { border-right: 3px solid #3fb950; }
-  .card.sell-card { border-right: 3px solid #f85149; }
-  .card.wait-card { border-right: 3px solid #d29922; }
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-  .ticker { font-size: 20px; font-weight: 700; color: #58a6ff; }
-  .company { font-size: 12px; color: #8b949e; margin-top: 2px; }
-  .rec-badge { padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; }
-  .badge-buy { background: #1a3a1e; color: #3fb950; }
-  .badge-sell { background: #3a1a1a; color: #f85149; }
-  .badge-wait { background: #3a2e1a; color: #d29922; }
-  .price-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
-  .price { font-size: 26px; font-weight: 700; }
-  .chg { font-size: 14px; }
-  .chg.pos { color: #3fb950; }
-  .chg.neg { color: #f85149; }
-  .indicators { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  .ind { background: #0d1117; border-radius: 8px; padding: 8px; text-align: center; }
-  .ind-lbl { font-size: 10px; color: #8b949e; margin-bottom: 2px; }
-  .ind-val { font-size: 14px; font-weight: 600; }
-  .levels { display: flex; justify-content: space-between; font-size: 13px; padding-top: 10px; border-top: 1px solid #21262d; }
-  .level-item { text-align: center; }
-  .level-lbl { font-size: 10px; color: #8b949e; margin-bottom: 2px; }
-  .level-val { font-weight: 600; }
-  .conf-bar-wrap { margin: 10px 0; }
-  .conf-label { font-size: 11px; color: #8b949e; margin-bottom: 4px; display: flex; justify-content: space-between; }
-  .conf-bar { height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; }
-  .conf-fill { height: 100%; border-radius: 2px; }
-  .loading { text-align: center; padding: 3rem; color: #8b949e; }
-  .error-msg { background: #3a1a1a; border: 1px solid #f85149; border-radius: 8px; padding: 1rem; color: #f85149; margin-bottom: 1rem; }
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-left: 8px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;direction:rtl;min-height:100vh}
+.header{background:#161b22;border-bottom:1px solid #30363d;padding:1rem 2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.logo{font-size:22px;font-weight:700;color:#58a6ff;display:flex;align-items:center;gap:8px}
+.subtitle{font-size:13px;color:#8b949e}
+.clock{margin-right:auto;font-size:13px;color:#58a6ff;font-weight:500}
+.main{max-width:1200px;margin:0 auto;padding:1.5rem 1rem}
+.search-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem}
+.search-title{font-size:14px;color:#8b949e;margin-bottom:1rem}
+.search-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search-row input{flex:1;min-width:200px;padding:10px 14px;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:15px;direction:ltr}
+.search-row input:focus{outline:none;border-color:#58a6ff}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;transition:all .2s}
+.btn-primary{background:#238636;color:white}
+.btn-primary:hover{background:#2ea043}
+.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.btn-secondary:hover{background:#30363d}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.preset-btn{padding:5px 12px;background:#0d1117;border:1px solid #30363d;border-radius:20px;color:#8b949e;font-size:12px;cursor:pointer}
+.preset-btn:hover{border-color:#58a6ff;color:#58a6ff}
+.stats-row{display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap}
+.stat{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px 16px;text-align:center;min-width:100px}
+.stat-label{font-size:11px;color:#8b949e;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:700}
+.green{color:#3fb950}.red{color:#f85149}.yellow{color:#d29922}.blue{color:#58a6ff}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;overflow:hidden;transition:border-color .2s;cursor:pointer}
+.card:hover{border-color:#58a6ff}
+.card.buy-card{border-top:3px solid #3fb950}
+.card.sell-card{border-top:3px solid #f85149}
+.card.wait-card{border-top:3px solid #d29922}
+.card-header{padding:1rem 1.25rem;display:flex;justify-content:space-between;align-items:flex-start}
+.ticker-name .ticker{font-size:22px;font-weight:700;color:#58a6ff}
+.ticker-name .company{font-size:12px;color:#8b949e;margin-top:2px}
+.ticker-name .sector{font-size:11px;color:#6e7681;margin-top:1px}
+.badge{padding:5px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.badge-buy{background:#1a3a1e;color:#3fb950}
+.badge-sell{background:#3a1a1a;color:#f85149}
+.badge-wait{background:#3a2e1a;color:#d29922}
+.card-price{padding:0 1.25rem .75rem;display:flex;align-items:baseline;gap:10px}
+.price{font-size:28px;font-weight:700}
+.chg{font-size:14px;font-weight:500}
+.conf-wrap{padding:0 1.25rem .75rem}
+.conf-label{display:flex;justify-content:space-between;font-size:11px;color:#8b949e;margin-bottom:4px}
+.conf-bar{height:4px;background:#21262d;border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;transition:width .5s}
+.indicators{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#21262d;margin:0 0 1px}
+.ind{background:#161b22;padding:10px;text-align:center;cursor:pointer;transition:background .15s;position:relative}
+.ind:hover{background:#1c2128}
+.ind-label{font-size:10px;color:#8b949e;margin-bottom:3px;display:flex;align-items:center;justify-content:center;gap:3px}
+.ind-val{font-size:15px;font-weight:600}
+.ind-hint{font-size:9px;color:#6e7681;margin-top:1px}
+.info-icon{font-size:10px;color:#58a6ff;cursor:help}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#21262d}
+.level{background:#161b22;padding:10px;text-align:center;cursor:pointer}
+.level:hover{background:#1c2128}
+.level-label{font-size:10px;color:#8b949e;margin-bottom:3px}
+.level-val{font-size:14px;font-weight:600}
+.tooltip{position:fixed;background:#1c2128;border:1px solid #30363d;border-radius:8px;padding:10px 14px;font-size:12px;color:#e6edf3;max-width:220px;z-index:1000;pointer-events:none;line-height:1.5;display:none;direction:rtl;text-align:right}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:1.5rem;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;direction:rtl}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.modal-title{font-size:18px;font-weight:700;color:#58a6ff}
+.modal-close{background:none;border:none;color:#8b949e;font-size:20px;cursor:pointer}
+.modal-section{margin-bottom:1rem}
+.modal-section h4{font-size:13px;color:#8b949e;margin-bottom:.5rem;border-bottom:1px solid #21262d;padding-bottom:.25rem}
+.modal-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #21262d;font-size:13px}
+.modal-row:last-child{border-bottom:none}
+.div-badge{background:#1a2a3a;color:#58a6ff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600}
+.loading{text-align:center;padding:3rem;color:#8b949e;font-size:15px}
+.spinner{display:inline-block;width:24px;height:24px;border:2px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error{background:#3a1a1a;border:1px solid #f85149;border-radius:8px;padding:1rem;color:#f85149;margin-bottom:1rem;font-size:14px}
+.signal-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #21262d;font-size:13px}
+.signal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 </style>
 </head>
 <body>
-
 <div class="header">
-  <h1>📈 מנתח מניות AI</h1>
-  <span>נתונים חיים מהשוק</span>
-  <span id="clock" style="margin-right:auto;font-size:12px;color:#58a6ff"></span>
+  <div class="logo">📈 Jonathan Stocks</div>
+  <span class="subtitle">ניתוח מניות חכם בזמן אמת</span>
+  <span class="clock" id="clock"></span>
 </div>
 
 <div class="main">
   <div class="search-box">
+    <div class="search-title">הזן טיקרים לניתוח (מופרדים בפסיק)</div>
     <div class="search-row">
-      <input id="tickerInput" placeholder="הזן טיקר — AAPL, TEVA, TSLA..." />
-      <button onclick="analyze()">🔍 נתח</button>
-      <button class="btn-preset" onclick="loadPreset()">5 מניות לדוגמה</button>
+      <input id="tickerInput" placeholder="AAPL, TEVA, TSLA, NVDA..." />
+      <button class="btn btn-primary" onclick="analyze()">🔍 נתח</button>
+      <button class="btn btn-secondary" onclick="clearAll()">נקה</button>
+    </div>
+    <div class="presets">
+      <span style="font-size:11px;color:#6e7681;margin-top:6px">מהיר:</span>
+      <button class="preset-btn" onclick="setPreset('AAPL,TSLA,NVDA,MSFT,TEVA')">5 מניות פופולריות</button>
+      <button class="preset-btn" onclick="setPreset('AAPL,GOOGL,META,AMZN,MSFT,NFLX')">טכנולוגיה</button>
+      <button class="preset-btn" onclick="setPreset('TEVA,PFE,JNJ,ABBV')">פארמה</button>
+      <button class="preset-btn" onclick="setPreset('JPM,BAC,GS,V,MA')">פיננסים</button>
     </div>
   </div>
 
   <div id="statsRow" class="stats-row" style="display:none">
-    <div class="stat-card"><div class="lbl">קנייה</div><div class="val buy-color" id="sBuy">0</div></div>
-    <div class="stat-card"><div class="lbl">המתנה</div><div class="val wait-color" id="sWait">0</div></div>
-    <div class="stat-card"><div class="lbl">מכירה</div><div class="val sell-color" id="sSell">0</div></div>
-    <div class="stat-card"><div class="lbl">סה"כ</div><div class="val" id="sTotal">0</div></div>
+    <div class="stat"><div class="stat-label">קנייה</div><div class="stat-val green" id="sBuy">0</div></div>
+    <div class="stat"><div class="stat-label">המתנה</div><div class="stat-val yellow" id="sWait">0</div></div>
+    <div class="stat"><div class="stat-label">מכירה</div><div class="stat-val red" id="sSell">0</div></div>
+    <div class="stat"><div class="stat-label">סה"כ</div><div class="stat-val blue" id="sTotal">0</div></div>
   </div>
 
   <div id="output"></div>
 </div>
 
+<div class="tooltip" id="tooltip"></div>
+
+<div class="modal" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
 <script>
+const TIPS = {
+  rsi: {title:'RSI — מדד עוצמה יחסית',text:'מתחת ל-30 = מכירת יתר (הזדמנות קנייה). מעל 70 = קניית יתר (שקול מכירה). 50 = נייטרלי.'},
+  macd: {title:'MACD — מגמה ומומנטום',text:'כשה-MACD מעל קו האות = בולי (עולה). מתחת = דובי (יורד). צליבה = נקודת מפנה.'},
+  atr: {title:'ATR — תנודתיות ממוצעת',text:'כמה המניה זזה ביום בממוצע. ATR גבוה = סיכון גבוה אך פוטנציאל רווח גדול יותר.'},
+  bb: {title:'Bollinger Bands',text:'0% = ליד הרצועה התחתונה (זול). 100% = ליד הרצועה העליונה (יקר). מעל 100% = פריצה.'},
+  vol: {title:'מחזור מסחר יחסי',text:'כמה פעמים המחזור גדול מהממוצע. מעל 1.5x = עניין גבוה. מתחת ל-0.7x = אדישות.'},
+  entry: {title:'מחיר כניסה',text:'המחיר הנוכחי שממנו מתחשב הניתוח.'},
+  target: {title:'מחיר יעד',text:'יעד הרווח המחושב לפי ATR × 2. לא ערובה לרווח.'},
+  stop: {title:'Stop Loss',text:'נקודת עצירת הפסד מוצעת לפי ATR × 1.5. חשוב לניהול סיכונים.'},
+};
+
 let results = [];
 
-function clock() {
+function clock(){
   const n = new Date();
-  document.getElementById('clock').textContent = n.toLocaleTimeString('he-IL');
+  document.getElementById('clock').textContent = n.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 }
-setInterval(clock, 1000); clock();
+setInterval(clock,1000); clock();
 
-async function fetchStock(ticker) {
-  const res = await fetch('/api/stock/' + ticker.trim().toUpperCase());
-  return await res.json();
+function showTooltip(e, key){
+  const t = document.getElementById('tooltip');
+  const info = TIPS[key];
+  if(!info) return;
+  t.innerHTML = '<strong>' + info.title + '</strong><br>' + info.text;
+  t.style.display = 'block';
+  t.style.top = (e.clientY + 12) + 'px';
+  t.style.left = (e.clientX - 110) + 'px';
+}
+function hideTooltip(){
+  document.getElementById('tooltip').style.display = 'none';
 }
 
-async function analyze() {
+function openDetail(r){
+  const div = document.getElementById('modal');
+  const box = document.getElementById('modalBox');
+  const recLabel = r.rec==='BUY'?'🟢 קנייה':r.rec==='SELL'?'🔴 מכירה':'🟡 המתנה';
+  const divYield = r.dividend_yield ? (r.dividend_yield*100).toFixed(2)+'%' : 'לא מחלק';
+  const exDate = r.ex_dividend_date || 'לא ידוע';
+  const upside = ((r.target-r.price)/r.price*100).toFixed(1);
+  const downside = ((r.price-r.stop)/r.price*100).toFixed(1);
+
+  const signals = [];
+  if(r.rsi < 35) signals.push({color:'#3fb950',text:'RSI נמוך — מכירת יתר, הזדמנות קנייה'});
+  if(r.rsi > 70) signals.push({color:'#f85149',text:'RSI גבוה — קניית יתר, שקול מכירה'});
+  if(r.macd==='BULLISH') signals.push({color:'#3fb950',text:'MACD בולי — מומנטום חיובי'});
+  else signals.push({color:'#f85149',text:'MACD דובי — מומנטום שלילי'});
+  if(r.bb_pct < 20) signals.push({color:'#3fb950',text:'מחיר ליד רצועת בולינגר התחתונה'});
+  if(r.bb_pct > 85) signals.push({color:'#f85149',text:'מחיר ליד רצועת בולינגר העליונה'});
+  if(r.vol_ratio > 1.5) signals.push({color:'#d29922',text:'מחזור גבוה במיוחד — עניין מוסדי'});
+  if(r.dividend_yield > 0) signals.push({color:'#58a6ff',text:'מניה מחלקת דיבידנד — ' + divYield + ' תשואה'});
+
+  box.innerHTML = `
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">${r.ticker} — ${r.name}</div>
+        <div style="font-size:12px;color:#8b949e">${r.sector}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-section">
+      <h4>המלצה: ${recLabel} (${r.conf}% ביטחון)</h4>
+      <div class="modal-row"><span>מחיר נוכחי</span><span style="font-weight:700">$${r.price.toFixed(2)}</span></div>
+      <div class="modal-row"><span>כניסה</span><span style="color:#58a6ff">$${r.entry.toFixed(2)}</span></div>
+      <div class="modal-row"><span>יעד רווח (+${upside}%)</span><span style="color:#3fb950">$${r.target.toFixed(2)}</span></div>
+      <div class="modal-row"><span>Stop Loss (-${downside}%)</span><span style="color:#f85149">$${r.stop.toFixed(2)}</span></div>
+      <div class="modal-row"><span>תמיכה</span><span>$${r.support.toFixed(2)}</span></div>
+      <div class="modal-row"><span>התנגדות</span><span>$${r.resistance.toFixed(2)}</span></div>
+    </div>
+    <div class="modal-section">
+      <h4>דיבידנד</h4>
+      <div class="modal-row"><span>תשואת דיבידנד</span><span class="div-badge">${divYield}</span></div>
+      <div class="modal-row"><span>תאריך Ex-Dividend</span><span>${exDate}</span></div>
+      ${r.dividend_yield > 0 ? '<div style="font-size:12px;color:#d29922;margin-top:6px">💡 כדי לקבל את הדיבידנד הבא, יש לקנות לפני תאריך ה-Ex-Dividend</div>' : ''}
+    </div>
+    <div class="modal-section">
+      <h4>אינדיקטורים טכניים</h4>
+      <div class="modal-row"><span>RSI</span><span style="color:${r.rsi>70?'#f85149':r.rsi<35?'#3fb950':'#e6edf3'}">${r.rsi}</span></div>
+      <div class="modal-row"><span>MACD</span><span style="color:${r.macd==='BULLISH'?'#3fb950':'#f85149'}">${r.macd==='BULLISH'?'בולי ↑':'דובי ↓'}</span></div>
+      <div class="modal-row"><span>ATR%</span><span>${r.atr_pct}%</span></div>
+      <div class="modal-row"><span>Bollinger %B</span><span>${r.bb_pct}%</span></div>
+      <div class="modal-row"><span>מחזור יחסי</span><span>${r.vol_ratio}x</span></div>
+    </div>
+    <div class="modal-section">
+      <h4>אותות מסחר</h4>
+      ${signals.map(s=>`<div class="signal-row"><div class="signal-dot" style="background:${s.color}"></div><span>${s.text}</span></div>`).join('')}
+    </div>
+  `;
+  div.classList.add('open');
+}
+
+function closeModal(e){
+  if(!e || e.target === document.getElementById('modal')){
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+async function analyze(){
   const raw = document.getElementById('tickerInput').value;
-  const tickers = raw.split(/[,\s]+/).map(t => t.trim().toUpperCase()).filter(Boolean);
-  if (!tickers.length) return;
-
+  const tickers = raw.split(/[,\s]+/).map(t=>t.trim().toUpperCase()).filter(Boolean);
+  if(!tickers.length) return;
   results = [];
-  document.getElementById('output').innerHTML = '<div class="loading"><span class="spinner"></span> שולף נתונים חיים...</div>';
+  document.getElementById('output').innerHTML = '<div class="loading"><span class="spinner"></span> שולף נתונים חיים מהשוק...</div>';
   document.getElementById('statsRow').style.display = 'none';
-
-  for (const ticker of tickers) {
-    try {
-      const data = await fetchStock(ticker);
-      if (data.error) {
-        document.getElementById('output').innerHTML += `<div class="error-msg">שגיאה ב-${ticker}: ${data.error}</div>`;
-      } else {
-        results.push(data);
-      }
-    } catch(e) {
-      document.getElementById('output').innerHTML += `<div class="error-msg">לא ניתן לטעון את ${ticker}</div>`;
+  for(const ticker of tickers){
+    try{
+      const res = await fetch('/api/stock/'+ticker);
+      const data = await res.json();
+      if(data.error) document.getElementById('output').innerHTML += `<div class="error">שגיאה ב-${ticker}: ${data.error}</div>`;
+      else results.push(data);
+    }catch(e){
+      document.getElementById('output').innerHTML += `<div class="error">לא ניתן לטעון ${ticker}</div>`;
     }
   }
-
   renderAll();
 }
 
-function loadPreset() {
-  document.getElementById('tickerInput').value = 'AAPL, TSLA, NVDA, MSFT, TEVA';
+function setPreset(val){
+  document.getElementById('tickerInput').value = val;
   analyze();
 }
 
-function renderAll() {
-  const buy = results.filter(r => r.rec === 'BUY').length;
-  const wait = results.filter(r => r.rec === 'WAIT').length;
-  const sell = results.filter(r => r.rec === 'SELL').length;
+function clearAll(){
+  results = [];
+  document.getElementById('tickerInput').value = '';
+  document.getElementById('output').innerHTML = '';
+  document.getElementById('statsRow').style.display = 'none';
+}
 
+function renderAll(){
+  const buy = results.filter(r=>r.rec==='BUY').length;
+  const wait = results.filter(r=>r.rec==='WAIT').length;
+  const sell = results.filter(r=>r.rec==='SELL').length;
   document.getElementById('sBuy').textContent = buy;
   document.getElementById('sWait').textContent = wait;
   document.getElementById('sSell').textContent = sell;
   document.getElementById('sTotal').textContent = results.length;
   document.getElementById('statsRow').style.display = results.length ? 'flex' : 'none';
-
-  const sorted = [...results].sort((a, b) => b.conf - a.conf);
-  const html = '<div class="cards">' + sorted.map(r => cardHTML(r)).join('') + '</div>';
-  document.getElementById('output').innerHTML = html;
+  const sorted = [...results].sort((a,b)=>b.conf-a.conf);
+  document.getElementById('output').innerHTML = '<div class="cards">' + sorted.map(cardHTML).join('') + '</div>';
 }
 
-function cardHTML(r) {
-  const recClass = r.rec === 'BUY' ? 'buy' : r.rec === 'SELL' ? 'sell' : 'wait';
-  const recLabel = r.rec === 'BUY' ? '🟢 קנייה' : r.rec === 'SELL' ? '🔴 מכירה' : '🟡 המתנה';
-  const chgClass = r.chg >= 0 ? 'pos' : 'neg';
-  const chgSign = r.chg >= 0 ? '+' : '';
-  const confColor = r.conf >= 70 ? '#3fb950' : r.conf >= 50 ? '#d29922' : '#f85149';
-  const rsiColor = r.rsi > 70 ? '#f85149' : r.rsi < 35 ? '#3fb950' : '#e6edf3';
-  const macdColor = r.macd === 'BULLISH' ? '#3fb950' : '#f85149';
-  const upside = ((r.target - r.price) / r.price * 100).toFixed(1);
-  const downside = ((r.price - r.stop) / r.price * 100).toFixed(1);
-
+function cardHTML(r){
+  const rc = r.rec==='BUY'?'buy':r.rec==='SELL'?'sell':'wait';
+  const rl = r.rec==='BUY'?'🟢 קנייה':r.rec==='SELL'?'🔴 מכירה':'🟡 המתנה';
+  const cc = r.conf>=70?'#3fb950':r.conf>=50?'#d29922':'#f85149';
+  const chgC = r.chg>=0?'green':'red';
+  const chgS = r.chg>=0?'+':'';
+  const rsiC = r.rsi>70?'#f85149':r.rsi<35?'#3fb950':'#e6edf3';
+  const macdC = r.macd==='BULLISH'?'#3fb950':'#f85149';
+  const divInfo = r.dividend_yield>0 ? `<span class="div-badge" style="margin-right:6px">דיב ${(r.dividend_yield*100).toFixed(1)}%</span>` : '';
   return `
-    <div class="card ${recClass}-card">
-      <div class="card-top">
-        <div>
-          <div class="ticker">${r.ticker}</div>
-          <div class="company">${r.name}</div>
-          <div style="font-size:11px;color:#8b949e;margin-top:2px">${r.sector}</div>
-        </div>
-        <span class="rec-badge badge-${recClass}">${recLabel}</span>
+  <div class="card ${rc}-card" onclick="openDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+    <div class="card-header">
+      <div class="ticker-name">
+        <div class="ticker">${r.ticker} ${divInfo}</div>
+        <div class="company">${r.name}</div>
+        <div class="sector">${r.sector}</div>
       </div>
-      <div class="price-row">
-        <span class="price">$${r.price.toFixed(2)}</span>
-        <span class="chg ${chgClass}">${chgSign}${r.chg.toFixed(2)}%</span>
+      <span class="badge badge-${rc}">${rl}</span>
+    </div>
+    <div class="card-price">
+      <span class="price">$${r.price.toFixed(2)}</span>
+      <span class="chg ${chgC}">${chgS}${r.chg.toFixed(2)}%</span>
+    </div>
+    <div class="conf-wrap">
+      <div class="conf-label"><span>ביטחון AI</span><span>${r.conf}%</span></div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${r.conf}%;background:${cc}"></div></div>
+    </div>
+    <div class="indicators">
+      <div class="ind" onmouseenter="showTooltip(event,'rsi')" onmouseleave="hideTooltip()">
+        <div class="ind-label">RSI <span class="info-icon">?</span></div>
+        <div class="ind-val" style="color:${rsiC}">${r.rsi}</div>
+        <div class="ind-hint">${r.rsi>70?'קניית יתר':r.rsi<35?'מכירת יתר':'נייטרלי'}</div>
       </div>
-      <div class="conf-bar-wrap">
-        <div class="conf-label"><span>ביטחון</span><span>${r.conf}%</span></div>
-        <div class="conf-bar"><div class="conf-fill" style="width:${r.conf}%;background:${confColor}"></div></div>
+      <div class="ind" onmouseenter="showTooltip(event,'macd')" onmouseleave="hideTooltip()">
+        <div class="ind-label">MACD <span class="info-icon">?</span></div>
+        <div class="ind-val" style="color:${macdC}">${r.macd==='BULLISH'?'בולי ↑':'דובי ↓'}</div>
+        <div class="ind-hint">${r.macd==='BULLISH'?'מומנטום חיובי':'מומנטום שלילי'}</div>
       </div>
-      <div class="indicators">
-        <div class="ind"><div class="ind-lbl">RSI</div><div class="ind-val" style="color:${rsiColor}">${r.rsi}</div></div>
-        <div class="ind"><div class="ind-lbl">MACD</div><div class="ind-val" style="color:${macdColor}">${r.macd === 'BULLISH' ? 'בולי ↑' : 'דובי ↓'}</div></div>
-        <div class="ind"><div class="ind-lbl">ATR%</div><div class="ind-val">${r.atr_pct}%</div></div>
-        <div class="ind"><div class="ind-lbl">BB%</div><div class="ind-val">${r.bb_pct}%</div></div>
-        <div class="ind"><div class="ind-lbl">מחזור×</div><div class="ind-val">${r.vol_ratio}x</div></div>
-        <div class="ind"><div class="ind-lbl">R:R</div><div class="ind-val">1:1.3</div></div>
+      <div class="ind" onmouseenter="showTooltip(event,'atr')" onmouseleave="hideTooltip()">
+        <div class="ind-label">ATR <span class="info-icon">?</span></div>
+        <div class="ind-val">${r.atr_pct}%</div>
+        <div class="ind-hint">${r.atr_pct>3?'תנודתי':'יציב'}</div>
       </div>
-      <div class="levels">
-        <div class="level-item"><div class="level-lbl">כניסה</div><div class="level-val" style="color:#58a6ff">$${r.entry.toFixed(2)}</div></div>
-        <div class="level-item"><div class="level-lbl">יעד (+${upside}%)</div><div class="level-val" style="color:#3fb950">$${r.target.toFixed(2)}</div></div>
-        <div class="level-item"><div class="level-lbl">Stop (-${downside}%)</div><div class="level-val" style="color:#f85149">$${r.stop.toFixed(2)}</div></div>
+      <div class="ind" onmouseenter="showTooltip(event,'bb')" onmouseleave="hideTooltip()">
+        <div class="ind-label">BB% <span class="info-icon">?</span></div>
+        <div class="ind-val">${r.bb_pct}%</div>
+        <div class="ind-hint">${r.bb_pct>85?'קרוב לשיא':r.bb_pct<15?'קרוב לתחתית':'אמצע'}</div>
       </div>
-    </div>`;
+      <div class="ind" onmouseenter="showTooltip(event,'vol')" onmouseleave="hideTooltip()">
+        <div class="ind-label">מחזור <span class="info-icon">?</span></div>
+        <div class="ind-val">${r.vol_ratio}x</div>
+        <div class="ind-hint">${r.vol_ratio>1.5?'גבוה':r.vol_ratio<0.7?'נמוך':'רגיל'}</div>
+      </div>
+      <div class="ind">
+        <div class="ind-label">פוטנציאל</div>
+        <div class="ind-val" style="color:#3fb950">+${((r.target-r.price)/r.price*100).toFixed(1)}%</div>
+        <div class="ind-hint">יחס R:R 1:1.3</div>
+      </div>
+    </div>
+    <div class="levels">
+      <div class="level" onmouseenter="showTooltip(event,'entry')" onmouseleave="hideTooltip()">
+        <div class="level-label">כניסה <span class="info-icon">?</span></div>
+        <div class="level-val" style="color:#58a6ff">$${r.entry.toFixed(2)}</div>
+      </div>
+      <div class="level" onmouseenter="showTooltip(event,'target')" onmouseleave="hideTooltip()">
+        <div class="level-label">יעד <span class="info-icon">?</span></div>
+        <div class="level-val" style="color:#3fb950">$${r.target.toFixed(2)}</div>
+      </div>
+      <div class="level" onmouseenter="showTooltip(event,'stop')" onmouseleave="hideTooltip()">
+        <div class="level-label">Stop Loss <span class="info-icon">?</span></div>
+        <div class="level-val" style="color:#f85149">$${r.stop.toFixed(2)}</div>
+      </div>
+    </div>
+  </div>`;
 }
 </script>
 </body>
