@@ -12,6 +12,7 @@ def index():
 def get_stock(ticker):
     try:
         stock = yf.Ticker(ticker)
+stock.session = None
         hist = stock.history(period='1mo')
         info = stock.info
 
