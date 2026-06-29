@@ -2,15 +2,13 @@ from flask import Flask, render_template, jsonify, request
 import os
 import requests
 import pandas as pd
-import numpy as np
-from datetime import datetime
 
 app = Flask(__name__)
 
 AV_KEY = os.environ.get('AV_KEY', 'demo')
 AV_BASE = 'https://www.alphavantage.co/query'
 
-def get_av(params):
+def av(params):
     params['apikey'] = AV_KEY
     r = requests.get(AV_BASE, params=params, timeout=15)
     return r.json()
@@ -22,21 +20,21 @@ def index():
 @app.route('/api/stock/<ticker>')
 def get_stock(ticker):
     try:
-        data = get_av({'function': 'TIME_SERIES_DAILY', 'symbol': ticker, 'outputsize': 'compact'})
+        data = av({'function': 'TIME_SERIES_DAILY', 'symbol': ticker, 'outputsize': 'compact'})
         if 'Error Message' in data or 'Note' in data:
-            return jsonify({'error': 'מניה לא נמצאה או חריגת מגבלה'}), 404
+            return jsonify({'error': 'מניה לא נמצאה'}), 404
         ts = data.get('Time Series (Daily)', {})
         if not ts:
             return jsonify({'error': 'אין נתונים'}), 404
         dates = sorted(ts.keys(), reverse=True)[:30]
         closes = [float(ts[d]['4. close']) for d in dates]
-        highs  = [float(ts[d]['2. high'])  for d in dates]
-        lows   = [float(ts[d]['3. low'])   for d in dates]
-        vols   = [int(ts[d]['5. volume'])  for d in dates]
+        highs = [float(ts[d]['2. high']) for d in dates]
+        lows = [float(ts[d]['3. low']) for d in dates]
+        vols = [int(ts[d]['5. volume']) for d in dates]
         close = pd.Series(closes[::-1])
-        high  = pd.Series(highs[::-1])
-        low   = pd.Series(lows[::-1])
-        vol   = pd.Series(vols[::-1])
+        high = pd.Series(highs[::-1])
+        low = pd.Series(lows[::-1])
+        vol = pd.Series(vols[::-1])
         delta = close.diff()
         gain = delta.clip(lower=0).ewm(span=14).mean()
         loss = (-delta.clip(upper=0)).ewm(span=14).mean()
@@ -55,8 +53,8 @@ def get_stock(ticker):
         bb_pct = round(float((close.iloc[-1] - bb_lower.iloc[-1]) / (bb_upper.iloc[-1] - bb_lower.iloc[-1] + 1e-10) * 100), 1)
         vol_ratio = round(float(vol.iloc[-1] / vol.mean()), 2)
         price = round(float(close.iloc[-1]), 2)
-        prev  = round(float(close.iloc[-2]), 2)
-        chg   = round((price - prev) / prev * 100, 2)
+        prev = round(float(close.iloc[-2]), 2)
+        chg = round((price - prev) / prev * 100, 2)
         atr_abs = price * atr_pct / 100
         score = 0
         if rsi < 35: score += 3
@@ -72,8 +70,8 @@ def get_stock(ticker):
         elif score <= -3: rec = 'SELL'
         else: rec = 'WAIT'
         conf = min(95, max(40, 55 + score * 7))
-        overview = get_av({'function': 'OVERVIEW', 'symbol': ticker})
-        name   = overview.get('Name', ticker)
+        overview = av({'function': 'OVERVIEW', 'symbol': ticker})
+        name = overview.get('Name', ticker)
         sector = overview.get('Sector', '')
         div_yield = float(overview.get('DividendYield', 0) or 0)
         ex_div = overview.get('ExDividendDate', None)
@@ -85,9 +83,9 @@ def get_stock(ticker):
             'atr_pct': atr_pct, 'bb_pct': bb_pct, 'vol_ratio': vol_ratio,
             'rec': rec, 'conf': conf, 'entry': price,
             'target': round(price + 2 * atr_abs, 2),
-            'stop':   round(price - 1.5 * atr_abs, 2),
-            'support':     round(float(low.rolling(20).min().iloc[-1]), 2),
-            'resistance':  round(float(high.rolling(20).max().iloc[-1]), 2),
+            'stop': round(price - 1.5 * atr_abs, 2),
+            'support': round(float(low.rolling(20).min().iloc[-1]), 2),
+            'resistance': round(float(high.rolling(20).max().iloc[-1]), 2),
             'dividend_yield': round(div_yield, 4),
             'ex_dividend_date': ex_div,
             'history': history,
@@ -100,13 +98,13 @@ def get_chart(ticker):
     try:
         period = request.args.get('period', '1mo')
         if period in ['1d', '5d']:
-            data = get_av({'function': 'TIME_SERIES_INTRADAY', 'symbol': ticker, 'interval': '60min', 'outputsize': 'compact'})
+            data = av({'function': 'TIME_SERIES_INTRADAY', 'symbol': ticker, 'interval': '60min', 'outputsize': 'compact'})
             ts_key = 'Time Series (60min)'
         elif period in ['1mo', '3mo', '6mo']:
-            data = get_av({'function': 'TIME_SERIES_DAILY', 'symbol': ticker, 'outputsize': 'compact'})
+            data = av({'function': 'TIME_SERIES_DAILY', 'symbol': ticker, 'outputsize': 'compact'})
             ts_key = 'Time Series (Daily)'
         else:
-            data = get_av({'function': 'TIME_SERIES_WEEKLY', 'symbol': ticker})
+            data = av({'function': 'TIME_SERIES_WEEKLY', 'symbol': ticker})
             ts_key = 'Weekly Time Series'
         ts = data.get(ts_key, {})
         if not ts:
@@ -134,11 +132,12 @@ def get_chart(ticker):
 @app.route('/api/news/<ticker>')
 def get_news(ticker):
     try:
-        data = get_av({'function': 'NEWS_SENTIMENT', 'tickers': ticker, 'limit': '8'})
+        data = av({'function': 'NEWS_SENTIMENT', 'tickers': ticker, 'limit': '8'})
         feed = data.get('feed', [])
         return jsonify([{'title':n.get('title',''),'link':n.get('url',''),'publisher':n.get('source',''),'time':n.get('time_published','')} for n in feed[:8]])
-    except:
+    except Exception as e:
         return jsonify([])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    
