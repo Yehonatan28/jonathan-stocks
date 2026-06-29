@@ -6,36 +6,31 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-FINNHUB_KEY = os.environ.get('FINNHUB_KEY', 'd91d95pr01qqfqkb97vgd91d95pr01qqfqkb9800').strip()
-FINNHUB = 'https://finnhub.io/api/v1'
+YF = 'https://query1.finance.yahoo.com/v8/finance/chart'
+HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 
-def fh(path, **params):
-    params['token'] = FINNHUB_KEY
-    r = requests.get(f'{FINNHUB}{path}', params=params, timeout=10)
+def yf_chart(ticker, interval, range_):
+    r = requests.get(f'{YF}/{ticker}', headers=HEADERS,
+                     params={'interval': interval, 'range': range_}, timeout=10)
     r.raise_for_status()
-    return r.json()
-
-
-def candles_df(ticker, resolution, from_ts, to_ts):
-    data = fh('/stock/candle', symbol=ticker.upper(), resolution=resolution,
-              **{'from': from_ts, 'to': to_ts})
-    if data.get('s') != 'ok' or not data.get('c'):
-        return pd.DataFrame()
+    data = r.json()['chart']['result'][0]
+    quotes = data['indicators']['quote'][0]
+    timestamps = data['timestamps']
     df = pd.DataFrame({
-        'Open': data['o'], 'High': data['h'], 'Low': data['l'],
-        'Close': data['c'], 'Volume': data['v'],
-        'Time': [datetime.utcfromtimestamp(t) for t in data['t']]
-    }).set_index('Time')
+        'Open': quotes['open'], 'High': quotes['high'], 'Low': quotes['low'],
+        'Close': quotes['close'], 'Volume': quotes['volume'],
+        'Time': [datetime.utcfromtimestamp(t) for t in timestamps]
+    }).dropna().set_index('Time')
     return df
 
 
-def period_to_resolution(period):
+def period_params(period):
     return {
-        '1d': ('1', 1), '5d': ('5', 5), '1mo': ('D', 30),
-        '3mo': ('D', 90), '6mo': ('D', 180), '1y': ('W', 365),
-        '2y': ('W', 730), '5y': ('M', 1825),
-    }.get(period, ('D', 30))
+        '1d': ('5m', '1d'), '5d': ('15m', '5d'), '1mo': ('1d', '1mo'),
+        '3mo': ('1d', '3mo'), '6mo': ('1d', '6mo'), '1y': ('1wk', '1y'),
+        '2y': ('1wk', '2y'), '5y': ('1mo', '5y'),
+    }.get(period, ('1d', '1mo'))
 
 
 @app.route('/')
@@ -46,9 +41,7 @@ def index():
 @app.route('/api/stock/<ticker>')
 def get_stock(ticker):
     try:
-        now = int(datetime.utcnow().timestamp())
-        from_ts = int((datetime.utcnow() - timedelta(days=60)).timestamp())
-        hist = candles_df(ticker, 'D', from_ts, now)
+        hist = yf_chart(ticker, '1d', '3mo')
         if hist.empty:
             return jsonify({'error': 'מניה לא נמצאה'}), 404
 
@@ -98,22 +91,15 @@ def get_stock(ticker):
         else: rec = 'WAIT'
         conf = min(95, max(40, 55 + sc * 7))
 
-        profile = fh('/stock/profile2', symbol=ticker.upper())
-        name = profile.get('name', ticker.upper())
-        sector = profile.get('finnhubIndustry', '')
-
-        dy, ex = 0, None
-        try:
-            div_data = fh('/stock/dividend', symbol=ticker.upper(),
-                          **{'from': (datetime.utcnow() - timedelta(days=365)).strftime('%Y-%m-%d'),
-                             'to': datetime.utcnow().strftime('%Y-%m-%d')})
-            if div_data:
-                last = div_data[-1]
-                amount = last.get('amount', 0) or 0
-                dy = round(amount / price, 4) if price else 0
-                ex = last.get('exDate', None)
-        except Exception:
-            pass
+        r2 = requests.get(f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
+                          headers=HEADERS, params={'modules': 'assetProfile,summaryDetail'}, timeout=10)
+        info = r2.json().get('quoteSummary', {}).get('result', [{}])[0] if r2.ok else {}
+        profile = info.get('assetProfile', {})
+        summary = info.get('summaryDetail', {})
+        name = ticker.upper()
+        sector = profile.get('sector', '')
+        dy = round(float(summary.get('dividendYield', {}).get('raw', 0) or 0), 4)
+        ex = summary.get('exDividendDate', {}).get('fmt', None)
 
         return jsonify({
             'ticker': ticker.upper(), 'name': name, 'sector': sector,
@@ -136,10 +122,8 @@ def get_stock(ticker):
 def get_chart(ticker):
     try:
         period = request.args.get('period', '1mo')
-        resolution, days = period_to_resolution(period)
-        now = int(datetime.utcnow().timestamp())
-        from_ts = int((datetime.utcnow() - timedelta(days=days)).timestamp())
-        hist = candles_df(ticker, resolution, from_ts, now)
+        interval, range_ = period_params(period)
+        hist = yf_chart(ticker, interval, range_)
         if hist.empty:
             return jsonify({'error': 'אין נתונים'}), 404
 
@@ -168,16 +152,17 @@ def get_chart(ticker):
 @app.route('/api/news/<ticker>')
 def get_news(ticker):
     try:
-        to_date = datetime.utcnow().strftime('%Y-%m-%d')
-        from_date = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
-        news = fh('/company-news', symbol=ticker.upper(),
-                  **{'from': from_date, 'to': to_date})
+        r = requests.get(f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
+                         headers=HEADERS, params={'modules': 'topHoldings'}, timeout=10)
+        news_r = requests.get(f'https://query2.finance.yahoo.com/v1/finance/search',
+                              headers=HEADERS, params={'q': ticker, 'newsCount': 8}, timeout=10)
+        news = news_r.json().get('news', []) if news_r.ok else []
         return jsonify([{
-            'title': n.get('headline', ''),
-            'link': n.get('url', ''),
-            'publisher': n.get('source', ''),
-            'time': n.get('datetime', 0)
-        } for n in (news or [])[:8]])
+            'title': n.get('title', ''),
+            'link': n.get('link', ''),
+            'publisher': n.get('publisher', ''),
+            'time': n.get('providerPublishTime', 0)
+        } for n in news[:8]])
     except Exception:
         return jsonify([])
 
