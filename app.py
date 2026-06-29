@@ -16,7 +16,7 @@ def yf_chart(ticker, interval, range_):
     r.raise_for_status()
     data = r.json()['chart']['result'][0]
     quotes = data['indicators']['quote'][0]
-    timestamps = data['timestamps']
+           timestamps = data['timestamp']
     df = pd.DataFrame({
         'Open': quotes['open'], 'High': quotes['high'], 'Low': quotes['low'],
         'Close': quotes['close'], 'Volume': quotes['volume'],
