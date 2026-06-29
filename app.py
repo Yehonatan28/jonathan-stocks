@@ -6,20 +6,26 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-YF = 'https://query1.finance.yahoo.com/v8/finance/chart'
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 
 def yf_chart(ticker, interval, range_):
-    r = requests.get(f'{YF}/{ticker}', headers=HEADERS,
-                     params={'interval': interval, 'range': range_}, timeout=10)
+    r = requests.get(
+        f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',
+        headers=HEADERS,
+        params={'interval': interval, 'range': range_},
+        timeout=10
+    )
     r.raise_for_status()
     data = r.json()['chart']['result'][0]
     quotes = data['indicators']['quote'][0]
-           timestamps = data['timestamp']
+    timestamps = data['timestamp']
     df = pd.DataFrame({
-        'Open': quotes['open'], 'High': quotes['high'], 'Low': quotes['low'],
-        'Close': quotes['close'], 'Volume': quotes['volume'],
+        'Open': quotes['open'],
+        'High': quotes['high'],
+        'Low': quotes['low'],
+        'Close': quotes['close'],
+        'Volume': quotes['volume'],
         'Time': [datetime.utcfromtimestamp(t) for t in timestamps]
     }).dropna().set_index('Time')
     return df
@@ -44,38 +50,31 @@ def get_stock(ticker):
         hist = yf_chart(ticker, '1d', '3mo')
         if hist.empty:
             return jsonify({'error': 'מניה לא נמצאה'}), 404
-
         close = hist['Close']
         high = hist['High']
         low = hist['Low']
         vol = hist['Volume']
-
         delta = close.diff()
         gain = delta.clip(lower=0).ewm(span=14).mean()
         loss = (-delta.clip(upper=0)).ewm(span=14).mean()
         rsi = round(float(100 - (100 / (1 + gain.iloc[-1] / (loss.iloc[-1] + 1e-10)))), 1)
-
         ema12 = close.ewm(span=12).mean()
         ema26 = close.ewm(span=26).mean()
         macd = ema12 - ema26
         signal = macd.ewm(span=9).mean()
         macd_b = bool(macd.iloc[-1] > signal.iloc[-1])
-
         tr = (high - low).ewm(span=14).mean()
         atr_pct = round(float(tr.iloc[-1] / close.iloc[-1] * 100), 2)
-
         ma20 = close.rolling(20).mean()
         std20 = close.rolling(20).std()
         bb_u = ma20 + 2 * std20
         bb_l = ma20 - 2 * std20
         bb_pct = round(float((close.iloc[-1] - bb_l.iloc[-1]) / (bb_u.iloc[-1] - bb_l.iloc[-1] + 1e-10) * 100), 1)
-
         vol_ratio = round(float(vol.iloc[-1] / vol.mean()), 2)
         price = round(float(close.iloc[-1]), 2)
         prev = round(float(close.iloc[-2]), 2)
         chg = round((price - prev) / prev * 100, 2)
         atr_abs = price * atr_pct / 100
-
         sc = 0
         if rsi < 35: sc += 3
         elif rsi < 50: sc += 2
@@ -90,19 +89,24 @@ def get_stock(ticker):
         elif sc <= -3: rec = 'SELL'
         else: rec = 'WAIT'
         conf = min(95, max(40, 55 + sc * 7))
-
-        r2 = requests.get(f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
-                          headers=HEADERS, params={'modules': 'assetProfile,summaryDetail'}, timeout=10)
-        info = r2.json().get('quoteSummary', {}).get('result', [{}])[0] if r2.ok else {}
-        profile = info.get('assetProfile', {})
-        summary = info.get('summaryDetail', {})
-        name = ticker.upper()
-        sector = profile.get('sector', '')
-        dy = round(float(summary.get('dividendYield', {}).get('raw', 0) or 0), 4)
-        ex = summary.get('exDividendDate', {}).get('fmt', None)
-
+        dy, ex, sector = 0, None, ''
+        try:
+            r2 = requests.get(
+                f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
+                headers=HEADERS,
+                params={'modules': 'assetProfile,summaryDetail'},
+                timeout=10
+            )
+            if r2.ok:
+                result = r2.json().get('quoteSummary', {}).get('result', [{}])[0]
+                sector = result.get('assetProfile', {}).get('sector', '')
+                summary = result.get('summaryDetail', {})
+                dy = round(float(summary.get('dividendYield', {}).get('raw', 0) or 0), 4)
+                ex = summary.get('exDividendDate', {}).get('fmt', None)
+        except Exception:
+            pass
         return jsonify({
-            'ticker': ticker.upper(), 'name': name, 'sector': sector,
+            'ticker': ticker.upper(), 'name': ticker.upper(), 'sector': sector,
             'price': price, 'chg': chg, 'rsi': rsi,
             'macd': 'BULLISH' if macd_b else 'BEARISH',
             'atr_pct': atr_pct, 'bb_pct': bb_pct, 'vol_ratio': vol_ratio,
@@ -126,12 +130,10 @@ def get_chart(ticker):
         hist = yf_chart(ticker, interval, range_)
         if hist.empty:
             return jsonify({'error': 'אין נתונים'}), 404
-
         candles = [{'t': idx.strftime('%Y-%m-%d'), 'o': round(float(r['Open']), 2),
                     'h': round(float(r['High']), 2), 'l': round(float(r['Low']), 2),
                     'c': round(float(r['Close']), 2), 'v': int(r['Volume'])}
                    for idx, r in hist.iterrows()]
-
         close = pd.Series([c['c'] for c in candles])
         delta = close.diff()
         gain = delta.clip(lower=0).ewm(span=14).mean()
@@ -142,7 +144,6 @@ def get_chart(ticker):
         macd_line = (ema12 - ema26).round(4).tolist()
         sig_line = (ema12 - ema26).ewm(span=9).mean().round(4).tolist()
         ma20 = close.rolling(20).mean().round(2).tolist()
-
         return jsonify({'candles': candles, 'rsi': rsi, 'macd': macd_line,
                         'signal': sig_line, 'ma20': ma20})
     except Exception as e:
@@ -152,11 +153,13 @@ def get_chart(ticker):
 @app.route('/api/news/<ticker>')
 def get_news(ticker):
     try:
-        r = requests.get(f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
-                         headers=HEADERS, params={'modules': 'topHoldings'}, timeout=10)
-        news_r = requests.get(f'https://query2.finance.yahoo.com/v1/finance/search',
-                              headers=HEADERS, params={'q': ticker, 'newsCount': 8}, timeout=10)
-        news = news_r.json().get('news', []) if news_r.ok else []
+        r = requests.get(
+            'https://query2.finance.yahoo.com/v1/finance/search',
+            headers=HEADERS,
+            params={'q': ticker, 'newsCount': 8},
+            timeout=10
+        )
+        news = r.json().get('news', []) if r.ok else []
         return jsonify([{
             'title': n.get('title', ''),
             'link': n.get('link', ''),
