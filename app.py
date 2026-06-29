@@ -89,24 +89,25 @@ def get_stock(ticker):
         elif sc <= -3: rec = 'SELL'
         else: rec = 'WAIT'
         conf = min(95, max(40, 55 + sc * 7))
-        dy, ex, sector = 0, None, ''
+        dy, ex, sector, name = 0, None, '', ticker.upper()
         try:
             r2 = requests.get(
                 f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
                 headers=HEADERS,
-                params={'modules': 'assetProfile,summaryDetail'},
+                params={'modules': 'assetProfile,summaryDetail,price'},
                 timeout=10
             )
             if r2.ok:
                 result = r2.json().get('quoteSummary', {}).get('result', [{}])[0]
                 sector = result.get('assetProfile', {}).get('sector', '')
+                name = result.get('price', {}).get('longName', ticker.upper()) or ticker.upper()
                 summary = result.get('summaryDetail', {})
                 dy = round(float(summary.get('dividendYield', {}).get('raw', 0) or 0), 4)
                 ex = summary.get('exDividendDate', {}).get('fmt', None)
         except Exception:
             pass
         return jsonify({
-            'ticker': ticker.upper(), 'name': ticker.upper(), 'sector': sector,
+            'ticker': ticker.upper(), 'name': name, 'sector': sector,
             'price': price, 'chg': chg, 'rsi': rsi,
             'macd': 'BULLISH' if macd_b else 'BEARISH',
             'atr_pct': atr_pct, 'bb_pct': bb_pct, 'vol_ratio': vol_ratio,
@@ -138,12 +139,17 @@ def get_chart(ticker):
         delta = close.diff()
         gain = delta.clip(lower=0).ewm(span=14).mean()
         loss = (-delta.clip(upper=0)).ewm(span=14).mean()
-        rsi = (100 - (100 / (1 + gain / (loss + 1e-10)))).round(1).tolist()
+
+        def clean(series):
+            return [None if pd.isna(v) else float(v) for v in series]
+
+        rsi = clean((100 - (100 / (1 + gain / (loss + 1e-10)))).round(1))
         ema12 = close.ewm(span=12).mean()
         ema26 = close.ewm(span=26).mean()
-        macd_line = (ema12 - ema26).round(4).tolist()
-        sig_line = (ema12 - ema26).ewm(span=9).mean().round(4).tolist()
-        ma20 = close.rolling(20).mean().round(2).tolist()
+        macd_line = clean((ema12 - ema26).round(4))
+        sig_line = clean((ema12 - ema26).ewm(span=9).mean().round(4))
+        ma20 = clean(close.rolling(20).mean().round(2))
+
         return jsonify({'candles': candles, 'rsi': rsi, 'macd': macd_line,
                         'signal': sig_line, 'ma20': ma20})
     except Exception as e:
