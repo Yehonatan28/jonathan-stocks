@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-FINNHUB_KEY FINNHUB_KEY = os.environ.get('FINNHUB_KEY', 'd91d95pr01qqfqkb97vgd91d95pr01qqfqkb9800').strip()
+FINNHUB_KEY = os.environ.get('FINNHUB_KEY', 'd91d95pr01qqfqkb97vgd91d95pr01qqfqkb9800').strip()
 FINNHUB = 'https://finnhub.io/api/v1'
 
 
