@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, jsonify, request
 import yfinance as yf
+import requests
 
 app = Flask(__name__)
 
