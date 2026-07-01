@@ -3,1116 +3,519 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jonathan Stocks — מערכת ניתוח מניות מתקדמת</title>
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<title>Jonathan Stocks | ניתוח מניות חכם</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root {
-  --bg: #04060d;
-  --bg2: #080d16;
-  --bg3: #0d1520;
-  --card: #0b1219;
-  --border: #162030;
-  --gold: #f59e0b;
-  --gold2: #fbbf24;
-  --blue: #3b82f6;
-  --blue2: #60a5fa;
-  --green: #10b981;
-  --green2: #34d399;
-  --red: #ef4444;
-  --red2: #f87171;
-  --purple: #8b5cf6;
-  --cyan: #06b6d4;
-  --text: #dde6f0;
-  --text2: #8fa3b8;
-  --text3: #4d6070;
-  --glow-gold: 0 0 24px rgba(245,158,11,0.35);
-  --glow-blue: 0 0 20px rgba(59,130,246,0.35);
-  --glow-green: 0 0 20px rgba(16,185,129,0.35);
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
-  background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden;position:relative;
-}
-body::before{
-  content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
-  background-size:48px 48px;pointer-events:none;z-index:0;
-}
-body::after{
-  content:'';position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%,rgba(245,158,11,0.07) 0%,transparent 60%),
-    radial-gradient(ellipse 40% 40% at 90% 80%,rgba(59,130,246,0.05) 0%,transparent 50%),
-    radial-gradient(ellipse 40% 30% at 10% 90%,rgba(16,185,129,0.04) 0%,transparent 50%);
-  pointer-events:none;z-index:0;
-}
-.tape-wrap,.header,.tabs-bar,.tab-content,.modal-overlay,.glossary-panel,.toast-container,.auth-modal-overlay{position:relative;z-index:1}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg2)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:#1e2d3d}
-
-/* TAPE */
-.tape-wrap{background:linear-gradient(90deg,rgba(4,6,13,.96) 0%,rgba(8,13,22,.96) 50%,rgba(4,6,13,.96) 100%);border-bottom:1px solid var(--border);padding:7px 0;overflow:hidden;position:sticky;top:0;z-index:100;backdrop-filter:blur(4px)}
-.tape{display:flex;gap:0;white-space:nowrap;animation:tape 40s linear infinite}
-.tape:hover{animation-play-state:paused}
-@keyframes tape{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.tape-item{display:inline-flex;align-items:center;gap:6px;padding:0 20px;font-size:12px;font-family:'JetBrains Mono',monospace;border-right:1px solid var(--border)}
-.tape-sym{color:var(--gold);font-weight:700;letter-spacing:.5px}
-.tape-price{color:var(--text)}
-.tape-chg.pos{color:var(--green2)}
-.tape-chg.neg{color:var(--red2)}
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--blue:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;direction:rtl;min-height:100vh}
 
 /* HEADER */
-.header{background:linear-gradient(180deg,rgba(8,13,22,.98) 0%,rgba(4,6,13,.85) 100%);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px;backdrop-filter:blur(8px)}
-.logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--gold),#b45309);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#000;box-shadow:var(--glow-gold);letter-spacing:-1px}
-.logo-text{font-size:19px;font-weight:800;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.logo-sub{font-size:10px;color:var(--text3);margin-top:-1px;letter-spacing:.3px}
-.header-center{display:flex;align-items:center;gap:10px}
-.market-badge{display:flex;align-items:center;gap:7px;padding:5px 13px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid;letter-spacing:.3px}
-.market-badge.open{background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.4);color:var(--green2)}
-.market-badge.closed{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.3);color:var(--red2)}
-.pulse{width:7px;height:7px;border-radius:50%;animation:pulse 1.5s infinite;flex-shrink:0}
-.open .pulse{background:var(--green2)}
-.closed .pulse{background:var(--red2);animation:none}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
-.fg-badge{display:flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);font-size:11px;font-weight:700;color:#a78bfa;cursor:pointer;transition:all .2s}
-.fg-badge:hover{background:rgba(139,92,246,.15)}
-.header-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-.search-input{background:rgba(11,18,25,.8);border:1px solid var(--border);border-radius:9px;padding:7px 14px;color:var(--text);font-size:13px;width:210px;outline:none;transition:all .3s}
-.search-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.08);background:var(--card)}
-.btn{padding:7px 16px;border-radius:9px;border:none;cursor:pointer;font-size:12px;font-weight:700;transition:all .2s;letter-spacing:.3px}
-.btn-gold{background:linear-gradient(135deg,var(--gold),#b45309);color:#000}
-.btn-gold:hover{transform:translateY(-1px);box-shadow:var(--glow-gold)}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
-.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
-.btn-sm{padding:5px 11px;font-size:11px}
-.user-area{display:flex;align-items:center;gap:8px}
-.username-tag{font-size:12px;font-weight:700;color:var(--gold);font-family:'JetBrains Mono',monospace;padding:5px 12px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px}
-
-/* LAYOUT */
-.container{max-width:1600px;margin:0 auto;padding:0 20px}
+.header{background:linear-gradient(135deg,#0d1117 0%,#161b22 100%);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.logo{font-size:20px;font-weight:700;color:var(--blue);display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.header-right{margin-right:auto;display:flex;align-items:center;gap:16px}
+.live-badge{background:#1a3a1e;color:var(--green);font-size:11px;padding:3px 10px;border-radius:10px;font-weight:600}
+.clock{font-size:13px;color:var(--muted)}
+.auto-refresh{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.refresh-bar{width:40px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.refresh-fill{height:100%;background:var(--blue);border-radius:2px;transition:width linear}
 
 /* TABS */
-.tabs-bar{display:flex;gap:2px;padding:14px 20px 0;border-bottom:1px solid var(--border);background:rgba(8,13,22,.9);overflow-x:auto;backdrop-filter:blur(4px)}
-.tab{padding:9px 18px;border-radius:7px 7px 0 0;cursor:pointer;font-size:11px;font-weight:800;color:var(--text3);border:1px solid transparent;border-bottom:none;transition:all .2s;position:relative;bottom:-1px;white-space:nowrap;letter-spacing:.5px;text-transform:uppercase}
-.tab.active{background:var(--card);color:var(--gold);border-color:var(--border);border-bottom-color:var(--card)}
-.tab:hover:not(.active){color:var(--text2);background:rgba(255,255,255,.02)}
-.tab-content{display:none;padding:20px}
-.tab-content.active{display:block}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;overflow-x:auto}
+.tab{padding:10px 20px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab:hover{color:var(--text)}
+.tab-count{font-size:11px;background:var(--bg3);padding:2px 7px;border-radius:10px;margin-right:6px}
 
-/* STOCK CARDS */
-.stocks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;margin-bottom:24px}
-.stock-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
-.stock-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s}
-.stock-card:hover{border-color:rgba(245,158,11,.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.5)}
-.stock-card:hover::before{opacity:1}
-.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-.card-ticker{font-size:17px;font-weight:900;color:var(--gold);font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
-.card-name{font-size:10px;color:var(--text3);margin-top:2px}
-.card-actions{display:flex;gap:5px;align-items:center}
-.fav-btn{background:none;border:none;cursor:pointer;font-size:16px;color:var(--text3);transition:all .2s;padding:2px}
-.fav-btn.active,.fav-btn:hover{color:var(--gold);transform:scale(1.15)}
-.add-portfolio-btn{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);color:var(--green2);border-radius:7px;padding:3px 9px;font-size:10px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.3px}
-.add-portfolio-btn:hover{background:rgba(16,185,129,.18);border-color:var(--green)}
-.card-price-row{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
-.card-price{font-size:26px;font-weight:900;font-family:'JetBrains Mono',monospace}
-.card-chg{font-size:13px;font-weight:700;padding:2px 8px;border-radius:5px}
-.chg-pos{color:var(--green2);background:rgba(16,185,129,.1)}
-.chg-neg{color:var(--red2);background:rgba(239,68,68,.1)}
-.card-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px}
-.metric{background:rgba(4,6,13,.6);border:1px solid var(--border);border-radius:7px;padding:7px;text-align:center}
-.metric-label{font-size:9px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.7px}
-.metric-val{font-size:12px;font-weight:800;font-family:'JetBrains Mono',monospace}
-.card-mini-chart{height:48px;margin-bottom:10px}
-.card-rec{display:flex;align-items:center;justify-content:space-between}
-.rec-badge{padding:3px 12px;border-radius:20px;font-size:11px;font-weight:900;letter-spacing:.8px}
-.rec-BUY{background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.4);color:var(--green2)}
-.rec-SELL{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:var(--red2)}
-.rec-WAIT{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--gold)}
-.conf-bar{flex:1;margin-left:10px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
-.conf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width 1s}
+/* MAIN */
+.main{max-width:1300px;margin:0 auto;padding:1.5rem 1rem}
 
-/* QUICK STATS */
-.quick-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px;text-align:center;position:relative;overflow:hidden}
-.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
-.stat-card.gold::after{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-.stat-card.blue::after{background:linear-gradient(90deg,transparent,var(--blue),transparent)}
-.stat-card.green::after{background:linear-gradient(90deg,transparent,var(--green),transparent)}
-.stat-card.red::after{background:linear-gradient(90deg,transparent,var(--red),transparent)}
-.stat-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:6px}
-.stat-val{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace}
-.stat-sub{font-size:9px;color:var(--text3);margin-top:2px}
+/* SEARCH */
+.search-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.5rem}
+.search-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search-input-wrap{flex:1;min-width:220px;position:relative}
+.search-row input{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;direction:ltr;transition:border-color .2s}
+.search-row input:focus{outline:none;border-color:var(--blue)}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;transition:all .2s}
+.btn-primary{background:var(--green);color:#fff}
+.btn-primary:hover{background:#2ea043;transform:translateY(-1px)}
+.btn-clear{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.btn-clear:hover{color:var(--text)}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.preset-label{font-size:11px;color:var(--muted)}
+.preset-btn{padding:5px 14px;background:var(--bg);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s}
+.preset-btn:hover{border-color:var(--blue);color:var(--blue)}
 
-/* CHART MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);z-index:1000;display:none;align-items:center;justify-content:center}
-.modal-overlay.open{display:flex}
-.chart-modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:95vw;max-width:1400px;height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 40px 120px rgba(0,0,0,.9)}
-.chart-header{background:var(--card);border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.chart-search-wrap{position:relative;flex:0 0 auto}
-.chart-search{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:6px 11px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;width:150px;outline:none;transition:all .3s;text-transform:uppercase}
-.chart-search:focus{border-color:var(--gold);width:190px}
-.chart-search-results{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:7px;margin-top:4px;z-index:10;max-height:200px;overflow-y:auto;display:none}
-.chart-search-results.show{display:block}
-.search-result-item{padding:8px 12px;cursor:pointer;font-size:12px;transition:background .15s;font-family:'JetBrains Mono',monospace}
-.search-result-item:hover{background:var(--bg3)}
-.chart-ticker-info{display:flex;align-items:baseline;gap:8px}
-.chart-ticker-sym{font-size:18px;font-weight:900;color:var(--gold);font-family:'JetBrains Mono',monospace}
-.chart-ticker-price{font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace}
-.chart-ticker-chg{font-size:13px;font-weight:700;padding:2px 7px;border-radius:5px}
-.period-btns{display:flex;gap:3px}
-.period-btn{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'JetBrains Mono',monospace}
-.period-btn.active,.period-btn:hover{background:var(--gold);color:#000;border-color:var(--gold)}
-.drawing-toolbar{background:var(--card);border-bottom:1px solid var(--border);padding:7px 14px;display:flex;align-items:center;gap:7px;overflow-x:auto;flex-wrap:nowrap}
-.draw-tool-btn{padding:5px 11px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;white-space:nowrap;font-weight:600}
-.draw-tool-btn.active,.draw-tool-btn:hover{background:rgba(245,158,11,.1);border-color:var(--gold);color:var(--gold)}
-.draw-separator{width:1px;height:22px;background:var(--border);margin:0 3px;flex-shrink:0}
-.draw-color-swatch{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;flex-shrink:0;transition:border-color .2s}
-.draw-color-swatch.active{border-color:#fff}
-.indicator-toggles{display:flex;gap:5px;margin-right:auto}
-.ind-toggle{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:10px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.4px}
-.ind-toggle.active{background:rgba(59,130,246,.12);border-color:var(--blue);color:var(--blue2)}
-.chart-area{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0}
-.main-chart-wrap{flex:1;position:relative;min-height:0;overflow:hidden}
-#mainChart{width:100%;height:100%}
-.subcharts{border-top:1px solid var(--border)}
-.subchart-container{position:relative;border-top:1px solid var(--border)}
-.subchart-label{position:absolute;top:3px;right:7px;font-size:9px;font-weight:800;color:var(--text3);z-index:5;pointer-events:none;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.6px}
-#rsiChart{height:78px;display:block}
-#macdChart{height:78px;display:block}
-.chart-footer{background:var(--card);border-top:1px solid var(--border);padding:9px 14px;display:flex;gap:18px;font-size:10px;font-family:'JetBrains Mono',monospace;flex-wrap:wrap}
-.cfooter-item{display:flex;flex-direction:column;gap:1px}
-.cfooter-label{color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.5px}
-.cfooter-val{font-weight:700;font-size:11px}
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:1.5rem}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:700}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
 
-/* NEWS */
-.news-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px}
-.news-hero{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .3s;grid-column:1;grid-row:1/3;text-decoration:none}
-.news-hero:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,.6);border-color:rgba(245,158,11,.3)}
-.news-hero-img{height:200px;position:relative;overflow:hidden}
-.news-hero-img-bg{position:absolute;inset:0;background:linear-gradient(135deg,rgba(245,158,11,.18) 0%,rgba(59,130,246,.12) 40%,rgba(16,185,129,.1) 100%)}
-.news-hero-img-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(11,18,25,.96) 100%)}
-.news-hero-img-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(245,158,11,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,.06) 1px,transparent 1px);background-size:28px 28px}
-.news-hero-img-label{position:absolute;bottom:0;right:0;z-index:2;padding:14px;font-size:10px;font-weight:800;color:rgba(245,158,11,.8);font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase}
-.news-hero-body{padding:20px}
-.news-tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.9px;margin-bottom:10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--gold)}
-.news-hero-title{font-size:17px;font-weight:800;line-height:1.35;margin-bottom:10px;color:var(--text)}
-.news-hero-meta{font-size:10px;color:var(--text3);display:flex;gap:10px}
-.news-card{background:var(--card);border:1px solid var(--border);border-radius:11px;overflow:hidden;cursor:pointer;transition:all .3s;display:flex;flex-direction:column;text-decoration:none}
-.news-card:hover{border-color:rgba(59,130,246,.4);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.5)}
-.news-card-img{height:72px;position:relative;overflow:hidden;flex-shrink:0}
-.news-card-body{padding:11px;flex:1;display:flex;flex-direction:column;gap:6px}
-.news-card-title{font-size:12px;font-weight:700;line-height:1.4;color:var(--text)}
-.news-card-meta{font-size:10px;color:var(--text3);display:flex;justify-content:space-between;margin-top:auto}
-.news-list-item{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:10px 14px;cursor:pointer;transition:all .2s;display:flex;gap:10px;align-items:flex-start;margin-bottom:7px;text-decoration:none}
-.news-list-item:hover{border-color:rgba(139,92,246,.4)}
-.news-list-num{font-size:22px;font-weight:900;color:var(--border);font-family:'JetBrains Mono',monospace;line-height:1;flex-shrink:0}
-.news-list-title{font-size:12px;font-weight:600;line-height:1.4;color:var(--text2)}
-.news-list-pub{font-size:9px;color:var(--text3);margin-top:3px}
+/* MARKET MOOD */
+.mood-bar{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.mood-label{font-size:12px;color:var(--muted)}
+.mood-track{flex:1;min-width:120px;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.mood-fill{height:100%;border-radius:4px;transition:width .8s}
+.mood-text{font-size:13px;font-weight:600}
 
-/* FEAR & GREED */
-.fear-greed-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;text-align:center}
-.fg-meter{width:200px;height:110px;margin:0 auto 10px;position:relative}
-.fg-arc-bg{fill:none;stroke:var(--bg3);stroke-width:16}
-.fg-arc-fill{fill:none;stroke-width:16;stroke-linecap:round}
-.fg-label{font-size:18px;font-weight:900;margin-bottom:4px}
-.fg-val{font-size:42px;font-weight:900;font-family:'JetBrains Mono',monospace;margin-bottom:4px}
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .25s;cursor:pointer;position:relative}
+.card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.card.buy-card{border-top:3px solid var(--green)}
+.card.sell-card{border-top:3px solid var(--red)}
+.card.wait-card{border-top:3px solid var(--yellow)}
+.card-score{position:absolute;top:12px;left:12px;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:2px solid}
+.card-header{padding:1rem 1.25rem .75rem;display:flex;justify-content:space-between;align-items:flex-start}
+.ticker{font-size:21px;font-weight:700;color:var(--blue)}
+.company{font-size:12px;color:var(--muted);margin-top:2px}
+.sector-tag{display:inline-block;font-size:10px;background:var(--bg3);color:var(--muted);padding:2px 8px;border-radius:10px;margin-top:4px}
+.badge{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700}
+.badge-buy{background:#1a3a1e;color:var(--green)}
+.badge-sell{background:#3a1a1a;color:var(--red)}
+.badge-wait{background:#3a2e1a;color:var(--yellow)}
+.price-row{padding:0 1.25rem .5rem;display:flex;align-items:baseline;gap:10px}
+.price{font-size:26px;font-weight:700}
+.chg{font-size:14px;font-weight:500}
+.conf-wrap{padding:0 1.25rem .75rem}
+.conf-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+.conf-bar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.conf-fill{height:100%;border-radius:3px;transition:width .6s}
 
-/* HEATMAP */
-.heatmap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.heatmap-cell{border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
-.heatmap-cell::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:12px 12px}
-.heatmap-cell:hover{transform:scale(1.04);z-index:1}
-.hm-sector{font-size:10px;font-weight:800;color:rgba(255,255,255,.85);margin-bottom:4px;position:relative;z-index:1}
-.hm-chg{font-size:17px;font-weight:900;color:#fff;font-family:'JetBrains Mono',monospace;position:relative;z-index:1}
+/* CHART */
+.chart-wrap{padding:0 1rem .75rem;height:80px;position:relative}
 
-/* PORTFOLIO */
-.portfolio-layout{display:grid;grid-template-columns:1fr 340px;gap:18px}
-.portfolio-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:auto}
-.portfolio-table-wrap table{width:100%;border-collapse:collapse}
-.portfolio-table-wrap th{background:var(--bg3);padding:10px 14px;font-size:10px;text-transform:uppercase;letter-spacing:.9px;color:var(--text3);font-weight:800;text-align:right;white-space:nowrap}
-.portfolio-table-wrap td{padding:11px 14px;border-top:1px solid var(--border);font-size:12px;vertical-align:middle;white-space:nowrap}
-.portfolio-table-wrap tr:hover td{background:rgba(245,158,11,.03)}
-.portfolio-sidebar{display:flex;flex-direction:column;gap:14px}
-.pf-pie-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
-.pf-summary-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
-.pf-stat{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
-.pf-stat:last-child{border:none}
-.pf-stat-label{font-size:11px;color:var(--text3)}
-.pf-stat-val{font-size:13px;font-weight:800;font-family:'JetBrains Mono',monospace}
-.add-to-pf-form{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
-.form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:9px}
-.form-input{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:12px;outline:none;width:100%;transition:border-color .2s}
-.form-input:focus{border-color:var(--gold)}
+/* INDICATORS */
+.inds{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bg3)}
+.ind{background:var(--bg2);padding:10px 8px;text-align:center;cursor:pointer;transition:background .15s}
+.ind:hover{background:#1c2128}
+.ind-label{font-size:9px;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:2px}
+.ind-val{font-size:14px;font-weight:600}
+.ind-sub{font-size:9px;color:var(--muted);margin-top:1px}
+.info-i{font-size:9px;color:var(--blue);cursor:help}
 
-/* GLOSSARY */
-.glossary-panel{position:fixed;left:0;top:0;bottom:0;width:370px;background:var(--bg2);border-right:1px solid var(--border);z-index:500;transform:translateX(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
-.glossary-panel.open{transform:translateX(0)}
-.glossary-header{background:var(--card);padding:18px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
-.glossary-header h2{font-size:16px;font-weight:900;color:var(--gold)}
-.glossary-close{position:absolute;top:14px;left:16px;background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px;line-height:1}
-.glossary-body{padding:14px}
-.glossary-item{border-bottom:1px solid var(--border);padding:12px 0}
-.glossary-item:last-child{border:none}
-.glossary-term{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:2px}
-.glossary-he{font-size:12px;color:var(--text2);margin-bottom:5px}
-.glossary-def{font-size:11px;color:var(--text3);line-height:1.6}
+/* LEVELS */
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bg3)}
+.level{background:var(--bg2);padding:10px;text-align:center;cursor:pointer}
+.level:hover{background:#1c2128}
+.level-label{font-size:10px;color:var(--muted);margin-bottom:3px}
+.level-val{font-size:13px;font-weight:600}
 
-/* ALERTS */
-.alert-item{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
-.alert-item.triggered{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.04)}
+/* DIV BANNER */
+.div-banner{margin:0 1rem .75rem;background:#0d2137;border:1px solid #1a4a6e;border-radius:8px;padding:8px 12px;font-size:12px;color:var(--blue);display:flex;align-items:center;gap:8px}
 
-/* WATCHLIST */
-.watchlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
-.watchlist-item{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:13px;cursor:pointer;transition:all .2s}
-.watchlist-item:hover{border-color:rgba(245,158,11,.3);transform:translateY(-1px)}
+/* TOOLTIP */
+.tooltip{position:fixed;background:#1c2128;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text);max-width:240px;z-index:999;pointer-events:none;display:none;direction:rtl;line-height:1.6}
 
-/* COMPARE */
-.compare-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border)}
-.compare-table th{background:var(--bg3);padding:11px 14px;font-size:10px;text-transform:uppercase;color:var(--text3);font-weight:800;text-align:center;border-bottom:1px solid var(--border);letter-spacing:.7px}
-.compare-table td{padding:11px 14px;border-top:1px solid var(--border);text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px}
-.compare-table tr:hover td{background:rgba(245,158,11,.02)}
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;align-items:center;justify-content:center;padding:1rem}
+.modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:1.5rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;direction:rtl}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem}
+.modal-ticker{font-size:24px;font-weight:700;color:var(--blue)}
+.modal-name{font-size:13px;color:var(--muted);margin-top:2px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+.modal-section{margin-bottom:1.25rem}
+.modal-section h4{font-size:12px;color:var(--muted);margin-bottom:.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--bg3);text-transform:uppercase;letter-spacing:.5px}
+.modal-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bg3);font-size:13px}
+.modal-row:last-child{border:none}
+.signal-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bg3);font-size:13px}
+.signal-item:last-child{border:none}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.chart-modal{height:160px;position:relative;margin:8px 0}
+.score-circle{width:60px;height:60px;border-radius:50%;border:3px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.score-num{font-size:20px;font-weight:700;line-height:1}
+.score-lbl{font-size:9px;color:var(--muted)}
+.div-alert{background:#0d2137;border:1px solid #1a4a6e;border-radius:8px;padding:10px 14px;font-size:13px;color:var(--blue);margin-top:8px}
 
-/* TOAST */
-.toast-container{position:fixed;bottom:20px;left:20px;z-index:9999;display:flex;flex-direction:column;gap:7px}
-.toast{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:11px 16px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:8px;animation:slideIn .3s ease;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:340px}
-.toast.success{border-color:rgba(16,185,129,.4);color:var(--green2)}
-.toast.error{border-color:rgba(239,68,68,.4);color:var(--red2)}
-.toast.info{border-color:rgba(59,130,246,.4);color:var(--blue2)}
-@keyframes slideIn{from{transform:translateX(-16px);opacity:0}to{transform:translateX(0);opacity:1}}
-
-/* SECTION TITLES */
-.section-title{font-size:16px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;gap:10px;letter-spacing:.2px}
-.section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
-.section-badge{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--gold);padding:1px 9px;border-radius:20px;font-size:9px;font-weight:800;letter-spacing:.8px}
-
-/* LOADING */
-.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;margin:40px auto}
+.loading{text-align:center;padding:4rem;color:var(--muted);font-size:15px}
+.spinner{display:inline-block;width:28px;height:28px;border:3px solid var(--bg3);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-left:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty-state{text-align:center;padding:50px 20px;color:var(--text3)}
-.empty-state .icon{font-size:36px;margin-bottom:14px;opacity:.4}
-.empty-state h3{font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text2)}
-
-/* AUTH MODAL */
-.auth-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.94);backdrop-filter:blur(18px);z-index:2000;display:flex;align-items:center;justify-content:center}
-.auth-modal-overlay.hidden{display:none}
-.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:20px;width:420px;max-width:94vw;padding:36px;box-shadow:0 40px 120px rgba(0,0,0,.9),0 0 0 1px rgba(245,158,11,.06);position:relative;overflow:hidden}
-.auth-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-.auth-box::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.02) 1px,transparent 1px);background-size:32px 32px;pointer-events:none}
-.auth-logo{text-align:center;margin-bottom:24px;position:relative;z-index:1}
-.auth-logo-icon{width:52px;height:52px;background:linear-gradient(135deg,var(--gold),#b45309);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;font-family:'JetBrains Mono',monospace;color:#000;margin:0 auto 12px;box-shadow:var(--glow-gold);letter-spacing:-1px}
-.auth-logo-text{font-size:22px;font-weight:900;background:linear-gradient(135deg,var(--gold),var(--gold2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.auth-logo-sub{font-size:11px;color:var(--text3);margin-top:3px}
-.auth-tabs{display:flex;background:var(--bg3);border-radius:9px;padding:3px;margin-bottom:22px;position:relative;z-index:1}
-.auth-tab{flex:1;padding:8px;text-align:center;font-size:11px;font-weight:800;cursor:pointer;border-radius:7px;transition:all .2s;color:var(--text3);letter-spacing:.5px;text-transform:uppercase}
-.auth-tab.active{background:var(--card);color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.auth-form-group{margin-bottom:14px;position:relative;z-index:1}
-.auth-label{display:block;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
-.auth-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;transition:all .3s}
-.auth-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.08)}
-.auth-submit{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:12px;font-weight:900;background:linear-gradient(135deg,var(--gold),#b45309);color:#000;margin-top:6px;letter-spacing:.6px;transition:all .2s;text-transform:uppercase;position:relative;z-index:1}
-.auth-submit:hover{transform:translateY(-1px);box-shadow:var(--glow-gold)}
-.auth-error{color:var(--red2);font-size:11px;font-weight:700;margin-top:8px;text-align:center;min-height:16px;position:relative;z-index:1}
-
-/* RESPONSIVE */
-@media(max-width:1100px){
-  .news-grid{grid-template-columns:1fr 1fr}
-  .news-hero{grid-column:1/3;grid-row:auto}
-  .portfolio-layout{grid-template-columns:1fr}
-}
-@media(max-width:700px){
-  .news-grid{grid-template-columns:1fr}
-  .news-hero{grid-column:auto;grid-row:auto}
-  .stocks-grid{grid-template-columns:1fr}
-  .heatmap-grid{grid-template-columns:repeat(2,1fr)}
-  .chart-modal{width:100vw;height:100vh;border-radius:0}
-  .auth-box{padding:24px 18px}
-}
+.error-msg{background:#3a1a1a;border:1px solid var(--red);border-radius:8px;padding:1rem;color:var(--red);margin-bottom:1rem;font-size:14px}
+.empty{text-align:center;padding:4rem;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:1rem}
 </style>
 </head>
 <body>
 
-<!-- AUTH MODAL -->
-<div class="auth-modal-overlay" id="authOverlay">
-  <div class="auth-box">
-    <div class="auth-logo">
-      <div class="auth-logo-icon">JS</div>
-      <div class="auth-logo-text">Jonathan Stocks</div>
-      <div class="auth-logo-sub">Professional Trading Analytics Platform</div>
-    </div>
-    <div class="auth-tabs">
-      <div class="auth-tab active" id="authTabLogin" onclick="switchAuthTab('login')">כניסה</div>
-      <div class="auth-tab" id="authTabReg" onclick="switchAuthTab('register')">הרשמה</div>
-    </div>
-    <div id="authFormLogin">
-      <div class="auth-form-group">
-        <label class="auth-label">אימייל</label>
-        <input class="auth-input" id="loginEmail" type="email" placeholder="your@email.com" autocomplete="email">
-      </div>
-      <div class="auth-form-group">
-        <label class="auth-label">סיסמה</label>
-        <input class="auth-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div class="auth-error" id="loginError"></div>
-      <button class="auth-submit" onclick="doLogin()">כניסה למערכת</button>
-    </div>
-    <div id="authFormReg" style="display:none">
-      <div class="auth-form-group">
-        <label class="auth-label">שם משתמש</label>
-        <input class="auth-input" id="regUsername" type="text" placeholder="JonathanTrader" autocomplete="username">
-      </div>
-      <div class="auth-form-group">
-        <label class="auth-label">אימייל</label>
-        <input class="auth-input" id="regEmail" type="email" placeholder="your@email.com" autocomplete="email">
-      </div>
-      <div class="auth-form-group">
-        <label class="auth-label">סיסמה (מינימום 6 תווים)</label>
-        <input class="auth-input" id="regPass" type="password" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
-      </div>
-      <div class="auth-error" id="regError"></div>
-      <button class="auth-submit" onclick="doRegister()">יצירת חשבון</button>
-    </div>
-  </div>
-</div>
-
-<!-- TAPE -->
-<div class="tape-wrap">
-  <div class="tape" id="tape">
-    <span class="tape-item"><span class="tape-sym">AAPL</span> <span class="tape-price" id="t-AAPL-p">&#8212;</span> <span class="tape-chg pos" id="t-AAPL-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">TSLA</span> <span class="tape-price" id="t-TSLA-p">&#8212;</span> <span class="tape-chg pos" id="t-TSLA-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">NVDA</span> <span class="tape-price" id="t-NVDA-p">&#8212;</span> <span class="tape-chg pos" id="t-NVDA-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">MSFT</span> <span class="tape-price" id="t-MSFT-p">&#8212;</span> <span class="tape-chg pos" id="t-MSFT-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">GOOGL</span> <span class="tape-price" id="t-GOOGL-p">&#8212;</span> <span class="tape-chg pos" id="t-GOOGL-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">AMZN</span> <span class="tape-price" id="t-AMZN-p">&#8212;</span> <span class="tape-chg pos" id="t-AMZN-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">META</span> <span class="tape-price" id="t-META-p">&#8212;</span> <span class="tape-chg pos" id="t-META-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">TEVA.TA</span> <span class="tape-price" id="t-TEVA_TA-p">&#8212;</span> <span class="tape-chg pos" id="t-TEVA_TA-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">NICE.TA</span> <span class="tape-price" id="t-NICE_TA-p">&#8212;</span> <span class="tape-chg pos" id="t-NICE_TA-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">CHKP.TA</span> <span class="tape-price" id="t-CHKP_TA-p">&#8212;</span> <span class="tape-chg pos" id="t-CHKP_TA-c">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">AAPL</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">TSLA</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">NVDA</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">MSFT</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">GOOGL</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">AMZN</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">META</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">TEVA.TA</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">NICE.TA</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-    <span class="tape-item"><span class="tape-sym">CHKP.TA</span> <span class="tape-price">&#8212;</span> <span class="tape-chg pos">&#8212;</span></span>
-  </div>
-</div>
-
-<!-- HEADER -->
 <div class="header">
-  <div class="logo">
-    <div class="logo-icon">JS</div>
-    <div>
-      <div class="logo-text">Jonathan Stocks</div>
-      <div class="logo-sub">Professional Trading Analytics &middot; מערכת ניתוח מתקדמת</div>
-    </div>
-  </div>
-  <div class="header-center">
-    <div class="market-badge closed" id="marketBadge">
-      <div class="pulse"></div>
-      <span id="marketText">שוק סגור</span>
-    </div>
-    <div class="fg-badge" id="fgBadge" onclick="switchTab('heatmap')">
-      <span id="fgBadgeText">F&amp;G: &#8212;</span>
-    </div>
-  </div>
+  <div class="logo"><span class="logo-dot"></span>📈 Jonathan Stocks</div>
+  <span style="font-size:12px;color:var(--muted)">ניתוח מניות חכם בזמן אמת</span>
   <div class="header-right">
-    <input type="text" class="search-input" id="mainSearch" placeholder="חפש מניה... AAPL, TEVA.TA" onkeydown="if(event.key==='Enter')searchFromHeader()">
-    <button class="btn btn-gold" onclick="searchFromHeader()">ניתוח</button>
-    <button class="btn btn-outline" onclick="toggleGlossary()">מילון</button>
-    <div class="user-area" id="userArea" style="display:none">
-      <span class="username-tag" id="usernameTag"></span>
-      <button class="btn btn-outline btn-sm" onclick="doLogout()">יציאה</button>
+    <span class="live-badge">● LIVE</span>
+    <div class="auto-refresh">
+      רענון אוטו
+      <div class="refresh-bar"><div class="refresh-fill" id="refreshFill"></div></div>
     </div>
+    <span class="clock" id="clock"></span>
   </div>
 </div>
 
-<!-- TABS -->
-<div class="tabs-bar">
-  <div class="tab active" onclick="switchTab('home')">בית</div>
-  <div class="tab" onclick="switchTab('news')">חדשות</div>
-  <div class="tab" onclick="switchTab('portfolio')">תיק השקעות</div>
-  <div class="tab" onclick="switchTab('watchlist')">מועדפים</div>
-  <div class="tab" onclick="switchTab('heatmap')">מפת חום</div>
-  <div class="tab" onclick="switchTab('compare')">השוואה</div>
-  <div class="tab" onclick="switchTab('alerts')">התראות</div>
-</div>
-
-<!-- HOME -->
-<div id="tab-home" class="tab-content active">
-  <div class="container">
-    <div class="quick-stats">
-      <div class="stat-card gold"><div class="stat-label">ממוצע RSI</div><div class="stat-val" id="avgRSI">&#8212;</div><div class="stat-sub">מכלל המניות</div></div>
-      <div class="stat-card green"><div class="stat-label">המלצות קנייה</div><div class="stat-val" id="buyCount">&#8212;</div><div class="stat-sub">BUY</div></div>
-      <div class="stat-card red"><div class="stat-label">המלצות מכירה</div><div class="stat-val" id="sellCount">&#8212;</div><div class="stat-sub">SELL</div></div>
-      <div class="stat-card blue"><div class="stat-label">נבדקו</div><div class="stat-val" id="watchCount">&#8212;</div><div class="stat-sub">מניות</div></div>
-    </div>
-    <div class="section-title">מניות מובילות <span class="section-badge">LIVE</span></div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px">
-      <button class="btn btn-outline" onclick="loadPreset('us')">ארה"ב</button>
-      <button class="btn btn-outline" onclick="loadPreset('il')">ישראל</button>
-      <button class="btn btn-outline" onclick="loadPreset('tech')">טכנולוגיה</button>
-      <button class="btn btn-outline" onclick="loadPreset('all')">הכל</button>
-    </div>
-    <div class="stocks-grid" id="stocksGrid">
-      <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text3)">
-        <div style="font-size:14px;color:var(--text2);margin-bottom:6px">בחר קטגוריה להצגת מניות</div>
-        <div style="font-size:12px">או חפש מניה ספציפית בשדה החיפוש למעלה</div>
+<div class="main">
+  <div class="search-box">
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <input id="tickerInput" placeholder="הזן טיקרים — AAPL, TEVA, TSLA, NVDA..." />
       </div>
+      <button class="btn btn-primary" onclick="analyze()">🔍 נתח עכשיו</button>
+      <button class="btn btn-clear" onclick="clearAll()">נקה</button>
+    </div>
+    <div class="presets">
+      <span class="preset-label">מהיר:</span>
+      <button class="preset-btn" onclick="setPreset('AAPL,TSLA,NVDA,MSFT,TEVA')">🔥 פופולריות</button>
+      <button class="preset-btn" onclick="setPreset('AAPL,GOOGL,META,AMZN,MSFT,NFLX,NVDA')">💻 טכנולוגיה</button>
+      <button class="preset-btn" onclick="setPreset('TEVA,PFE,JNJ,ABBV,MRK')">💊 פארמה</button>
+      <button class="preset-btn" onclick="setPreset('JPM,BAC,GS,V,MA')">🏦 פיננסים</button>
+      <button class="preset-btn" onclick="setPreset('XOM,CVX,BP,COP')">⛽ אנרגיה</button>
+    </div>
+  </div>
+
+  <div id="statsRow" class="stats-row" style="display:none">
+    <div class="stat"><div class="stat-label">קנייה</div><div class="stat-val" style="color:var(--green)" id="sBuy">0</div></div>
+    <div class="stat"><div class="stat-label">המתנה</div><div class="stat-val" style="color:var(--yellow)" id="sWait">0</div></div>
+    <div class="stat"><div class="stat-label">מכירה</div><div class="stat-val" style="color:var(--red)" id="sSell">0</div></div>
+    <div class="stat"><div class="stat-label">דיבידנד</div><div class="stat-val" style="color:var(--blue)" id="sDiv">0</div></div>
+    <div class="stat"><div class="stat-label">סה"כ</div><div class="stat-val" id="sTotal">0</div></div>
+  </div>
+
+  <div id="moodBar" class="mood-bar" style="display:none">
+    <span class="mood-label">סנטימנט שוק:</span>
+    <div class="mood-track"><div class="mood-fill" id="moodFill"></div></div>
+    <span class="mood-text" id="moodText"></span>
+  </div>
+
+  <div id="tabs" class="tabs" style="display:none">
+    <div class="tab active" onclick="filterTab('all')" id="tab-all">הכל <span class="tab-count" id="tc-all">0</span></div>
+    <div class="tab" onclick="filterTab('BUY')" id="tab-BUY">🟢 קנייה <span class="tab-count" id="tc-BUY">0</span></div>
+    <div class="tab" onclick="filterTab('WAIT')" id="tab-WAIT">🟡 המתנה <span class="tab-count" id="tc-WAIT">0</span></div>
+    <div class="tab" onclick="filterTab('SELL')" id="tab-SELL">🔴 מכירה <span class="tab-count" id="tc-SELL">0</span></div>
+    <div class="tab" onclick="filterTab('DIV')" id="tab-DIV">💰 דיבידנד <span class="tab-count" id="tc-DIV">0</span></div>
+  </div>
+
+  <div id="output">
+    <div class="empty">
+      <div class="empty-icon">📊</div>
+      <div>הזן טיקרים למעלה ולחץ נתח</div>
     </div>
   </div>
 </div>
 
-<!-- NEWS -->
-<div id="tab-news" class="tab-content">
-  <div class="container">
-    <div class="section-title">חדשות פיננסיות <span class="section-badge">LIVE</span></div>
-    <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap">
-      <button class="btn btn-gold" onclick="loadNewsFor('SPY')">שוק כללי</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('AAPL')">Apple</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('TSLA')">Tesla</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('NVDA')">Nvidia</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('TEVA.TA')">תבע</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('CHKP.TA')">צ'ק פוינט</button>
-      <button class="btn btn-outline" onclick="loadNewsFor('NICE.TA')">נייס</button>
-    </div>
-    <div id="newsContent"><div class="spinner"></div></div>
-  </div>
+<div class="tooltip" id="tooltip"></div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalBox"></div>
 </div>
 
-<!-- PORTFOLIO -->
-<div id="tab-portfolio" class="tab-content">
-  <div class="container">
-    <div class="section-title">תיק השקעות <span class="section-badge">P&amp;L</span></div>
-    <div class="portfolio-layout">
+<script>
+const TIPS={
+  rsi:{t:'RSI — מדד עוצמה',b:'מתחת 30 = מכירת יתר (קנייה). מעל 70 = קניית יתר (מכירה). 50 = נייטרלי.'},
+  macd:{t:'MACD — מגמה',b:'מעל קו האות = בולי. מתחת = דובי. צליבה = נקודת מפנה פוטנציאלית.'},
+  atr:{t:'ATR — תנודתיות',b:'התזוזה היומית הממוצעת ב-14 יום. גבוה = סיכון גבוה, פוטנציאל גבוה.'},
+  bb:{t:'Bollinger %B',b:'0% = ליד רצועה תחתונה. 100% = ליד עליונה. מעל 100% = פריצה.'},
+  vol:{t:'מחזור יחסי',b:'כמה פעמים גדול מהממוצע. מעל 1.5x = עניין גבוה. מתחת 0.7x = אדישות.'},
+  entry:{t:'מחיר כניסה',b:'המחיר הנוכחי לפיו מחושב הניתוח.'},
+  target:{t:'יעד רווח',b:'מחיר כניסה + ATR×2. לא ערובה לרווח — רק יעד טכני.'},
+  stop:{t:'Stop Loss',b:'נקודת עצירת הפסד: מחיר כניסה − ATR×1.5. חיוני לניהול סיכונים!'},
+};
+
+let results=[], activeTab='all', charts={}, autoTimer, refreshInterval=300;
+
+function clock(){
+  document.getElementById('clock').textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(clock,1000);clock();
+
+function startAutoRefresh(){
+  clearInterval(autoTimer);
+  let elapsed=0;
+  const fill=document.getElementById('refreshFill');
+  autoTimer=setInterval(()=>{
+    elapsed++;
+    if(fill) fill.style.width=(elapsed/refreshInterval*100)+'%';
+    if(elapsed>=refreshInterval){
+      elapsed=0;
+      if(results.length) reAnalyze();
+    }
+  },1000);
+}
+
+function calcScore(r){
+  let s=0;
+  if(r.rsi<35)s+=2;else if(r.rsi<50)s+=1;else if(r.rsi>70)s-=2;else if(r.rsi>60)s-=1;
+  if(r.macd==='BULLISH')s+=2;else s-=2;
+  if(r.bb_pct<20)s+=1;else if(r.bb_pct>85)s-=1;
+  if(r.vol_ratio>1.5)s+=1;
+  if(r.dividend_yield>0.03)s+=1;
+  return Math.min(10,Math.max(1,Math.round((s+6)/12*10)));
+}
+
+function showTip(e,k){
+  const t=document.getElementById('tooltip'),i=TIPS[k];
+  if(!i)return;
+  t.innerHTML='<strong>'+i.t+'</strong><br>'+i.b;
+  t.style.display='block';
+  t.style.top=(e.clientY+14)+'px';
+  t.style.left=Math.max(10,(e.clientX-120))+'px';
+}
+function hideTip(){document.getElementById('tooltip').style.display='none';}
+
+async function analyze(){
+  const raw=document.getElementById('tickerInput').value;
+  const tickers=raw.split(/[,\s]+/).map(t=>t.trim().toUpperCase()).filter(Boolean);
+  if(!tickers.length)return;
+  results=[];
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});
+  charts={};
+  document.getElementById('output').innerHTML='<div class="loading"><span class="spinner"></span> שולף נתונים חיים מהשוק...</div>';
+  document.getElementById('statsRow').style.display='none';
+  document.getElementById('tabs').style.display='none';
+  document.getElementById('moodBar').style.display='none';
+  for(const ticker of tickers){
+    try{
+      const res=await fetch('/api/stock/'+ticker);
+      const data=await res.json();
+      if(data.error)document.getElementById('output').innerHTML+=`<div class="error-msg">שגיאה ב-${ticker}: ${data.error}</div>`;
+      else{data.score=calcScore(data);results.push(data);}
+    }catch(e){document.getElementById('output').innerHTML+=`<div class="error-msg">לא ניתן לטעון ${ticker}</div>`;}
+  }
+  renderAll();
+  startAutoRefresh();
+}
+
+async function reAnalyze(){
+  const tickers=results.map(r=>r.ticker);
+  results=[];
+  Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});
+  charts={};
+  for(const ticker of tickers){
+    try{
+      const res=await fetch('/api/stock/'+ticker);
+      const data=await res.json();
+      if(!data.error){data.score=calcScore(data);results.push(data);}
+    }catch(e){}
+  }
+  renderAll();
+}
+
+function setPreset(v){document.getElementById('tickerInput').value=v;analyze();}
+function clearAll(){results=[];document.getElementById('tickerInput').value='';document.getElementById('output').innerHTML='<div class="empty"><div class="empty-icon">📊</div><div>הזן טיקרים למעלה ולחץ נתח</div></div>';document.getElementById('statsRow').style.display='none';document.getElementById('tabs').style.display='none';document.getElementById('moodBar').style.display='none';clearInterval(autoTimer);}
+
+function filterTab(tab){
+  activeTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab)?.classList.add('active');
+  renderCards();
+}
+
+function renderAll(){
+  const buy=results.filter(r=>r.rec==='BUY').length;
+  const wait=results.filter(r=>r.rec==='WAIT').length;
+  const sell=results.filter(r=>r.rec==='SELL').length;
+  const div=results.filter(r=>r.dividend_yield>0).length;
+  document.getElementById('sBuy').textContent=buy;
+  document.getElementById('sWait').textContent=wait;
+  document.getElementById('sSell').textContent=sell;
+  document.getElementById('sDiv').textContent=div;
+  document.getElementById('sTotal').textContent=results.length;
+  document.getElementById('tc-all').textContent=results.length;
+  document.getElementById('tc-BUY').textContent=buy;
+  document.getElementById('tc-WAIT').textContent=wait;
+  document.getElementById('tc-SELL').textContent=sell;
+  document.getElementById('tc-DIV').textContent=div;
+  if(results.length){
+    document.getElementById('statsRow').style.display='grid';
+    document.getElementById('tabs').style.display='flex';
+    const mood=Math.round(buy/(results.length)*100);
+    const moodFill=document.getElementById('moodFill');
+    const moodText=document.getElementById('moodText');
+    moodFill.style.width=mood+'%';
+    moodFill.style.background=mood>60?'#3fb950':mood>40?'#d29922':'#f85149';
+    moodText.textContent=mood>60?'🟢 שורי '+mood+'%':mood>40?'🟡 נייטרלי '+mood+'%':'🔴 דובי '+mood+'%';
+    moodText.style.color=mood>60?'#3fb950':mood>40?'#d29922':'#f85149';
+    document.getElementById('moodBar').style.display='flex';
+  }
+  renderCards();
+}
+
+function renderCards(){
+  let filtered=activeTab==='all'?results:activeTab==='DIV'?results.filter(r=>r.dividend_yield>0):results.filter(r=>r.rec===activeTab);
+  filtered=[...filtered].sort((a,b)=>b.conf-a.conf);
+  if(!filtered.length){document.getElementById('output').innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>אין מניות בקטגוריה זו</div></div>';return;}
+  document.getElementById('output').innerHTML='<div class="cards">'+filtered.map(cardHTML).join('')+'</div>';
+  setTimeout(()=>filtered.forEach(r=>drawMiniChart(r)),100);
+}
+
+function cardHTML(r){
+  const rc=r.rec==='BUY'?'buy':r.rec==='SELL'?'sell':'wait';
+  const rl=r.rec==='BUY'?'🟢 קנייה':r.rec==='SELL'?'🔴 מכירה':'🟡 המתנה';
+  const cc=r.conf>=70?'#3fb950':r.conf>=50?'#d29922':'#f85149';
+  const sc=r.score>=7?'#3fb950':r.score>=5?'#d29922':'#f85149';
+  const chgC=r.chg>=0?'var(--green)':'var(--red)';
+  const rsiC=r.rsi>70?'var(--red)':r.rsi<35?'var(--green)':'var(--text)';
+  const macdC=r.macd==='BULLISH'?'var(--green)':'var(--red)';
+  const up=((r.target-r.price)/r.price*100).toFixed(1);
+  const dn=((r.price-r.stop)/r.price*100).toFixed(1);
+  const divHTML=r.dividend_yield>0?`<div class="div-banner">💰 דיבידנד: ${(r.dividend_yield*100).toFixed(2)}% ${r.ex_dividend_date?'| Ex-Date: '+r.ex_dividend_date:''}</div>`:'';
+  return `
+  <div class="card ${rc}-card" onclick="openDetail(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+    <div class="card-score" style="color:${sc};border-color:${sc}">${r.score}<div style="font-size:8px;color:var(--muted)">ציון</div></div>
+    <div class="card-header">
       <div>
-        <div class="portfolio-table-wrap">
-          <table>
-            <thead><tr><th>מניה</th><th>כמות</th><th>כניסה</th><th>מחיר</th><th>שווי</th><th>רווח/הפסד</th><th>%</th><th></th></tr></thead>
-            <tbody id="portfolioBody">
-              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">התיק ריק</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="add-to-pf-form" style="margin-top:14px">
-          <div style="font-size:13px;font-weight:800;margin-bottom:12px;color:var(--text2)">הוסף פוזיציה</div>
-          <div class="form-row">
-            <input class="form-input" id="pfTicker" placeholder="מניה (AAPL)">
-            <input class="form-input" id="pfQty" type="number" placeholder="כמות" min="0.001" step="any">
-            <input class="form-input" id="pfEntry" type="number" placeholder="מחיר כניסה" min="0" step="any">
+        <div class="ticker">${r.ticker}</div>
+        <div class="company">${r.name}</div>
+        <span class="sector-tag">${r.sector}</span>
+      </div>
+      <span class="badge badge-${rc}">${rl}</span>
+    </div>
+    <div class="price-row">
+      <span class="price">$${r.price.toFixed(2)}</span>
+      <span class="chg" style="color:${chgC}">${r.chg>=0?'+':''}${r.chg.toFixed(2)}%</span>
+    </div>
+    <div class="conf-wrap">
+      <div class="conf-label"><span>ביטחון AI</span><span>${r.conf}%</span></div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${r.conf}%;background:${cc}"></div></div>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-${r.ticker}" height="80"></canvas></div>
+    ${divHTML}
+    <div class="inds">
+      <div class="ind" onmouseenter="showTip(event,'rsi')" onmouseleave="hideTip()">
+        <div class="ind-label">RSI <span class="info-i">?</span></div>
+        <div class="ind-val" style="color:${rsiC}">${r.rsi}</div>
+        <div class="ind-sub">${r.rsi>70?'קניית יתר':r.rsi<35?'מכירת יתר':'נייטרלי'}</div>
+      </div>
+      <div class="ind" onmouseenter="showTip(event,'macd')" onmouseleave="hideTip()">
+        <div class="ind-label">MACD <span class="info-i">?</span></div>
+        <div class="ind-val" style="color:${macdC}">${r.macd==='BULLISH'?'בולי ↑':'דובי ↓'}</div>
+        <div class="ind-sub">מומנטום</div>
+      </div>
+      <div class="ind" onmouseenter="showTip(event,'atr')" onmouseleave="hideTip()">
+        <div class="ind-label">ATR <span class="info-i">?</span></div>
+        <div class="ind-val">${r.atr_pct}%</div>
+        <div class="ind-sub">${r.atr_pct>3?'תנודתי':'יציב'}</div>
+      </div>
+      <div class="ind" onmouseenter="showTip(event,'bb')" onmouseleave="hideTip()">
+        <div class="ind-label">BB% <span class="info-i">?</span></div>
+        <div class="ind-val">${r.bb_pct}%</div>
+        <div class="ind-sub">${r.bb_pct>85?'שיא':r.bb_pct<15?'תחתית':'אמצע'}</div>
+      </div>
+      <div class="ind" onmouseenter="showTip(event,'vol')" onmouseleave="hideTip()">
+        <div class="ind-label">מחזור <span class="info-i">?</span></div>
+        <div class="ind-val">${r.vol_ratio}x</div>
+        <div class="ind-sub">${r.vol_ratio>1.5?'גבוה':r.vol_ratio<0.7?'נמוך':'רגיל'}</div>
+      </div>
+      <div class="ind">
+        <div class="ind-label">פוטנציאל</div>
+        <div class="ind-val" style="color:var(--green)">+${up}%</div>
+        <div class="ind-sub">R:R 1:1.3</div>
+      </div>
+    </div>
+    <div class="levels">
+      <div class="level" onmouseenter="showTip(event,'entry')" onmouseleave="hideTip()">
+        <div class="level-label">כניסה <span class="info-i">?</span></div>
+        <div class="level-val" style="color:var(--blue)">$${r.entry.toFixed(2)}</div>
+      </div>
+      <div class="level" onmouseenter="showTip(event,'target')" onmouseleave="hideTip()">
+        <div class="level-label">יעד (+${up}%) <span class="info-i">?</span></div>
+        <div class="level-val" style="color:var(--green)">$${r.target.toFixed(2)}</div>
+      </div>
+      <div class="level" onmouseenter="showTip(event,'stop')" onmouseleave="hideTip()">
+        <div class="level-label">Stop (-${dn}%) <span class="info-i">?</span></div>
+        <div class="level-val" style="color:var(--red)">$${r.stop.toFixed(2)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function drawMiniChart(r){
+  const canvas=document.getElementById('chart-'+r.ticker);
+  if(!canvas||!r.history)return;
+  const prices=r.history;
+  const color=prices[prices.length-1]>=prices[0]?'#3fb950':'#f85149';
+  if(charts[r.ticker])try{charts[r.ticker].destroy()}catch(e){}
+  charts[r.ticker]=new Chart(canvas,{
+    type:'line',
+    data:{labels:prices.map((_,i)=>i),datasets:[{data:prices,borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',pointRadius:0,tension:.3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:600}}
+  });
+}
+
+function openDetail(r){
+  if(typeof r==='string')r=JSON.parse(r.replace(/&quot;/g,'"'));
+  const rl=r.rec==='BUY'?'🟢 קנייה':r.rec==='SELL'?'🔴 מכירה':'🟡 המתנה';
+  const up=((r.target-r.price)/r.price*100).toFixed(1);
+  const dn=((r.price-r.stop)/r.price*100).toFixed(1);
+  const divY=r.dividend_yield>0?(r.dividend_yield*100).toFixed(2)+'%':'אינה מחלקת';
+  const sc=r.score>=7?'#3fb950':r.score>=5?'#d29922':'#f85149';
+  const signals=[];
+  if(r.rsi<35)signals.push({c:'#3fb950',t:'RSI נמוך — מכירת יתר, הזדמנות קנייה פוטנציאלית'});
+  if(r.rsi>70)signals.push({c:'#f85149',t:'RSI גבוה — קניית יתר, שקול מימוש'});
+  if(r.macd==='BULLISH')signals.push({c:'#3fb950',t:'MACD בולי — מומנטום עולה'});
+  else signals.push({c:'#f85149',t:'MACD דובי — מומנטום יורד'});
+  if(r.bb_pct<20)signals.push({c:'#3fb950',t:'מחיר ליד רצועת בולינגר התחתונה — זול יחסית'});
+  if(r.bb_pct>85)signals.push({c:'#f85149',t:'מחיר ליד רצועת בולינגר העליונה — יקר יחסית'});
+  if(r.vol_ratio>1.5)signals.push({c:'#d29922',t:'מחזור גבוה במיוחד — עניין מוסדי או חדשות'});
+  if(r.dividend_yield>0.03)signals.push({c:'#58a6ff',t:'תשואת דיבידנד גבוהה — '+divY+' לשנה'});
+
+  document.getElementById('modalBox').innerHTML=`
+    <div class="modal-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div>
+            <div class="modal-ticker">${r.ticker}</div>
+            <div class="modal-name">${r.name} | ${r.sector}</div>
           </div>
-          <input class="form-input" id="pfNotes" placeholder="הערות (אופציונלי)" style="margin-bottom:9px">
-          <button class="btn btn-gold" onclick="addToPortfolio()">הוסף לתיק</button>
+          <div class="score-circle" style="color:${sc};border-color:${sc}">
+            <div class="score-num">${r.score}</div>
+            <div class="score-lbl">מתוך 10</div>
+          </div>
         </div>
       </div>
-      <div class="portfolio-sidebar">
-        <div class="pf-summary-card">
-          <div class="pf-stat"><span class="pf-stat-label">שווי תיק</span><span class="pf-stat-val" id="pfTotal">$0</span></div>
-          <div class="pf-stat"><span class="pf-stat-label">רווח / הפסד</span><span class="pf-stat-val" id="pfPnL">$0</span></div>
-          <div class="pf-stat"><span class="pf-stat-label">תשואה</span><span class="pf-stat-val" id="pfReturn">0%</span></div>
-          <div class="pf-stat"><span class="pf-stat-label">פוזיציות</span><span class="pf-stat-val" id="pfCount">0</span></div>
-        </div>
-        <div class="pf-pie-card">
-          <div style="font-size:12px;font-weight:800;margin-bottom:10px;color:var(--text2)">הקצאת תיק</div>
-          <canvas id="pfPieChart"></canvas>
-        </div>
-      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-  </div>
-</div>
+    ${r.history?`<div class="chart-modal"><canvas id="modal-chart"></canvas></div>`:''}
+    <div class="modal-section">
+      <h4>המלצה: ${rl} — ביטחון ${r.conf}%</h4>
+      <div class="modal-row"><span>מחיר נוכחי</span><span style="font-weight:700;font-size:16px">$${r.price.toFixed(2)}</span></div>
+      <div class="modal-row"><span>כניסה</span><span style="color:#58a6ff">$${r.entry.toFixed(2)}</span></div>
+      <div class="modal-row"><span>יעד רווח</span><span style="color:#3fb950">$${r.target.toFixed(2)} <small>(+${up}%)</small></span></div>
+      <div class="modal-row"><span>Stop Loss</span><span style="color:#f85149">$${r.stop.toFixed(2)} <small>(-${dn}%)</small></span></div>
+      <div class="modal-row"><span>תמיכה</span><span>$${r.support.toFixed(2)}</span></div>
+      <div class="modal-row"><span>התנגדות</span><span>$${r.resistance.toFixed(2)}</span></div>
+    </div>
+    <div class="modal-section">
+      <h4>💰 דיבידנד</h4>
+      <div class="modal-row"><span>תשואת דיבידנד שנתית</span><span style="color:#58a6ff;font-weight:600">${divY}</span></div>
+      <div class="modal-row"><span>תאריך Ex-Dividend</span><span>${r.ex_dividend_date||'לא ידוע'}</span></div>
+      ${r.dividend_yield>0?`<div class="div-alert">💡 כדי לקבל את הדיבידנד הבא, יש לרכוש את המניה לפני תאריך ה-Ex-Dividend</div>`:''}
+    </div>
+    <div class="modal-section">
+      <h4>אינדיקטורים טכניים</h4>
+      <div class="modal-row"><span>RSI</span><span style="color:${r.rsi>70?'#f85149':r.rsi<35?'#3fb950':'var(--text)'}">${r.rsi}</span></div>
+      <div class="modal-row"><span>MACD</span><span style="color:${r.macd==='BULLISH'?'#3fb950':'#f85149'}">${r.macd==='BULLISH'?'בולי ↑':'דובי ↓'}</span></div>
+      <div class="modal-row"><span>ATR%</span><span>${r.atr_pct}%</span></div>
+      <div class="modal-row"><span>Bollinger %B</span><span>${r.bb_pct}%</span></div>
+      <div class="modal-row"><span>מחזור יחסי</span><span>${r.vol_ratio}x</span></div>
+    </div>
+    <div class="modal-section">
+      <h4>אותות מסחר</h4>
+      ${signals.map(s=>`<div class="signal-item"><div class="sdot" style="background:${s.c}"></div><span>${s.t}</span></div>`).join('')}
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+  if(r.history){
+    setTimeout(()=>{
+      const mc=document.getElementById('modal-chart');
+      if(!mc)return;
+      const color=r.history[r.history.length-1]>=r.history[0]?'#3fb950':'#f85149';
+      new Chart(mc,{type:'line',data:{labels:r.history.map((_,i)=>i),datasets:[{data:r.history,borderColor:color,borderWidth:2,fill:true,backgroundColor:color+'22',pointRadius:0,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
+    },100);
+  }
+}
 
-<!-- WATCHLIST -->
-<div id="tab-watchlist" class="tab-content">
-  <div class="container">
-    <div class="section-title">מועדפים</div>
-    <div class="watchlist-grid" id="watchlistGrid">
-      <div class="empty-state"><div class="icon">&#9733;</div><h3>אין מועדפים</h3><p>לחץ על &#9733; בכרטיס מניה</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- HEATMAP -->
-<div id="tab-heatmap" class="tab-content">
-  <div class="container">
-    <div class="section-title">מפת חום סקטוריאלית</div>
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start">
-      <div class="heatmap-grid" id="heatmapGrid"><div class="spinner" style="grid-column:1/-1"></div></div>
-      <div class="fear-greed-card">
-        <div style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--text2)">Fear &amp; Greed Index</div>
-        <div class="fg-meter">
-          <svg width="200" height="110" viewBox="0 0 200 110">
-            <path class="fg-arc-bg" d="M20,100 A80,80 0 0,1 180,100"/>
-            <path class="fg-arc-fill" id="fgArc" d="M20,100 A80,80 0 0,1 180,100" stroke="#94a3b8" stroke-dasharray="0 252"/>
-            <line id="fgNeedle" x1="100" y1="100" x2="100" y2="25" stroke="white" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="100" cy="100" r="5" fill="white"/>
-          </svg>
-        </div>
-        <div class="fg-val" id="fgVal">&#8212;</div>
-        <div class="fg-label" id="fgLabelText">טוען...</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px">מדד פחד ותאוות בצע</div>
-        <div style="margin-top:12px;display:flex;justify-content:space-between;font-size:9px">
-          <span style="color:var(--red)">פחד קיצוני</span>
-          <span style="color:var(--text3)">ניטרלי</span>
-          <span style="color:var(--green)">חמדנות</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- COMPARE -->
-<div id="tab-compare" class="tab-content">
-  <div class="container">
-    <div class="section-title">השוואת מניות</div>
-    <div style="display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap">
-      <input class="form-input" id="cmpT1" placeholder="מניה 1 (AAPL)" style="width:145px">
-      <input class="form-input" id="cmpT2" placeholder="מניה 2 (MSFT)" style="width:145px">
-      <input class="form-input" id="cmpT3" placeholder="מניה 3 (אופציונלי)" style="width:165px">
-      <button class="btn btn-gold" onclick="doCompare()">השווה</button>
-    </div>
-    <div id="compareContent"></div>
-  </div>
-</div>
-
-<!-- ALERTS -->
-<div id="tab-alerts" class="tab-content">
-  <div class="container">
-    <div class="section-title">התראות מחיר</div>
-    <div style="display:flex;gap:9px;margin-bottom:18px;flex-wrap:wrap">
-      <input class="form-input" id="alertTicker" placeholder="מניה (AAPL)" style="width:135px">
-      <select class="form-input" id="alertDir" style="width:115px"><option value="above">מעל</option><option value="below">מתחת</option></select>
-      <input class="form-input" id="alertPrice" type="number" placeholder="מחיר" style="width:115px">
-      <button class="btn btn-gold" onclick="addAlert()">הוסף התראה</button>
-    </div>
-    <div id="alertsList"></div>
-  </div>
-</div>
-
-<!-- CHART MODAL -->
-<div class="modal-overlay" id="chartModal">
-  <div class="chart-modal">
-    <div class="chart-header">
-      <div class="chart-search-wrap">
-        <input type="text" class="chart-search" id="chartSearchInput" placeholder="חפש..." oninput="onChartSearch(this.value)" onkeydown="if(event.key==='Enter')chartSearchGo()">
-        <div class="chart-search-results" id="chartSearchResults"></div>
-      </div>
-      <div class="chart-ticker-info">
-        <span class="chart-ticker-sym" id="chartSym">&#8212;</span>
-        <span class="chart-ticker-price" id="chartPrice">&#8212;</span>
-        <span class="chart-ticker-chg chg-pos" id="chartChg">&#8212;</span>
-      </div>
-      <div class="period-btns">
-        <button class="period-btn" onclick="changePeriod('1d',this)">1D</button>
-        <button class="period-btn" onclick="changePeriod('5d',this)">5D</button>
-        <button class="period-btn active" onclick="changePeriod('1mo',this)">1M</button>
-        <button class="period-btn" onclick="changePeriod('3mo',this)">3M</button>
-        <button class="period-btn" onclick="changePeriod('6mo',this)">6M</button>
-        <button class="period-btn" onclick="changePeriod('1y',this)">1Y</button>
-        <button class="period-btn" onclick="changePeriod('2y',this)">2Y</button>
-        <button class="period-btn" onclick="changePeriod('5y',this)">5Y</button>
-      </div>
-      <button class="btn btn-outline btn-sm" onclick="closeChart()" style="margin-right:auto">&#x2715;</button>
-    </div>
-    <div class="drawing-toolbar">
-      <button class="draw-tool-btn active" id="tool-cursor" onclick="setDrawTool('cursor')">&#8598; בחר</button>
-      <div class="draw-separator"></div>
-      <button class="draw-tool-btn" id="tool-hline" onclick="setDrawTool('hline')">&#8212; אופקי</button>
-      <button class="draw-tool-btn" id="tool-trendline" onclick="setDrawTool('trendline')">&#8599; מגמה</button>
-      <div class="draw-separator"></div>
-      <div class="draw-color-swatch active" style="background:#f59e0b" onclick="setDrawColor('#f59e0b',this)"></div>
-      <div class="draw-color-swatch" style="background:#10b981" onclick="setDrawColor('#10b981',this)"></div>
-      <div class="draw-color-swatch" style="background:#ef4444" onclick="setDrawColor('#ef4444',this)"></div>
-      <div class="draw-color-swatch" style="background:#60a5fa" onclick="setDrawColor('#60a5fa',this)"></div>
-      <div class="draw-color-swatch" style="background:#a78bfa" onclick="setDrawColor('#a78bfa',this)"></div>
-      <div class="draw-separator"></div>
-      <button class="draw-tool-btn" onclick="clearDrawings()" style="color:var(--red2)">נקה</button>
-      <div class="draw-separator"></div>
-      <div class="indicator-toggles">
-        <button class="ind-toggle active" id="togMA" onclick="toggleInd('ma')">MA20</button>
-        <button class="ind-toggle active" id="togRSI" onclick="toggleInd('rsi')">RSI</button>
-        <button class="ind-toggle active" id="togMACD" onclick="toggleInd('macd')">MACD</button>
-        <button class="ind-toggle" id="togBB" onclick="toggleInd('bb')">BB</button>
-        <button class="ind-toggle" id="togVol" onclick="toggleInd('vol')">נפח</button>
-      </div>
-    </div>
-    <div class="chart-area">
-      <div class="main-chart-wrap" id="mainChartWrap">
-        <div id="mainChart" style="width:100%;height:100%"></div>
-      </div>
-      <div class="subcharts" id="subchartsWrap">
-        <div class="subchart-container" id="rsiWrap">
-          <div class="subchart-label">RSI(14)</div>
-          <canvas id="rsiChart"></canvas>
-        </div>
-        <div class="subchart-container" id="macdWrap">
-          <div class="subchart-label">MACD(12,26,9)</div>
-          <canvas id="macdChart"></canvas>
-        </div>
-      </div>
-    </div>
-    <div class="chart-footer">
-      <div class="cfooter-item"><span class="cfooter-label">פתיחה</span><span class="cfooter-val" id="cf-open">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">גבוה</span><span class="cfooter-val" id="cf-high" style="color:var(--green2)">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">נמוך</span><span class="cfooter-val" id="cf-low" style="color:var(--red2)">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">סגירה</span><span class="cfooter-val" id="cf-close">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">נפח</span><span class="cfooter-val" id="cf-vol">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">RSI</span><span class="cfooter-val" id="cf-rsi">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">MACD</span><span class="cfooter-val" id="cf-macd">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">תמיכה</span><span class="cfooter-val" id="cf-sup" style="color:var(--green2)">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">התנגדות</span><span class="cfooter-val" id="cf-res" style="color:var(--red2)">&#8212;</span></div>
-      <div class="cfooter-item"><span class="cfooter-label">המלצה</span><span class="cfooter-val" id="cf-rec">&#8212;</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- GLOSSARY -->
-<div class="glossary-panel" id="glossaryPanel">
-  <div class="glossary-header">
-    <h2>מילון מושגים פיננסיים</h2>
-    <div style="font-size:10px;color:var(--text3);margin-top:2px">Hebrew &amp; English Financial Glossary</div>
-    <button class="glossary-close" onclick="toggleGlossary()">&#x2715;</button>
-  </div>
-  <div class="glossary-body" id="glossaryBody"></div>
-</div>
-
-<!-- TOAST -->
-<div class="toast-container" id="toastContainer"></div>
-
-<script src="/static/app.js"></script>
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+</script>
 </body>
 </html>
-from flask import Flask, render_template, jsonify, request, session
-import os
-import sqlite3
-import hashlib
-import secrets
-import pandas as pd
-import requests
-from datetime import datetime
-from functools import wraps
-
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
-
-HEADERS = {'User-Agent': 'Mozilla/5.0'}
-DB_PATH = os.path.join(os.path.dirname(__file__), 'data.db')
-
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    with get_db() as conn:
-        conn.executescript('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                created_at TEXT DEFAULT (datetime('now'))
-            );
-            CREATE TABLE IF NOT EXISTS portfolio (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                ticker TEXT NOT NULL,
-                qty REAL NOT NULL,
-                entry_price REAL NOT NULL,
-                notes TEXT DEFAULT '',
-                added_at TEXT DEFAULT (datetime('now')),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            CREATE TABLE IF NOT EXISTS watchlist (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                ticker TEXT NOT NULL,
-                added_at TEXT DEFAULT (datetime('now')),
-                UNIQUE(user_id, ticker),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-            CREATE TABLE IF NOT EXISTS alerts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                ticker TEXT NOT NULL,
-                direction TEXT NOT NULL,
-                price REAL NOT NULL,
-                triggered INTEGER DEFAULT 0,
-                created_at TEXT DEFAULT (datetime('now')),
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            );
-        ''')
-
-
-init_db()
-
-
-def hash_password(pw):
-    return hashlib.sha256(pw.encode()).hexdigest()
-
-
-def login_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'user_id' not in session:
-            return jsonify({'error': 'unauthorized'}), 401
-        return f(*args, **kwargs)
-    return decorated
-
-
-# ── AUTH ──────────────────────────────────────────────────────
-@app.route('/api/auth/register', methods=['POST'])
-def register():
-    data = request.get_json()
-    username = (data.get('username') or '').strip()
-    email = (data.get('email') or '').strip().lower()
-    password = data.get('password') or ''
-    if not username or not email or not password:
-        return jsonify({'error': 'כל השדות נדרשים'}), 400
-    if len(password) < 6:
-        return jsonify({'error': 'סיסמה חייבת להיות לפחות 6 תווים'}), 400
-    try:
-        with get_db() as conn:
-            conn.execute(
-                'INSERT INTO users (username, email, password_hash) VALUES (?,?,?)',
-                (username, email, hash_password(password))
-            )
-        with get_db() as conn:
-            user = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        return jsonify({'ok': True, 'username': user['username']})
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'שם משתמש או אימייל כבר קיימים'}), 409
-
-
-@app.route('/api/auth/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    email = (data.get('email') or '').strip().lower()
-    password = data.get('password') or ''
-    with get_db() as conn:
-        user = conn.execute(
-            'SELECT * FROM users WHERE email=? AND password_hash=?',
-            (email, hash_password(password))
-        ).fetchone()
-    if not user:
-        return jsonify({'error': 'אימייל או סיסמה שגויים'}), 401
-    session['user_id'] = user['id']
-    session['username'] = user['username']
-    return jsonify({'ok': True, 'username': user['username']})
-
-
-@app.route('/api/auth/logout', methods=['POST'])
-def logout():
-    session.clear()
-    return jsonify({'ok': True})
-
-
-@app.route('/api/auth/me')
-def me():
-    if 'user_id' not in session:
-        return jsonify({'logged_in': False})
-    return jsonify({'logged_in': True, 'username': session['username'], 'user_id': session['user_id']})
-
-
-# ── PORTFOLIO ─────────────────────────────────────────────────
-@app.route('/api/portfolio', methods=['GET'])
-@login_required
-def get_portfolio():
-    with get_db() as conn:
-        rows = conn.execute(
-            'SELECT * FROM portfolio WHERE user_id=? ORDER BY added_at DESC',
-            (session['user_id'],)
-        ).fetchall()
-    return jsonify([dict(r) for r in rows])
-
-
-@app.route('/api/portfolio', methods=['POST'])
-@login_required
-def add_position():
-    data = request.get_json()
-    ticker = (data.get('ticker') or '').strip().upper()
-    qty = float(data.get('qty') or 0)
-    entry = float(data.get('entry_price') or 0)
-    notes = (data.get('notes') or '').strip()
-    if not ticker or qty <= 0 or entry <= 0:
-        return jsonify({'error': 'נתונים לא תקינים'}), 400
-    with get_db() as conn:
-        conn.execute(
-            'INSERT INTO portfolio (user_id, ticker, qty, entry_price, notes) VALUES (?,?,?,?,?)',
-            (session['user_id'], ticker, qty, entry, notes)
-        )
-        row = conn.execute('SELECT last_insert_rowid() as id').fetchone()
-    return jsonify({'ok': True, 'id': row['id']})
-
-
-@app.route('/api/portfolio/<int:pos_id>', methods=['DELETE'])
-@login_required
-def delete_position(pos_id):
-    with get_db() as conn:
-        conn.execute('DELETE FROM portfolio WHERE id=? AND user_id=?',
-                     (pos_id, session['user_id']))
-    return jsonify({'ok': True})
-
-
-@app.route('/api/portfolio/<int:pos_id>', methods=['PUT'])
-@login_required
-def update_position(pos_id):
-    data = request.get_json()
-    qty = float(data.get('qty') or 0)
-    entry = float(data.get('entry_price') or 0)
-    notes = (data.get('notes') or '').strip()
-    with get_db() as conn:
-        conn.execute(
-            'UPDATE portfolio SET qty=?, entry_price=?, notes=? WHERE id=? AND user_id=?',
-            (qty, entry, notes, pos_id, session['user_id'])
-        )
-    return jsonify({'ok': True})
-
-
-# ── WATCHLIST ─────────────────────────────────────────────────
-@app.route('/api/watchlist', methods=['GET'])
-@login_required
-def get_watchlist():
-    with get_db() as conn:
-        rows = conn.execute('SELECT ticker FROM watchlist WHERE user_id=?',
-                            (session['user_id'],)).fetchall()
-    return jsonify([r['ticker'] for r in rows])
-
-
-@app.route('/api/watchlist/<ticker>', methods=['POST'])
-@login_required
-def add_watchlist(ticker):
-    try:
-        with get_db() as conn:
-            conn.execute('INSERT INTO watchlist (user_id, ticker) VALUES (?,?)',
-                         (session['user_id'], ticker.upper()))
-    except sqlite3.IntegrityError:
-        pass
-    return jsonify({'ok': True})
-
-
-@app.route('/api/watchlist/<ticker>', methods=['DELETE'])
-@login_required
-def remove_watchlist(ticker):
-    with get_db() as conn:
-        conn.execute('DELETE FROM watchlist WHERE user_id=? AND ticker=?',
-                     (session['user_id'], ticker.upper()))
-    return jsonify({'ok': True})
-
-
-# ── ALERTS ────────────────────────────────────────────────────
-@app.route('/api/alerts', methods=['GET'])
-@login_required
-def get_alerts_route():
-    with get_db() as conn:
-        rows = conn.execute('SELECT * FROM alerts WHERE user_id=? ORDER BY created_at DESC',
-                            (session['user_id'],)).fetchall()
-    return jsonify([dict(r) for r in rows])
-
-
-@app.route('/api/alerts', methods=['POST'])
-@login_required
-def add_alert_route():
-    data = request.get_json()
-    ticker = (data.get('ticker') or '').strip().upper()
-    direction = data.get('direction') or 'above'
-    price = float(data.get('price') or 0)
-    if not ticker or price <= 0:
-        return jsonify({'error': 'נתונים לא תקינים'}), 400
-    with get_db() as conn:
-        conn.execute('INSERT INTO alerts (user_id, ticker, direction, price) VALUES (?,?,?,?)',
-                     (session['user_id'], ticker, direction, price))
-    return jsonify({'ok': True})
-
-
-@app.route('/api/alerts/<int:alert_id>', methods=['DELETE'])
-@login_required
-def delete_alert_route(alert_id):
-    with get_db() as conn:
-        conn.execute('DELETE FROM alerts WHERE id=? AND user_id=?',
-                     (alert_id, session['user_id']))
-    return jsonify({'ok': True})
-
-
-# ── MARKET DATA ───────────────────────────────────────────────
-def yf_chart(ticker, interval, range_):
-    r = requests.get(
-        f'https://query1.finance.yahoo.com/v8/finance/chart/{ticker}',
-        headers=HEADERS,
-        params={'interval': interval, 'range': range_},
-        timeout=10
-    )
-    r.raise_for_status()
-    data = r.json()['chart']['result'][0]
-    quotes = data['indicators']['quote'][0]
-    timestamps = data['timestamp']
-    df = pd.DataFrame({
-        'Open': quotes['open'],
-        'High': quotes['high'],
-        'Low': quotes['low'],
-        'Close': quotes['close'],
-        'Volume': quotes['volume'],
-        'Time': [datetime.utcfromtimestamp(t) for t in timestamps]
-    }).dropna().set_index('Time')
-    return df
-
-
-def period_params(period):
-    return {
-        '1d': ('5m', '1d'), '5d': ('15m', '5d'), '1mo': ('1d', '1mo'),
-        '3mo': ('1d', '3mo'), '6mo': ('1d', '6mo'), '1y': ('1wk', '1y'),
-        '2y': ('1wk', '2y'), '5y': ('1mo', '5y'),
-    }.get(period, ('1d', '1mo'))
-
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/api/stock/<ticker>')
-def get_stock(ticker):
-    try:
-        hist = yf_chart(ticker, '1d', '3mo')
-        if hist.empty:
-            return jsonify({'error': 'מניה לא נמצאה'}), 404
-        close = hist['Close']
-        high = hist['High']
-        low = hist['Low']
-        vol = hist['Volume']
-        delta = close.diff()
-        gain = delta.clip(lower=0).ewm(span=14).mean()
-        loss = (-delta.clip(upper=0)).ewm(span=14).mean()
-        rsi = round(float(100 - (100 / (1 + gain.iloc[-1] / (loss.iloc[-1] + 1e-10)))), 1)
-        ema12 = close.ewm(span=12).mean()
-        ema26 = close.ewm(span=26).mean()
-        macd = ema12 - ema26
-        signal = macd.ewm(span=9).mean()
-        macd_b = bool(macd.iloc[-1] > signal.iloc[-1])
-        tr = (high - low).ewm(span=14).mean()
-        atr_pct = round(float(tr.iloc[-1] / close.iloc[-1] * 100), 2)
-        ma20 = close.rolling(20).mean()
-        std20 = close.rolling(20).std()
-        bb_u = ma20 + 2 * std20
-        bb_l = ma20 - 2 * std20
-        bb_pct = round(float((close.iloc[-1] - bb_l.iloc[-1]) / (bb_u.iloc[-1] - bb_l.iloc[-1] + 1e-10) * 100), 1)
-        vol_ratio = round(float(vol.iloc[-1] / vol.mean()), 2)
-        price = round(float(close.iloc[-1]), 2)
-        prev = round(float(close.iloc[-2]), 2)
-        chg = round((price - prev) / prev * 100, 2)
-        atr_abs = price * atr_pct / 100
-        sc = 0
-        if rsi < 35: sc += 3
-        elif rsi < 50: sc += 2
-        elif rsi > 72: sc -= 3
-        elif rsi > 65: sc -= 1
-        if macd_b: sc += 2
-        else: sc -= 2
-        if bb_pct < 20: sc += 2
-        elif bb_pct > 85: sc -= 2
-        if vol_ratio > 1.4: sc += 1
-        if sc >= 4: rec = 'BUY'
-        elif sc <= -3: rec = 'SELL'
-        else: rec = 'WAIT'
-        conf = min(95, max(40, 55 + sc * 7))
-        dy, ex, sector, name = 0, None, '', ticker.upper()
-        try:
-            r2 = requests.get(
-                f'https://query1.finance.yahoo.com/v10/finance/quoteSummary/{ticker}',
-                headers=HEADERS,
-                params={'modules': 'assetProfile,summaryDetail,price'},
-                timeout=10
-            )
-            if r2.ok:
-                result = r2.json().get('quoteSummary', {}).get('result', [{}])[0]
-                sector = result.get('assetProfile', {}).get('sector', '')
-                name = result.get('price', {}).get('longName', ticker.upper()) or ticker.upper()
-                summary = result.get('summaryDetail', {})
-                dy = round(float(summary.get('dividendYield', {}).get('raw', 0) or 0), 4)
-                ex = summary.get('exDividendDate', {}).get('fmt', None)
-        except Exception:
-            pass
-        return jsonify({
-            'ticker': ticker.upper(), 'name': name, 'sector': sector,
-            'price': price, 'chg': chg, 'rsi': rsi,
-            'macd': 'BULLISH' if macd_b else 'BEARISH',
-            'atr_pct': atr_pct, 'bb_pct': bb_pct, 'vol_ratio': vol_ratio,
-            'rec': rec, 'conf': conf, 'entry': price,
-            'target': round(price + 2 * atr_abs, 2),
-            'stop': round(price - 1.5 * atr_abs, 2),
-            'support': round(float(low.rolling(20).min().iloc[-1]), 2),
-            'resistance': round(float(high.rolling(20).max().iloc[-1]), 2),
-            'dividend_yield': dy, 'ex_dividend_date': ex,
-            'history': [round(float(p), 2) for p in close.tolist()],
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/chart/<ticker>')
-def get_chart(ticker):
-    try:
-        period = request.args.get('period', '1mo')
-        interval, range_ = period_params(period)
-        hist = yf_chart(ticker, interval, range_)
-        if hist.empty:
-            return jsonify({'error': 'אין נתונים'}), 404
-        candles = [{'t': idx.strftime('%Y-%m-%d'), 'o': round(float(r['Open']), 2),
-                    'h': round(float(r['High']), 2), 'l': round(float(r['Low']), 2),
-                    'c': round(float(r['Close']), 2), 'v': int(r['Volume'])}
-                   for idx, r in hist.iterrows()]
-        close = pd.Series([c['c'] for c in candles])
-        delta = close.diff()
-        gain = delta.clip(lower=0).ewm(span=14).mean()
-        loss = (-delta.clip(upper=0)).ewm(span=14).mean()
-
-        def clean(series):
-            return [None if pd.isna(v) else float(v) for v in series]
-
-        rsi = clean((100 - (100 / (1 + gain / (loss + 1e-10)))).round(1))
-        ema12 = close.ewm(span=12).mean()
-        ema26 = close.ewm(span=26).mean()
-        macd_line = clean((ema12 - ema26).round(4))
-        sig_line = clean((ema12 - ema26).ewm(span=9).mean().round(4))
-        ma20 = clean(close.rolling(20).mean().round(2))
-
-        return jsonify({'candles': candles, 'rsi': rsi, 'macd': macd_line,
-                        'signal': sig_line, 'ma20': ma20})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/news/<ticker>')
-def get_news(ticker):
-    try:
-        r = requests.get(
-            'https://query2.finance.yahoo.com/v1/finance/search',
-            headers=HEADERS,
-            params={'q': ticker, 'newsCount': 8},
-            timeout=10
-        )
-        news = r.json().get('news', []) if r.ok else []
-        return jsonify([{
-            'title': n.get('title', ''),
-            'link': n.get('link', ''),
-            'publisher': n.get('publisher', ''),
-            'time': n.get('providerPublishTime', 0)
-        } for n in news[:8]])
-    except Exception:
-        return jsonify([])
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
