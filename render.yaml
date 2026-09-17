@@ -1,0 +1,27 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Create the service by pointing Render at this repository (New > Blueprint).
+services:
+  - type: web
+    name: jonathan-stocks
+    runtime: python
+    # A persistent disk requires a paid instance. On the free plan remove the
+    # `disk:` block and the DB_PATH var below — the app then runs fine, but
+    # registered accounts reset on every deploy, so use guest mode there.
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    # One process with threads: the worker spends its time waiting on Yahoo,
+    # and a single process keeps SQLite free of cross-process write contention
+    # while letting the in-memory quote cache actually be shared.
+    startCommand: gunicorn app:app --workers 1 --threads 8 --timeout 120 --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_PATH
+        value: /var/data/stocks.db
+      - key: PYTHON_VERSION
+        value: "3.12"
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

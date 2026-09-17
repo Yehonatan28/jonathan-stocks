@@ -3,6 +3,7 @@ import os
 import time
 import sqlite3
 import hashlib
+import secrets
 import pandas as pd
 import requests
 from datetime import datetime
@@ -11,7 +12,11 @@ from concurrent.futures import ThreadPoolExecutor
 import engine
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'jonathan-stocks-secret-2024-xk9p')
+# Session cookies are signed with this key. The fallback is random per process
+# rather than a literal: a constant checked into a public repository lets anyone
+# forge a session cookie and sign in as any user. Set SECRET_KEY in the host's
+# environment so sessions survive a restart.
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 # Serverless hosts (Vercel) mount a read-only filesystem with only /tmp
