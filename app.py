@@ -14,7 +14,13 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'jonathan-stocks-secret-2024-xk9p')
 
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stocks.db')
+# Serverless hosts (Vercel) mount a read-only filesystem with only /tmp
+# writable, and that directory does not survive a cold start. Registered
+# accounts therefore persist only on a host with a real disk; guest mode keeps
+# everything in the browser and is unaffected.
+DB_PATH = os.environ.get('DB_PATH') or (
+    '/tmp/stocks.db' if os.environ.get('VERCEL')
+    else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stocks.db'))
 
 # simple in-memory cache {key: (expires_at, data)}
 _CACHE = {}
