@@ -8,6 +8,8 @@ import requests
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
+import engine
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'jonathan-stocks-secret-2024-xk9p')
 
@@ -69,7 +71,19 @@ def init_db():
         day TEXT NOT NULL,
         value REAL NOT NULL,
         UNIQUE(user_id, day));
+    CREATE TABLE IF NOT EXISTS settings(
+        user_id INTEGER PRIMARY KEY,
+        equity REAL DEFAULT 0,
+        risk_pct REAL DEFAULT 1.0,
+        trail_mult REAL DEFAULT 3.0);
     ''')
+    # risk-management columns, added to portfolios created before the engine
+    existing = {r['name'] for r in conn.execute('PRAGMA table_info(portfolio)')}
+    for col, decl in (('stop', 'REAL'), ('init_stop', 'REAL'),
+                      ('stop_type', "TEXT DEFAULT 'fixed'"), ('target', 'REAL'),
+                      ('opened_at', 'TEXT')):
+        if col not in existing:
+            conn.execute(f'ALTER TABLE portfolio ADD COLUMN {col} {decl}')
     conn.commit()
     conn.close()
 
@@ -79,6 +93,16 @@ init_db()
 
 def hash_pw(pw):
     return hashlib.sha256(('js-salt-' + pw).encode()).hexdigest()
+
+
+def _num(v):
+    """Coerce user input to a float, or None when it is blank/unparsable."""
+    if v is None or v == '':
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
 
 
 def current_user():
@@ -164,9 +188,13 @@ def portfolio():
         if not ticker or qty <= 0 or entry <= 0:
             conn.close()
             return jsonify({'error': 'Invalid data'}), 400
+        stop = _num(d.get('stop'))
         cur = conn.execute(
-            'INSERT INTO portfolio(user_id,ticker,qty,entry,notes) VALUES(?,?,?,?,?)',
-            (uid, ticker, qty, entry, d.get('notes', '')))
+            'INSERT INTO portfolio(user_id,ticker,qty,entry,notes,stop,init_stop,'
+            'stop_type,target,opened_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+            (uid, ticker, qty, entry, d.get('notes', ''), stop, stop,
+             d.get('stop_type') or 'fixed', _num(d.get('target')),
+             datetime.utcnow().strftime('%Y-%m-%d')))
         conn.commit()
         pid = cur.lastrowid
         conn.close()
@@ -176,16 +204,74 @@ def portfolio():
     return jsonify([dict(r) for r in rows])
 
 
-@app.route('/api/portfolio/<int:pos_id>', methods=['DELETE'])
+@app.route('/api/portfolio/<int:pos_id>', methods=['DELETE', 'PATCH'])
 def portfolio_delete(pos_id):
     uid = current_user()
     if not uid:
         return jsonify({'error': 'Not logged in'}), 401
     conn = db()
+    if request.method == 'PATCH':
+        d = request.get_json(silent=True) or {}
+        row = conn.execute('SELECT * FROM portfolio WHERE id=? AND user_id=?',
+                           (pos_id, uid)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Position not found'}), 404
+        fields, values = [], []
+        for key in ('qty', 'entry', 'stop', 'target'):
+            if key in d:
+                fields.append(f'{key}=?')
+                values.append(_num(d[key]))
+        if 'stop_type' in d:
+            fields.append('stop_type=?')
+            values.append(d['stop_type'] if d['stop_type'] in ('fixed', 'trail') else 'fixed')
+        if 'notes' in d:
+            fields.append('notes=?')
+            values.append(d['notes'])
+        # the first stop ever set is the reference risk every R multiple uses
+        if 'stop' in d and row['init_stop'] is None and _num(d['stop']) is not None:
+            fields.append('init_stop=?')
+            values.append(_num(d['stop']))
+        if not fields:
+            conn.close()
+            return jsonify({'error': 'Nothing to update'}), 400
+        values.extend([pos_id, uid])
+        conn.execute(f'UPDATE portfolio SET {",".join(fields)} WHERE id=? AND user_id=?',
+                     values)
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True})
     conn.execute('DELETE FROM portfolio WHERE id=? AND user_id=?', (pos_id, uid))
     conn.commit()
     conn.close()
     return jsonify({'ok': True})
+
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+def settings_route():
+    uid = current_user()
+    if not uid:
+        return jsonify({'error': 'Not logged in'}), 401
+    conn = db()
+    if request.method == 'POST':
+        d = request.get_json(silent=True) or {}
+        equity = max(0.0, _num(d.get('equity')) or 0)
+        risk_pct = min(10.0, max(0.1, _num(d.get('risk_pct')) or 1.0))
+        tm = _num(d.get('trail_mult'))
+        trail_mult = min(6.0, max(1.0, tm)) if tm else None
+        conn.execute(
+            'INSERT INTO settings(user_id,equity,risk_pct,trail_mult) VALUES(?,?,?,?) '
+            'ON CONFLICT(user_id) DO UPDATE SET equity=excluded.equity,'
+            'risk_pct=excluded.risk_pct,trail_mult=excluded.trail_mult',
+            (uid, equity, risk_pct, trail_mult))
+        conn.commit()
+        conn.close()
+        return jsonify({'ok': True, 'equity': equity, 'risk_pct': risk_pct,
+                        'trail_mult': trail_mult})
+    row = conn.execute('SELECT equity,risk_pct,trail_mult FROM settings WHERE user_id=?',
+                       (uid,)).fetchone()
+    conn.close()
+    return jsonify(dict(row) if row else dict(engine.DEFAULT_SETTINGS))
 
 
 @app.route('/api/pf_history', methods=['GET', 'POST'])
@@ -559,6 +645,73 @@ def profile(ticker):
         return jsonify(out)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# ---------- Engine: technical analysis + risk management ----------
+
+@app.route('/api/engine/analyze/<ticker>')
+def engine_analyze(ticker):
+    key = 'an:' + ticker.upper()
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    out = engine.analyze(ticker)
+    cache_set(key, out, 300 if out.get('ok') else 60)
+    return jsonify(out)
+
+
+def _clean_positions(raw):
+    """Accept positions posted by a guest browser, dropping anything unusable."""
+    out = []
+    for p in (raw or [])[:60]:
+        if not isinstance(p, dict):
+            continue
+        ticker = (p.get('ticker') or '').strip().upper()
+        qty, entry = _num(p.get('qty')), _num(p.get('entry'))
+        if not ticker or not qty or not entry or qty <= 0 or entry <= 0:
+            continue
+        out.append({
+            'id': p.get('id'), 'ticker': ticker, 'qty': qty, 'entry': entry,
+            'stop': _num(p.get('stop')), 'init_stop': _num(p.get('init_stop')),
+            'stop_type': p.get('stop_type') if p.get('stop_type') in ('fixed', 'trail') else 'fixed',
+            'target': _num(p.get('target')),
+        })
+    return out
+
+
+@app.route('/api/engine/plan', methods=['POST'])
+def engine_plan():
+    """The daily action plan. Logged-in users are read from the database;
+    guests post their locally stored portfolio in the request body."""
+    d = request.get_json(silent=True) or {}
+    uid = current_user()
+    if uid:
+        conn = db()
+        positions = [dict(r) for r in
+                     conn.execute('SELECT * FROM portfolio WHERE user_id=?', (uid,))]
+        watch = [r['ticker'] for r in
+                 conn.execute('SELECT ticker FROM watchlist WHERE user_id=?', (uid,))]
+        row = conn.execute(
+            'SELECT equity,risk_pct,trail_mult FROM settings WHERE user_id=?',
+            (uid,)).fetchone()
+        conn.close()
+        settings = dict(row) if row else {}
+    else:
+        positions = _clean_positions(d.get('positions'))
+        watch = [str(t).strip().upper() for t in (d.get('watch') or [])[:40] if str(t).strip()]
+        settings = d.get('settings') if isinstance(d.get('settings'), dict) else {}
+
+    trail_mult = _num(settings.get('trail_mult'))
+    settings = {
+        'equity': max(0.0, _num(settings.get('equity')) or 0),
+        'risk_pct': min(10.0, max(0.1, _num(settings.get('risk_pct')) or 1.0)),
+        # None keeps the engine's adaptive multiple
+        'trail_mult': min(6.0, max(1.0, trail_mult)) if trail_mult else None,
+    }
+    try:
+        return jsonify(engine.build_plan(positions, watch, settings))
+    except Exception as e:
+        return jsonify({'error': f'שגיאה בחישוב התוכנית: {e}'}), 500
 
 
 @app.route('/')
