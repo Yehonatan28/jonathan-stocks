@@ -1,13 +1,20 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 # Create the service by pointing Render at this repository (New > Blueprint).
+#
+# This is the FREE tier: no payment details required. The filesystem is a real
+# writable disk, so registered accounts work — but the container is rebuilt on
+# every deploy and after the service sleeps (free services spin down after ~15
+# minutes idle and take ~a minute to wake), and each rebuild starts the
+# database empty. Guest mode stores everything in the browser and is unaffected.
+#
+# TO MAKE ACCOUNTS DURABLE (paid, ~$7/mo): change `plan: free` to
+# `plan: starter`, then uncomment the disk block and the DB_PATH variable
+# below. The database then lives on the disk and survives deploys.
 services:
   - type: web
     name: jonathan-stocks
     runtime: python
-    # A persistent disk requires a paid instance. On the free plan remove the
-    # `disk:` block and the DB_PATH var below — the app then runs fine, but
-    # registered accounts reset on every deploy, so use guest mode there.
-    plan: starter
+    plan: free
     buildCommand: pip install -r requirements.txt
     # One process with threads: the worker spends its time waiting on Yahoo,
     # and a single process keeps SQLite free of cross-process write contention
@@ -17,11 +24,11 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
-      - key: DB_PATH
-        value: /var/data/stocks.db
       - key: PYTHON_VERSION
         value: "3.12"
-    disk:
-      name: data
-      mountPath: /var/data
-      sizeGB: 1
+      # - key: DB_PATH
+      #   value: /var/data/stocks.db
+    # disk:
+    #   name: data
+    #   mountPath: /var/data
+    #   sizeGB: 1
