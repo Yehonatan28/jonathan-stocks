@@ -113,14 +113,25 @@ def _f(value, digits=2):
     return round(v, digits)
 
 
-def _slope_pct(series, bars):
+def _slope_pct(series, bars, i=-1):
     """Percent change of a moving average over `bars` - its direction."""
-    if len(series.dropna()) <= bars:
+    idx = len(series) + i if i < 0 else i
+    if idx - bars < 0:
         return None
-    now, then = series.iloc[-1], series.iloc[-1 - bars]
+    now, then = series.iloc[idx], series.iloc[idx - bars]
     if not then or math.isnan(now) or math.isnan(then):
         return None
     return round((now - then) / abs(then) * 100, 2)
+
+
+def _bars_since_flip(flags, i, limit=30):
+    """How many bars ago a boolean series last changed value, at bar i."""
+    start = max(0, i - limit + 1)
+    window = flags.iloc[start:i + 1].tolist()
+    for back in range(len(window) - 1):
+        if window[-1 - back] != window[-2 - back]:
+            return back
+    return None
 
 
 # ------------------------------------------------------------- 3. analyze ---
@@ -136,59 +147,74 @@ REGIMES = {
 }
 
 
-def analyze(ticker):
-    """Full technical picture for one ticker."""
-    ticker = ticker.strip().upper()
-    df = fetch_daily(ticker)
-    if df is None or len(df) < 60:
-        return {'ticker': ticker, 'ok': False,
-                'error': 'אין מספיק נתונים היסטוריים לניתוח'}
+def _indicators(df):
+    """Every indicator series at once.
 
+    Each value at bar i depends only on bars <= i, which is what lets the
+    backtest walk this frame forward without leaking future prices.
+    """
     close, high, low, vol = df['Close'], df['High'], df['Low'], df['Volume']
-    price = float(close.iloc[-1])
-    prev = float(close.iloc[-2])
-
-    sma20 = close.rolling(20).mean()
-    sma50 = close.rolling(50).mean()
-    sma200 = close.rolling(200).mean() if len(close) >= 200 else close.rolling(len(close)).mean()
-    ema21 = close.ewm(span=21, adjust=False).mean()
-
-    r = rsi(close)
-    a = atr(df)
+    macd_line, macd_sig, macd_hist = macd(close)
     adx_s, plus_di, minus_di = adx(df)
-    macd_l, macd_s, macd_h = macd(close)
+    n = len(close)
+    return {
+        'close': close, 'high': high, 'low': low, 'volume': vol,
+        'open': df['Open'],
+        'sma20': close.rolling(20).mean(),
+        'sma50': close.rolling(50).mean(),
+        'sma200': close.rolling(200 if n >= 200 else n).mean(),
+        'ema21': close.ewm(span=21, adjust=False).mean(),
+        'rsi': rsi(close),
+        'atr': atr(df),
+        'adx': adx_s, 'plus_di': plus_di, 'minus_di': minus_di,
+        'macd': macd_line, 'macd_sig': macd_sig, 'macd_hist': macd_hist,
+        # shifted: the channel the current bar is measured against excludes it
+        'donch20_high': high.rolling(20).max().shift(1),
+        'donch20_low': low.rolling(20).min().shift(1),
+        'donch55_high': high.rolling(55, min_periods=20).max().shift(1),
+        'swing_low': low.rolling(10).min(),
+        'swing_high': high.rolling(10).max(),
+        'hh22': high.rolling(22).max(),
+        'vol_avg': vol.rolling(20).mean(),
+        'wk52_high': high.rolling(252, min_periods=20).max(),
+        'wk52_low': low.rolling(252, min_periods=20).min(),
+    }
 
-    atr_v = float(a.iloc[-1])
-    atr_pct = atr_v / price * 100 if price else 0
 
-    # channels & structure
-    donch20_high = float(high.iloc[-21:-1].max())
-    donch20_low = float(low.iloc[-21:-1].min())
-    donch55_high = float(high.iloc[-56:-1].max()) if len(high) > 56 else donch20_high
-    swing_low = float(low.iloc[-10:].min())
-    swing_high = float(high.iloc[-10:].max())
-    hh22 = float(high.iloc[-22:].max())
-    wk52_high = float(high.iloc[-252:].max())
-    wk52_low = float(low.iloc[-252:].min())
+def _snapshot(ticker, ind, i):
+    """The technical picture as it stood at the close of bar i.
 
-    vol_avg = float(vol.iloc[-20:].mean()) or 1.0
-    vol_ratio = float(vol.iloc[-1]) / vol_avg
+    analyze() is this at the last bar; the backtest is this at every bar.
+    Sharing one builder is what makes the backtest a test of the live rules
+    rather than of a second implementation that drifts from them.
+    """
+    def at(key, default=None):
+        v = ind[key].iloc[i]
+        if v is None or (isinstance(v, float) and math.isnan(v)):
+            return default
+        return float(v)
 
-    v_sma20 = float(sma20.iloc[-1]) if not math.isnan(sma20.iloc[-1]) else price
-    v_sma50 = float(sma50.iloc[-1]) if not math.isnan(sma50.iloc[-1]) else price
-    v_sma200 = float(sma200.iloc[-1]) if not math.isnan(sma200.iloc[-1]) else price
-    v_rsi = float(r.iloc[-1])
-    v_adx = float(adx_s.iloc[-1])
-    slope200 = _slope_pct(sma200, 20)
-    slope50 = _slope_pct(sma50, 10)
+    price = at('close')
+    if price is None:
+        return None
+    prev = float(ind['close'].iloc[i - 1]) if i > 0 else price
 
-    above200 = price > v_sma200
-    above50 = price > v_sma50
-    above20 = price > v_sma20
+    v_sma20 = at('sma20', price)
+    v_sma50 = at('sma50', price)
+    v_sma200 = at('sma200', price)
+    v_rsi = at('rsi', 50.0)
+    v_adx = at('adx', 0.0)
+    atr_v = at('atr', 0.0) or 0.0
+    vol_avg = at('vol_avg') or 1.0
+    vol_ratio = (at('volume', 0.0) or 0.0) / vol_avg if vol_avg else 1.0
+
+    slope200 = _slope_pct(ind['sma200'], 20, i)
+    slope50 = _slope_pct(ind['sma50'], 10, i)
+
+    above200, above50, above20 = price > v_sma200, price > v_sma50, price > v_sma20
     golden = v_sma50 > v_sma200
-    macd_up = float(macd_l.iloc[-1]) > float(macd_s.iloc[-1])
+    macd_up = at('macd', 0.0) > at('macd_sig', 0.0)
 
-    # ----- regime
     # A pullback is not a broken trend: as long as the 50/200 structure holds
     # and price is above the 200, a dip of up to 4% under the 50 still counts
     # as an uptrend - that dip is exactly where the best entries live.
@@ -206,7 +232,6 @@ def analyze(ticker):
     else:
         regime = 'weak'
 
-    # ----- trend score 0-100: how much the evidence agrees on "up"
     score = 0
     score += 20 if above200 else 0
     score += 15 if above50 else 0
@@ -214,57 +239,63 @@ def analyze(ticker):
     score += 15 if golden else 0
     score += 10 if (slope200 or 0) > 0 else 0
     score += 10 if macd_up else 0
-    score += 10 if (v_adx >= 20 and float(plus_di.iloc[-1]) > float(minus_di.iloc[-1])) else 0
+    score += 10 if (v_adx >= 20 and at('plus_di', 0.0) > at('minus_di', 0.0)) else 0
     score += 10 if 45 <= v_rsi <= 70 else (5 if 35 <= v_rsi < 45 else 0)
-    score = min(100, score)
-
-    # ----- crossover freshness (how many bars ago it happened)
-    def _bars_since(cond_series, limit=30):
-        tail = cond_series.iloc[-limit:]
-        flips = tail.ne(tail.shift())
-        idx = [i for i, v in enumerate(flips.tolist()) if v and i > 0]
-        return (len(tail) - 1 - idx[-1]) if idx else None
 
     golden_cross_bars = None
-    if len(sma200.dropna()) > 30:
-        gc = (sma50 > sma200)
-        if bool(gc.iloc[-1]):
-            golden_cross_bars = _bars_since(gc)
-    macd_cross_bars = None
-    mc = macd_l > macd_s
-    if bool(mc.iloc[-1]):
-        macd_cross_bars = _bars_since(mc)
+    if golden and len(ind['sma200'].dropna()) > 30:
+        golden_cross_bars = _bars_since_flip(ind['sma50'] > ind['sma200'], i)
+    macd_cross_bars = _bars_since_flip(ind['macd'] > ind['macd_sig'], i) if macd_up else None
 
-    out = {
+    snap = {
         'ticker': ticker, 'ok': True,
         'price': _f(price), 'prev_close': _f(prev),
         'chg_pct': _f((price - prev) / prev * 100) if prev else None,
-        'regime': regime, 'regime_he': REGIMES[regime], 'trend_score': score,
+        'regime': regime, 'regime_he': REGIMES[regime],
+        'trend_score': min(100, score),
         'ma': {'sma20': _f(v_sma20), 'sma50': _f(v_sma50), 'sma200': _f(v_sma200),
-               'ema21': _f(float(ema21.iloc[-1])),
+               'ema21': _f(at('ema21', price)),
                'slope50': slope50, 'slope200': slope200,
-               'dist20': _f((price / v_sma20 - 1) * 100),
-               'dist50': _f((price / v_sma50 - 1) * 100),
-               'dist200': _f((price / v_sma200 - 1) * 100)},
-        'rsi': _f(v_rsi, 1),
-        'adx': _f(v_adx, 1),
-        'macd_up': macd_up,
-        'macd_hist': _f(float(macd_h.iloc[-1]), 3),
-        'atr': _f(atr_v), 'atr_pct': _f(atr_pct),
+               'dist20': _f((price / v_sma20 - 1) * 100) if v_sma20 else None,
+               'dist50': _f((price / v_sma50 - 1) * 100) if v_sma50 else None,
+               'dist200': _f((price / v_sma200 - 1) * 100) if v_sma200 else None},
+        'rsi': _f(v_rsi, 1), 'adx': _f(v_adx, 1),
+        'macd_up': macd_up, 'macd_hist': _f(at('macd_hist', 0.0), 3),
+        'atr': _f(atr_v), 'atr_pct': _f(atr_v / price * 100) if price else None,
         'vol_ratio': _f(vol_ratio),
-        'levels': {'support': _f(donch20_low), 'resistance': _f(donch20_high),
-                   'swing_low': _f(swing_low), 'swing_high': _f(swing_high),
-                   'high22': _f(hh22), 'breakout55': _f(donch55_high),
-                   'wk52_high': _f(wk52_high), 'wk52_low': _f(wk52_low),
-                   'from_high_pct': _f((price / wk52_high - 1) * 100)},
+        'levels': {
+            'support': _f(at('donch20_low', price)),
+            'resistance': _f(at('donch20_high', price)),
+            'swing_low': _f(at('swing_low', price)),
+            'swing_high': _f(at('swing_high', price)),
+            'high22': _f(at('hh22', price)),
+            'breakout55': _f(at('donch55_high', price)),
+            'wk52_high': _f(at('wk52_high', price)),
+            'wk52_low': _f(at('wk52_low', price)),
+            'from_high_pct': _f((price / at('wk52_high', price) - 1) * 100),
+        },
         'golden_cross': golden,
         'golden_cross_bars': golden_cross_bars,
         'macd_cross_bars': macd_cross_bars,
-        'history': [round(float(p), 2) for p in close.iloc[-120:].tolist()],
     }
+    snap['suggested_stop'] = suggest_initial_stop(snap)
+    snap['trail_stop'] = suggest_trail_stop(snap)
+    return snap
+
+
+def analyze(ticker):
+    """Full technical picture for one ticker, as of the latest close."""
+    ticker = ticker.strip().upper()
+    df = fetch_daily(ticker)
+    if df is None or len(df) < 60:
+        return {'ticker': ticker, 'ok': False,
+                'error': 'אין מספיק נתונים היסטוריים לניתוח'}
+    ind = _indicators(df)
+    out = _snapshot(ticker, ind, len(df) - 1)
+    if out is None:
+        return {'ticker': ticker, 'ok': False, 'error': 'נתוני המחיר פגומים'}
     out['entries'] = _entry_setups(out)
-    out['suggested_stop'] = suggest_initial_stop(out)
-    out['trail_stop'] = suggest_trail_stop(out)
+    out['history'] = [round(float(p), 2) for p in df['Close'].iloc[-120:].tolist()]
     return out
 
 
@@ -628,4 +659,156 @@ def _risk_summary(metrics, settings):
         'unprotected': sum(1 for m in metrics if not m['has_stop']),
         'concentration_pct': _f(largest / value * 100) if value else None,
         'equity': _f(equity),
+    }
+
+
+# ------------------------------------------------------------ 6. backtest ---
+
+# Round-trip friction per side: commission plus the slippage a market order
+# actually pays. Ignoring it is the most common way a backtest flatters itself.
+COST_PCT = 0.05
+
+WARMUP_BARS = 210          # the 200-day average needs history before it means anything
+
+
+def _max_drawdown(curve):
+    """Deepest peak-to-trough fall of an equity curve, as a positive percent."""
+    peak, worst = None, 0.0
+    for v in curve:
+        peak = v if peak is None or v > peak else peak
+        if peak:
+            worst = max(worst, (peak - v) / peak * 100)
+    return round(worst, 2)
+
+
+def backtest(ticker, years=3, settings=None):
+    """Replay the live rules bar by bar and report what they would have done.
+
+    No lookahead: a setup detected on the close of bar i is entered at the
+    open of bar i+1, and every stop decision uses only bars up to that point.
+    """
+    settings = {**DEFAULT_SETTINGS, **(settings or {})}
+    risk_pct = settings.get('risk_pct') or 1.0
+    ticker = ticker.strip().upper()
+
+    df = fetch_daily(ticker, range_='5y')
+    if df is None or len(df) < WARMUP_BARS + 60:
+        return {'ticker': ticker, 'ok': False,
+                'error': 'אין מספיק היסטוריה לבדיקה אמינה (נדרשות כשנתיים לפחות)'}
+
+    ind = _indicators(df)
+    closes, opens, highs, lows = ind['close'], ind['open'], ind['high'], ind['low']
+    dates = [d.strftime('%Y-%m-%d') for d in df.index]
+
+    first = max(WARMUP_BARS, len(df) - int(years * 252))
+    last = len(df) - 1
+    if first >= last - 20:
+        return {'ticker': ticker, 'ok': False, 'error': 'טווח הבדיקה קצר מדי'}
+
+    equity = 100.0
+    curve, trades = [], []
+    pos = None                      # {entry, stop, init_stop, shares, bar, setup}
+    pending = None                  # a setup fired on the previous close
+
+    for i in range(first, last + 1):
+        price = float(closes.iloc[i])
+
+        # --- 1. an order queued yesterday fills at today's open
+        if pending is not None and pos is None:
+            fill = float(opens.iloc[i])
+            stop = pending['stop']
+            if stop < fill:                       # the gap may invalidate the setup
+                risk_share = fill - stop
+                budget = equity * (risk_pct / 100)
+                shares = budget / risk_share
+                cap = equity * 0.33 / fill        # one name may not become the portfolio
+                shares = min(shares, cap)
+                if shares > 0:
+                    pos = {'entry': fill, 'stop': stop, 'init_stop': stop,
+                           'shares': shares, 'bar': i, 'setup': pending['setup'],
+                           'setup_he': pending['setup_he']}
+            pending = None
+
+        # --- 2. manage an open position against today's bar
+        if pos is not None:
+            low = float(lows.iloc[i])
+            exit_price = None
+            if float(opens.iloc[i]) <= pos['stop']:
+                exit_price = float(opens.iloc[i])   # gapped through the stop
+            elif low <= pos['stop']:
+                exit_price = pos['stop']
+
+            if exit_price is not None:
+                gross = (exit_price - pos['entry']) * pos['shares']
+                cost = (pos['entry'] + exit_price) * pos['shares'] * COST_PCT / 100
+                equity += gross - cost
+                risk_share = pos['entry'] - pos['init_stop']
+                trades.append({
+                    'ticker': ticker,
+                    'setup': pos['setup'], 'setup_he': pos['setup_he'],
+                    'entry_date': dates[pos['bar']], 'exit_date': dates[i],
+                    'entry': _f(pos['entry']), 'exit': _f(exit_price),
+                    'stop': _f(pos['init_stop']),
+                    'bars': i - pos['bar'],
+                    'return_pct': _f((exit_price / pos['entry'] - 1) * 100),
+                    'r': _f((exit_price - pos['entry']) / risk_share, 2) if risk_share else None,
+                    'pnl': _f(gross - cost),
+                })
+                pos = None
+            else:
+                snap = _snapshot(ticker, ind, i)
+                if snap:
+                    risk_share = pos['entry'] - pos['init_stop']
+                    r_mult = (price - pos['entry']) / risk_share if risk_share else 0
+                    # the same ladder the command center prescribes
+                    if r_mult >= 1 and pos['stop'] < pos['entry']:
+                        pos['stop'] = pos['entry']            # breakeven
+                    trail = snap['trail_stop']
+                    if trail and trail > pos['stop']:
+                        pos['stop'] = trail                   # ratchet, never down
+
+        # --- 3. flat: look for a setup to queue for tomorrow
+        if pos is None and pending is None and i < last:
+            snap = _snapshot(ticker, ind, i)
+            if snap:
+                setups = _entry_setups(snap)
+                if setups:
+                    best = setups[0]
+                    pending = {'stop': best['stop'], 'setup': best['code'],
+                               'setup_he': best['title']}
+
+        open_value = (price - pos['entry']) * pos['shares'] if pos else 0
+        curve.append(round(equity + open_value, 2))
+
+    # --- buy and hold over the identical window, for an honest comparison
+    base = float(closes.iloc[first])
+    bh_curve = [round(100 * float(closes.iloc[i]) / base, 2) for i in range(first, last + 1)]
+
+    wins = [t for t in trades if (t['r'] or 0) > 0]
+    rs = [t['r'] for t in trades if t['r'] is not None]
+    bars_held = sum(t['bars'] for t in trades)
+    span = last - first + 1
+
+    return {
+        'ticker': ticker, 'ok': True,
+        'from': dates[first], 'to': dates[last], 'years': round(span / 252, 1),
+        'trades': trades[::-1],
+        'stats': {
+            'count': len(trades),
+            'wins': len(wins),
+            'win_rate': _f(len(wins) / len(trades) * 100, 1) if trades else None,
+            'expectancy_r': _f(sum(rs) / len(rs), 2) if rs else None,
+            'best_r': _f(max(rs), 2) if rs else None,
+            'worst_r': _f(min(rs), 2) if rs else None,
+            'avg_bars': round(bars_held / len(trades)) if trades else None,
+            'exposure_pct': _f(bars_held / span * 100, 1) if span else None,
+            'system_return': _f(curve[-1] - 100),
+            'system_dd': _max_drawdown(curve),
+            'hold_return': _f(bh_curve[-1] - 100),
+            'hold_dd': _max_drawdown(bh_curve),
+            'cost_pct': COST_PCT,
+        },
+        'curve': curve,
+        'hold_curve': bh_curve,
+        'dates': dates[first:last + 1],
     }

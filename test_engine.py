@@ -317,6 +317,88 @@ def t_missing_data():
     assert plan['positions'] == []
 
 
+
+
+@check('backtest: an uptrend produces trades with sane bookkeeping')
+def t_backtest_basic():
+    install('BTU', series_to_df(uptrend(n=900, start=50)))
+    engine._DF_CACHE['BTU:5y'] = engine._DF_CACHE['BTU:2y']
+    b = engine.backtest('BTU', years=3, settings={'risk_pct': 1.0})
+    assert b['ok'], b.get('error')
+    s = b['stats']
+    assert s['count'] > 0, 'an uptrend should trigger at least one entry'
+    for t in b['trades']:
+        assert t['exit_date'] >= t['entry_date'], 'a trade cannot exit before it opens'
+        assert t['bars'] >= 0
+        assert t['entry'] > 0 and t['exit'] > 0
+        assert t['stop'] < t['entry'], 'the initial stop must sit below the entry'
+    assert len(b['curve']) == len(b['hold_curve']) == len(b['dates'])
+    assert s['win_rate'] is not None and 0 <= s['win_rate'] <= 100
+
+
+@check('backtest: losses are bounded near -1R by the stop')
+def t_backtest_risk_bounded():
+    install('BTU', series_to_df(uptrend(n=900, start=50)))
+    engine._DF_CACHE['BTU:5y'] = engine._DF_CACHE['BTU:2y']
+    b = engine.backtest('BTU', years=3)
+    losers = [t['r'] for t in b['trades'] if t['r'] is not None and t['r'] < 0]
+    # a gap can overshoot the stop, but nothing should lose multiples of the risk
+    assert all(r > -2.5 for r in losers), f'a stop failed to cap the loss: {losers}'
+
+
+@check('backtest: no lookahead - the result is unchanged by future bars')
+def t_backtest_no_lookahead():
+    """Appending future bars must not alter a single decision already taken.
+
+    Both runs use a window long enough to start at the same warmup bar, so the
+    only difference between them is the 40 bars of future appended to the
+    second. Any change to a trade that closed before that future exists could
+    only come from the engine peeking ahead.
+    """
+    full = uptrend(n=900, start=50)
+    install('LOOK', series_to_df(full))
+    engine._DF_CACHE['LOOK:5y'] = engine._DF_CACHE['LOOK:2y']
+    a = engine.backtest('LOOK', years=10)
+
+    install('LOOK2', series_to_df(full + uptrend(n=40, start=full[-1], seed=99)))
+    engine._DF_CACHE['LOOK2:5y'] = engine._DF_CACHE['LOOK2:2y']
+    b = engine.backtest('LOOK2', years=10)
+
+    assert a['from'] == b['from'], f"windows differ: {a['from']} vs {b['from']}"
+    cut = a['to']
+    keep = lambda bt: [(t['entry_date'], t['exit_date'], t['entry'], t['exit'], t['r'])
+                       for t in bt['trades'] if t['exit_date'] < cut]
+    ta, tb = keep(a), keep(b)
+    assert ta, 'the fixture should close at least one trade before the cut'
+    assert ta == tb, f'future bars changed past trades\n{ta[:3]}\n{tb[:3]}'
+
+
+@check('backtest: a downtrend stays flat rather than inventing trades')
+def t_backtest_downtrend():
+    install('BTD', series_to_df(downtrend(n=900, start=400)))
+    engine._DF_CACHE['BTD:5y'] = engine._DF_CACHE['BTD:2y']
+    b = engine.backtest('BTD', years=3)
+    assert b['ok']
+    assert b['stats']['count'] == 0, 'the entry rules require an uptrend'
+    assert b['stats']['system_return'] == 0
+    assert b['stats']['hold_return'] < 0, 'buy and hold should lose in a downtrend'
+
+
+@check('backtest: too little history is refused instead of guessed at')
+def t_backtest_short():
+    install('SHORT', series_to_df(uptrend(n=120)))
+    engine._DF_CACHE['SHORT:5y'] = engine._DF_CACHE['SHORT:2y']
+    b = engine.backtest('SHORT')
+    assert b['ok'] is False and b['error']
+
+
+@check('backtest: drawdown is measured peak to trough')
+def t_drawdown():
+    assert engine._max_drawdown([100, 120, 60, 90]) == 50.0
+    assert engine._max_drawdown([100, 110, 120]) == 0.0
+    assert engine._max_drawdown([]) == 0.0
+
+
 def main():
     failed = 0
     for name, fn in CHECKS:
