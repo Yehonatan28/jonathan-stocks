@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request, session, Response
 import os
+import math
 import time
 import sqlite3
 import hashlib
@@ -690,6 +691,27 @@ def _clean_positions(raw):
     return out
 
 
+@app.route('/api/engine/backtest/<ticker>')
+def engine_backtest(ticker):
+    """Replay the live rules over history for one ticker."""
+    try:
+        years = min(5.0, max(1.0, float(request.args.get('years', 3))))
+    except (TypeError, ValueError):
+        years = 3.0
+    risk_pct = min(10.0, max(0.1, _num(request.args.get('risk_pct')) or 1.0))
+    key = f'bt:{ticker.upper()}:{years}:{risk_pct}'
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    try:
+        out = engine.backtest(ticker, years=years, settings={'risk_pct': risk_pct})
+    except Exception as e:
+        return jsonify({'ticker': ticker.upper(), 'ok': False,
+                        'error': f'שגיאה בבדיקה ההיסטורית: {e}'}), 500
+    cache_set(key, out, 1800 if out.get('ok') else 60)
+    return jsonify(out)
+
+
 @app.route('/api/engine/plan', methods=['POST'])
 def engine_plan():
     """The daily action plan. Logged-in users are read from the database;
@@ -834,19 +856,40 @@ def get_stock(ticker):
 
 @app.route('/api/chart/<ticker>')
 def get_chart(ticker):
+    """Candles plus the indicator series the chart draws on top of them."""
     try:
         period = request.args.get('period', '1mo')
         interval, range_ = period_params(period)
         hist = yf_chart(ticker, interval, range_)
         if hist.empty:
             return jsonify({'error': 'No data'}), 404
+
+        close = hist['Close']
+        macd_line, macd_sig, _ = engine.macd(close)
+        rsi_s = engine.rsi(close)
+
+        def arr(series, digits=4):
+            """JSON-safe list: NaN is not valid JSON, so warmup becomes null."""
+            out = []
+            for v in series.tolist():
+                v = float(v)
+                out.append(None if math.isnan(v) or math.isinf(v) else round(v, digits))
+            return out
+
         candles = [{'t': idx.strftime('%Y-%m-%d'),
                     'ts': int(idx.timestamp()),
                     'o': round(float(r['Open']), 4), 'h': round(float(r['High']), 4),
                     'l': round(float(r['Low']), 4), 'c': round(float(r['Close']), 4),
                     'v': int(r['Volume'])}
                    for idx, r in hist.iterrows()]
-        return jsonify({'candles': candles})
+        return jsonify({
+            'candles': candles,
+            'ma20': arr(close.rolling(20).mean()),
+            'ma50': arr(close.rolling(50).mean()),
+            'ma200': arr(close.rolling(200).mean()),
+            'rsi': arr(rsi_s, 2),
+            'macd': arr(macd_line), 'signal': arr(macd_sig),
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
