@@ -11,6 +11,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 import engine
+import news as newsfeed
 
 app = Flask(__name__)
 # Session cookies are signed with this key. The fallback is random per process
@@ -894,20 +895,59 @@ def get_chart(ticker):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/news')
+def market_news():
+    """Headlines from the RSS feeds, optionally narrowed to your own names."""
+    scope = request.args.get('scope', 'all')
+    if scope not in ('all', 'us', 'il', 'mine'):
+        scope = 'all'
+    key = f'news:{scope}'
+    extra = []
+    if scope == 'mine':
+        uid = current_user()
+        if uid:
+            conn = db()
+            extra = [r['ticker'] for r in conn.execute(
+                'SELECT DISTINCT ticker FROM portfolio WHERE user_id=?', (uid,))]
+            extra += [r['ticker'] for r in conn.execute(
+                'SELECT ticker FROM watchlist WHERE user_id=?', (uid,))]
+            conn.close()
+        else:
+            extra = [t.strip().upper()
+                     for t in request.args.get('tickers', '').split(',') if t.strip()]
+        extra = list(dict.fromkeys(extra))[:6]
+        if not extra:
+            return jsonify({'items': [], 'failed': [],
+                            'error': 'הוסף מניות לתיק או למעקב כדי לראות חדשות עליהן'})
+        key = 'news:mine:' + ','.join(sorted(extra))
+
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    out = newsfeed.get_news(scope='all' if scope == 'mine' else scope,
+                            extra_tickers=extra, limit=45)
+    cache_set(key, out, 300 if out['items'] else 60)
+    return jsonify(out)
+
+
+@app.route('/api/news/sources')
+def news_sources():
+    """Which feeds actually answer from this deployment. The sandbox the
+    aggregator was written in blocks all of them, so this is how the list gets
+    checked against reality."""
+    return jsonify(newsfeed.source_health(request.args.get('ticker', 'AAPL')))
+
+
 @app.route('/api/news/<ticker>')
 def get_news(ticker):
-    try:
-        r = requests.get('https://query2.finance.yahoo.com/v1/finance/search',
-                         headers=HEADERS,
-                         params={'q': ticker, 'newsCount': 10},
-                         timeout=10)
-        news = r.json().get('news', []) if r.ok else []
-        return jsonify([{'title': n.get('title', ''), 'link': n.get('link', ''),
-                         'publisher': n.get('publisher', ''),
-                         'time': n.get('providerPublishTime', 0)}
-                        for n in news[:10]])
-    except Exception:
-        return jsonify([])
+    """Headlines for one symbol, its own feeds first."""
+    key = 'news:t:' + ticker.upper()
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    out = newsfeed.get_news(ticker=ticker, scope='all', limit=30)
+    cache_set(key, out, 300 if out['items'] else 60)
+    return jsonify(out)
 
 
 if __name__ == '__main__':
