@@ -173,17 +173,37 @@ option{background:var(--s2);color:var(--tx)}
 .news-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:13px}
 .news-hero{grid-row:span 2;padding:0;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:border-color .15s}
 .news-hero:hover{border-color:var(--line3)}
-.nh-visual{height:150px;background:linear-gradient(135deg,var(--s3),var(--s2));display:grid;place-items:center;font-size:40px;opacity:.5}
+/* The hero is as tall as the list beside it, so the visual panel takes the
+   slack instead of leaving dead space under the headline. */
+.nh-visual{flex:1;min-height:150px;background:linear-gradient(135deg,var(--s3),var(--s2));display:grid;place-items:center;font-size:38px;opacity:.45;border-bottom:1px solid var(--line)}
+.news-hero{flex-direction:column}
+.news-hero .nh-body{margin-top:auto}
 .nh-body{padding:16px}
 .nh-kicker{font-size:9px;letter-spacing:1.6px;color:var(--gold-deep);font-family:var(--disp);font-weight:700;margin-bottom:7px}
 .nh-title{font-size:16px;font-weight:700;line-height:1.4;margin-bottom:8px}
 .nh-meta{font-size:11px;color:var(--tx3);font-family:var(--mono)}
+.news-list{display:flex;flex-direction:column;gap:9px}
+.nh-sum{font-size:12.5px;color:var(--tx3);line-height:1.6;margin-bottom:9px}
+.news-hero,.news-item{text-decoration:none;color:inherit;display:flex}
+.news-hero:focus-visible,.news-item:focus-visible{border-color:var(--gold)}
 .news-item{display:flex;gap:13px;padding:13px 15px;cursor:pointer;align-items:flex-start;transition:border-color .15s,background .15s}
 .news-item:hover{border-color:var(--line3);background:var(--s2)}
 .ni-num{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--tx3);flex:none;width:22px}
 .ni-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:5px}
 .ni-meta{font-size:10.5px;color:var(--tx3);font-family:var(--mono)}
 .n-tag{display:inline-block;font-size:9px;letter-spacing:1.1px;padding:2px 7px;border-radius:4px;background:var(--s3);color:var(--tx3);font-family:var(--disp);font-weight:700;margin-left:7px}
+/* == loading skeletons == */
+.sk{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:5px}
+@keyframes shimmer{to{background-position:-200% 0}}
+.sk-line{height:11px;margin-bottom:9px}
+.sk-line.short{width:55%}
+.sk-visual{height:150px;border-radius:0}
+.sk-hero{padding:0;overflow:hidden;flex-direction:column;display:flex}
+.sk-item{display:flex;gap:13px;padding:14px 15px;align-items:flex-start}
+.sk-n{width:22px;height:22px;flex:none;border-radius:6px}
+.sk-card{padding:16px}
+.sk-row{height:42px;margin-bottom:7px}
+@media(prefers-reduced-motion:reduce){.sk{animation:none}}
 /* == tables == */
 .tbl-wrap{overflow:auto}
 .tbl,.risk-tbl,.cmp-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
@@ -380,6 +400,14 @@ option{background:var(--s2);color:var(--tx)}
 .auth-go:hover{background:var(--gold2)}
 .auth-guest{width:100%;margin-top:11px;padding:10px;border-radius:8px;background:none;border:1px solid var(--line2);color:var(--tx3);font-size:12px;cursor:pointer;font-family:'Heebo';transition:.15s}
 .auth-guest:hover{border-color:var(--line3);color:var(--tx2)}
+/* == shortcuts sheet == */
+.sc-box{width:94vw;max-width:420px;padding:22px;height:max-content}
+.sc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sc-hdr h3{font-size:16px;font-weight:700}
+.sc-row{display:flex;align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.sc-row:last-child{border-bottom:none}
+.sc-row kbd{font-family:var(--mono);font-size:11px;background:var(--s3);border:1px solid var(--line2);border-radius:6px;padding:4px 9px;color:var(--tx2);white-space:nowrap;min-width:92px;text-align:center}
+.sc-row span{color:var(--tx2)}
 /* == toasts, spinner, empty == */
 .toasts{position:fixed;bottom:20px;left:20px;z-index:4000;display:flex;flex-direction:column;gap:9px}
 .toast{padding:12px 16px;border-radius:9px;background:var(--s3);border:1px solid var(--line2);font-size:12.5px;font-weight:600;box-shadow:var(--shadow-lg);animation:tin .25s ease;max-width:330px}
@@ -548,16 +576,19 @@ option{background:var(--s2);color:var(--tx)}
 </div></section>
 
 <section id="v-news" class="view"><div class="wrap">
- <div class="sec">חדשות שוק ההון <span class="tag">LIVE</span></div>
- <div class="filters">
-  <button class="btn btn-gold btn-sm" onclick="loadNews('SPY',this)">שוק כללי</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadNews('AAPL',this)">Apple</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadNews('TSLA',this)">Tesla</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadNews('NVDA',this)">Nvidia</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadNews('TEVA.TA',this)">טבע</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadNews('CHKP.TA',this)">צ'ק פוינט</button>
+ <div class="cc-head">
+  <div class="sec" style="margin:0;flex:1">חדשות שוק ההון <span class="tag">RSS</span></div>
+  <span class="cc-stamp" id="newsStamp"></span>
  </div>
- <div id="newsBox"><div class="spinner"></div></div>
+ <div class="filters" id="newsScopes">
+  <button class="btn btn-gold btn-sm" data-scope="all" onclick="loadNews('all',this)">הכול</button>
+  <button class="btn btn-ghost btn-sm" data-scope="mine" onclick="loadNews('mine',this)">★ המניות שלי</button>
+  <button class="btn btn-ghost btn-sm" data-scope="il" onclick="loadNews('il',this)">🇮🇱 ישראל</button>
+  <button class="btn btn-ghost btn-sm" data-scope="us" onclick="loadNews('us',this)">🇺🇸 ארה"ב</button>
+  <input class="inp" id="newsSearch" placeholder="סנן לפי מילה…" style="max-width:200px" oninput="filterNews()">
+ </div>
+ <div id="newsBox"></div>
+ <div id="newsFailed"></div>
 </div></section>
 
 <section id="v-portfolio" class="view"><div class="wrap">
@@ -665,6 +696,9 @@ const TAPE=['AAPL','TSLA','NVDA','MSFT','GOOGL','AMZN','META','SPY','QQQ','TEVA.
 const IDX_US=[['^GSPC','S&P 500'],['^IXIC','נאסד"ק'],['^DJI','דאו ג\'ונס'],['^RUT','ראסל 2000'],['^VIX','מדד הפחד VIX']];
 const IDX_IL=[['^TA125.TA','ת"א 125'],['^TA35.TA','ת"א 35'],['^TA90.TA','ת"א 90'],['TEVA.TA','טבע'],['LUMI.TA','לאומי'],['POLI.TA','פועלים']];
 const $=id=>document.getElementById(id);
+/* Headlines arrive from third-party feeds, so nothing from them reaches
+   innerHTML unescaped. */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=(n,d=2)=>n==null?'—':Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtCap=n=>{if(n==null)return'—';if(n>=1e12)return fmt(n/1e12)+ ' טריליון $';if(n>=1e9)return fmt(n/1e9)+' מיליארד $';if(n>=1e6)return fmt(n/1e6)+' מיליון $';return fmt(n)};
 const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});let j={};try{j=await r.json()}catch(e){j={error:'השרת החזיר תשובה לא צפויה — ודא ש-app.py המעודכן הועלה לגיטהאב'}}if(!r.ok){if(r.status===404&&!j.error)j.error='הנתיב לא קיים בשרת — ודא ש-app.py המעודכן הועלה';throw j}return j};
@@ -697,7 +731,7 @@ const store={
 };
 async function loadUserData(){S.watch=await store.getWatch().catch(()=>[]);S.alerts=await store.getAlerts().catch(()=>[]);await loadSettings();renderWatch();renderAlerts();loadPortfolio();loadPlan(true)}
 /* ===================== nav ===================== */
-function go(v){document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('on',n.dataset.v===v));document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));$('v-'+v).classList.add('on');if(v==='heatmap')loadHeatmap();if(v==='news'&&!S._newsLoaded){S._newsLoaded=1;loadNews('SPY')}if(v==='watchlist')renderWatch();if(v==='portfolio')loadPortfolio();if(v==='command')loadPlan(!S.plan)}
+function go(v){document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('on',n.dataset.v===v));document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));$('v-'+v).classList.add('on');if(v==='heatmap')loadHeatmap();if(v==='news'&&!S._newsLoaded){S._newsLoaded=1;loadNews('all',document.querySelector('#newsScopes .btn'))}if(v==='watchlist')renderWatch();if(v==='portfolio')loadPortfolio();if(v==='command')loadPlan(!S.plan)}
 /* ===================== clock + market status ===================== */
 function tickClock(){const now=new Date();$('clockChip').textContent=now.toLocaleTimeString('he-IL');const ny=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));const d=ny.getDay(),m=ny.getHours()*60+ny.getMinutes();const open=d>=1&&d<=5&&m>=570&&m<960;const c=$('mktChip');c.className='chip '+(open?'mkt-open':'mkt-closed');$('mktTxt').textContent=open?'וול סטריט פתוחה':'וול סטריט סגורה'}
 setInterval(tickClock,1000);tickClock();
@@ -729,7 +763,7 @@ checkAlerts(items);
 function drawFG(v){const off=251-(v/100)*251;$('fgArc').style.strokeDashoffset=off;const col=v<25?'#ff4d6a':v<45?'#ffa726':v<60?'#e5b048':'#26d07c';$('fgArc').style.stroke=col;$('fgNum').textContent=v;$('fgNum').style.color=col;const w=v<25?'פחד קיצוני':v<45?'פחד':v<60?'ניטרלי':v<80?'תאווה':'תאווה קיצונית';$('fgWord').textContent=w;$('fgWord').style.color=col;$('fgChip').textContent='F&G '+v+' · '+w}
 /* ===================== stock cards ===================== */
 async function fetchStock(t){if(S.cache[t]&&Date.now()-S.cache[t]._at<60000)return S.cache[t];const d=await api('/api/stock/'+encodeURIComponent(t));d._at=Date.now();S.cache[t]=d;return d}
-async function loadPreset(key,btn){const list=PRESETS[key]||[];$('stocksGrid').innerHTML='<div class="spinner" style="grid-column:1/-1"></div>';document.querySelectorAll('#v-home .filters .btn').forEach(x=>{x.className=x.className.replace('btn-gold','btn-ghost')});if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
+async function loadPreset(key,btn){const list=PRESETS[key]||[];$('stocksGrid').innerHTML=skelCards(8);document.querySelectorAll('#v-home .filters .btn').forEach(x=>{x.className=x.className.replace('btn-gold','btn-ghost')});if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
 const results=await Promise.allSettled(list.map(fetchStock));const stocks=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
 renderCards(stocks);updateStats(stocks)}
 function updateStats(stocks){if(!stocks.length)return;$('stAvgRsi').textContent=fmt(stocks.reduce((a,s)=>a+s.rsi,0)/stocks.length,1);$('stBuy').textContent=stocks.filter(s=>s.rec==='BUY').length;$('stSell').textContent=stocks.filter(s=>s.rec==='SELL').length;$('stCount').textContent=stocks.length}
@@ -869,19 +903,85 @@ if(indOn('macd')&&typeof Chart!=='undefined')S.chart.macdC=new Chart($('macdC'),
 let cmdkTimer=null;
 function openCmdk(){$('cmdk').classList.add('open');$('cmdkInput').value='';$('cmdkList').innerHTML='';$('cmdkInput').focus()}
 function closeCmdk(){$('cmdk').classList.remove('open')}
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmdk()}if(e.key==='Escape'){closeCmdk();closeChart();closeProfile()}});
+const VIEWS=['home','command','backtest','news','portfolio','watchlist','heatmap','compare','alerts'];
+const SHORTCUTS=[['Ctrl / ⌘ + K','חיפוש מניה'],['1 – 9','מעבר בין הלשוניות'],['G','מילון מושגים'],['R','רענון הניתוח במפקדה'],['?','המסך הזה'],['Esc','סגירת חלון']];
+function toggleShortcuts(){
+ let el=$('shortcuts');
+ if(el){el.remove();return}
+ el=document.createElement('div');el.id='shortcuts';el.className='modal open';
+ el.onclick=ev=>{if(ev.target===el)el.remove()};
+ el.innerHTML=`<div class="glass sc-box"><div class="sc-hdr"><h3>קיצורי מקלדת</h3><button class="x-btn" onclick="toggleShortcuts()">✕</button></div>
+  ${SHORTCUTS.map(([k,d])=>`<div class="sc-row"><kbd>${k}</kbd><span>${d}</span></div>`).join('')}</div>`;
+ document.body.appendChild(el)}
+
+document.addEventListener('keydown',e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmdk();return}
+ if(e.key==='Escape'){closeCmdk();closeChart();closeProfile();const s=$('shortcuts');if(s)s.remove();return}
+ /* Never steal a key while the user is typing into a field. */
+ const t=e.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
+ if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+ if(e.key>='1'&&e.key<='9'){const v=VIEWS[+e.key-1];if(v){e.preventDefault();go(v)}return}
+ const k=e.key.toLowerCase();
+ if(k==='g'){e.preventDefault();toggleGloss()}
+ else if(k==='r'&&$('v-command').classList.contains('on')){e.preventDefault();loadPlan(true)}
+ else if(e.key==='?'){e.preventDefault();toggleShortcuts()}});
 $('cmdkInput').addEventListener('input',e=>{clearTimeout(cmdkTimer);const q=e.target.value.trim();if(!q){$('cmdkList').innerHTML='';return}cmdkTimer=setTimeout(async()=>{try{const items=await api('/api/search?q='+encodeURIComponent(q));S.cmdkSel=0;$('cmdkList').innerHTML=items.map((it,i)=>`<div class="cmdk-item ${i===0?'sel':''}" data-sym="${it.symbol}" onclick="pickCmdk('${it.symbol}')"><span class="sym">${it.symbol}</span><span class="nm">${it.name}</span><span class="ex">${it.exch}</span></div>`).join('')||'<div class="empty" style="padding:24px">אין תוצאות</div>'}catch(err){}},250)});
 $('cmdkInput').addEventListener('keydown',e=>{const items=[...document.querySelectorAll('.cmdk-item')];if(!items.length){if(e.key==='Enter'&&e.target.value.trim())pickCmdk(e.target.value.trim().toUpperCase());return}
 if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();S.cmdkSel=(S.cmdkSel+(e.key==='ArrowDown'?1:-1)+items.length)%items.length;items.forEach((it,i)=>it.classList.toggle('sel',i===S.cmdkSel));items[S.cmdkSel].scrollIntoView({block:'nearest'})}
 if(e.key==='Enter'){pickCmdk(items[S.cmdkSel].dataset.sym)}});
 function pickCmdk(sym){closeCmdk();openChart(sym)}
 /* ===================== news ===================== */
-function timeAgo(ts){if(!ts)return'';const m=Math.floor((Date.now()/1000-ts)/60);if(m<60)return'לפני '+m+' דק\'';const h=Math.floor(m/60);if(h<24)return'לפני '+h+' שע\'';return'לפני '+Math.floor(h/24)+' ימים'}
-async function loadNews(t,btn){$('newsBox').innerHTML='<div class="spinner"></div>';document.querySelectorAll('#v-news .filters .btn').forEach(x=>x.className=x.className.replace('btn-gold','btn-ghost'));if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
-try{const news=await api('/api/news/'+encodeURIComponent(t));if(!news.length){$('newsBox').innerHTML='<div class="empty"><h4>אין חדשות כרגע</h4></div>';return}
-const[hero,...rest]=news;
-$('newsBox').innerHTML=`<div class="news-grid"><a class="glass news-hero" href="${hero.link}" target="_blank" rel="noopener"><div class="nh-visual"><span class="nh-kicker">TOP STORY · ${t}</span></div><div class="nh-body"><span class="n-tag">${hero.publisher||'חדשות'}</span><div class="nh-title">${hero.title}</div><div class="nh-meta"><span>${timeAgo(hero.time)}</span></div></div></a>
-<div style="display:flex;flex-direction:column;gap:10px">${rest.slice(0,6).map((n,i)=>`<a class="glass news-item" href="${n.link}" target="_blank" rel="noopener"><span class="ni-num">${String(i+2).padStart(2,'0')}</span><div><div class="ni-title">${n.title}</div><div class="ni-meta">${n.publisher||''} · ${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}catch(e){$('newsBox').innerHTML='<div class="empty"><h4>שגיאה בטעינת חדשות</h4></div>'}}
+function timeAgo(ts){if(!ts)return'זמן לא ידוע';const m=Math.floor((Date.now()/1000-ts)/60);if(m<60)return'לפני '+m+' דק\'';const h=Math.floor(m/60);if(h<24)return'לפני '+h+' שע\'';return'לפני '+Math.floor(h/24)+' ימים'}
+let newsCache=[];
+async function loadNews(scope,btn){
+ scope=scope||'all';S.newsScope=scope;
+ document.querySelectorAll('#newsScopes .btn').forEach(x=>x.className=x.className.replace('btn-gold','btn-ghost'));
+ if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
+ $('newsBox').innerHTML=skeletonNews();$('newsFailed').innerHTML='';$('newsStamp').textContent='';
+ try{
+  let url='/api/news?scope='+scope;
+  if(scope==='mine'&&!S.user){
+   const mine=[...new Set([...S.pf.map(p=>p.ticker),...S.watch])].slice(0,6);
+   url+='&tickers='+encodeURIComponent(mine.join(','));
+  }
+  const d=await api(url);
+  newsCache=d.items||[];
+  if(d.error&&!newsCache.length){
+   $('newsBox').innerHTML=`<div class="empty"><div class="e-ic">★</div><h4>${d.error}</h4></div>`;return}
+  renderNews();
+  $('newsStamp').textContent=`${newsCache.length} כתבות · עודכן ${new Date().toLocaleTimeString('he-IL')}`;
+  /* Feeds move and block; say which ones are quiet instead of silently
+     showing a thinner page. */
+  if(d.failed&&d.failed.length){
+   const names=[...new Set(d.failed.map(f=>f.source))];
+   $('newsFailed').innerHTML=`<div class="cc-sub" style="margin-top:14px">מקורות שלא הגיבו כרגע: ${names.join(' · ')}. השאר נטענו כרגיל.</div>`}
+ }catch(e){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${e.error||'שגיאה בטעינת חדשות'}</h4></div>`}}
+
+function filterNews(){renderNews()}
+
+function renderNews(){
+ const q=($('newsSearch').value||'').trim().toLowerCase();
+ const list=q?newsCache.filter(n=>(n.title+' '+(n.summary||'')).toLowerCase().includes(q)):newsCache;
+ if(!list.length){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">📰</div><h4>${q?'אין כתבות שמתאימות לסינון':'אין חדשות כרגע'}</h4></div>`;return}
+ const[hero,...rest]=list;
+ $('newsBox').innerHTML=`<div class="news-grid">
+  <a class="glass news-hero" href="${hero.link}" target="_blank" rel="noopener noreferrer">
+   <div class="nh-visual">📈</div>
+   <div class="nh-body"><span class="nh-kicker">${esc(hero.source||'')} · הכותרת המובילה</span>
+    <div class="nh-title">${esc(hero.title)}</div>
+    ${hero.summary?`<div class="nh-sum">${esc(hero.summary)}</div>`:''}
+    <div class="nh-meta">${timeAgo(hero.time)}</div></div></a>
+  <div class="news-list">${rest.slice(0,14).map((n,i)=>`
+   <a class="glass news-item" href="${n.link}" target="_blank" rel="noopener noreferrer">
+    <span class="ni-num">${String(i+2).padStart(2,'0')}</span>
+    <div style="flex:1;min-width:0"><div class="ni-title">${esc(n.title)}</div>
+     <div class="ni-meta"><span class="n-tag">${esc(n.source||'')}</span>${timeAgo(n.time)}</div></div></a>`).join('')}</div>
+ </div>`}
+
+function skeletonNews(){
+ const row='<div class="glass sk-item"><div class="sk sk-n"></div><div style="flex:1"><div class="sk sk-line"></div><div class="sk sk-line short"></div></div></div>';
+ return `<div class="news-grid"><div class="glass sk-hero"><div class="sk sk-visual"></div><div style="padding:16px"><div class="sk sk-line"></div><div class="sk sk-line"></div><div class="sk sk-line short"></div></div></div><div class="news-list">${row.repeat(5)}</div></div>`}
+
 /* ===================== portfolio ===================== */
 let pfPie=null;
 async function loadPortfolio(){try{S.pf=await store.getPf()}catch(e){S.pf=[]}
@@ -908,7 +1008,7 @@ try{await store.addPf({ticker:t,qty:q,entry:e,notes:$('pfNotes').value,stop:st>0
 async function delPosition(id){await store.delPf(id).catch(()=>{});loadPortfolio();loadPlan(true);toast('פוזיציה הוסרה','info')}
 /* ===================== watchlist ===================== */
 async function renderWatch(){S.watch=await store.getWatch().catch(()=>[]);const g=$('wlGrid');if(!S.watch.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="e-ic">★</div><h4>אין מניות במעקב</h4><div style="font-size:13px">לחץ על ★ בכרטיס מניה כדי להוסיף</div></div>';return}
-g.innerHTML='<div class="spinner" style="grid-column:1/-1"></div>';
+g.innerHTML=skelCards(4);
 let quotes=[];try{quotes=await api('/api/quotes?tickers='+S.watch.join(','))}catch(e){}
 g.innerHTML=quotes.map(q=>`<div class="glass wl-item" onclick="openChart('${q.ticker}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-family:var(--mono);color:var(--gold-deep)">${q.ticker}</b><button class="iconbtn" onclick="event.stopPropagation();toggleWatch('${q.ticker}');renderWatch()">✕</button></div><div style="font-family:var(--mono);font-size:21px;font-weight:700">${q.price!=null?'$'+fmt(q.price):'—'}</div><div class="${q.chg>=0?'up':'dn'}" style="font-family:var(--mono);font-size:13px;font-weight:700;margin-top:3px">${q.chg!=null?(q.chg>=0?'▲ ':'▼ ')+fmt(Math.abs(q.chg))+'%':''}</div><canvas class="spark" data-s='${JSON.stringify(q.spark||[])}' height="38" style="margin-top:8px"></canvas></div>`).join('');
 requestAnimationFrame(()=>document.querySelectorAll('#wlGrid canvas').forEach(c=>{const d=JSON.parse(c.dataset.s);if(d.length>1)sparkline(c,d,d[d.length-1]>=d[0]?'rgb(38,208,124)':'rgb(255,77,106)')}))}
@@ -933,6 +1033,12 @@ async function delAlert(id){await store.delAlert(id).catch(()=>{});S.alerts=awai
 function renderAlerts(){const box=$('alList');if(!S.alerts.length){box.innerHTML='<div class="empty"><div class="e-ic">🔔</div><h4>אין התראות פעילות</h4></div>';return}
 box.innerHTML=S.alerts.map(a=>`<div class="glass al-item" id="al-${a.id}"><div><b style="font-family:var(--mono);color:var(--gold-deep)">${a.ticker}</b> <span style="font-size:13px;color:var(--tx2)">${a.condition==='above'?'מעל':'מתחת ל'}־ $${fmt(a.price)}</span></div><button class="iconbtn" onclick="delAlert(${a.id})">🗑</button></div>`).join('')}
 function checkAlerts(quotes){S.alerts.forEach(a=>{const q=quotes.find(x=>x.ticker===a.ticker);if(!q||q.price==null)return;const hit=a.condition==='above'?q.price>=a.price:q.price<=a.price;if(hit){const el=$('al-'+a.id);el&&el.classList.add('hit');if(!a._notified){a._notified=true;toast('🔔 '+a.ticker+' חצה את $'+fmt(a.price)+' — כעת $'+fmt(q.price),'ok')}}})}
+/* A skeleton in the shape of the incoming content, so the layout does not
+   jump when data lands and the wait reads as progress rather than a stall. */
+function skelCards(n){return Array(n).fill(0).map(()=>
+ '<div class="glass sk-card"><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk sk-visual" style="height:38px;margin:12px 0;border-radius:5px"></div><div class="sk sk-line short"></div></div>').join('')}
+function skelRows(n){return Array(n).fill(0).map(()=>'<div class="glass sk sk-row"></div>').join('')}
+
 /* ===================== command center ===================== */
 const ACT_ICON={SET_STOP:'🛡',STOP_HIT:'🚨',STOP_NEAR:'⚠️',BREAKEVEN:'🔒',TRAIL_UP:'📈',TREND_BREAK:'📉',TAKE_PARTIAL:'💰',RISK_OVERSIZE:'⚖️',PORTFOLIO_HEAT:'🔥'};
 const SEV_HE={critical:'קריטי',high:'דחוף',medium:'לטיפול',info:'לידיעה'};
@@ -973,7 +1079,7 @@ async function loadPlan(force){
     computed from the request body, so re-read the local store every time —
     in-memory state can drift from what is actually saved. */
  if(!S.user){try{S.pf=await store.getPf()}catch(e){}try{S.watch=await store.getWatch()}catch(e){}}
- if(force||!S.plan)$('ccActions').innerHTML='<div class="spinner"></div>';
+ if(force||!S.plan)$('ccActions').innerHTML=skelRows(4);
  try{
   const body=S.user?{}:{positions:S.pf,watch:S.watch,settings:S.settings||{}};
   const plan=await api('/api/engine/plan',{method:'POST',body:JSON.stringify(body)});
@@ -1100,7 +1206,7 @@ async function runBacktest(ticker,years){
  $('btTicker').value=t;
  if(years)$('btYears').value=String(years);
  const y=$('btYears').value;
- $('btBox').innerHTML='<div class="spinner"></div>';$('btStamp').textContent='';
+ $('btBox').innerHTML='<div class="bt-stats">'+skelRows(5)+'</div>'+skelRows(2);$('btStamp').textContent='';
  try{
   const risk=(S.settings&&S.settings.risk_pct)||1;
   const b=await api(`/api/engine/backtest/${encodeURIComponent(t)}?years=${y}&risk_pct=${risk}`);
