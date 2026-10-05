@@ -18,7 +18,10 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter as L
 from openpyxl.worksheet.datavalidation import DataValidation
 
-OUT = Path(__file__).with_name("budget.xlsx")
+import os
+
+CLEAN = os.environ.get("CLEAN") == "1"  # גרסה נקייה – בלי תנועות לדוגמה
+OUT = Path(__file__).with_name("budget_clean.xlsx" if CLEAN else "budget.xlsx")
 YEAR = 2026
 
 # ---------------------------------------------------------------- styles
@@ -335,7 +338,7 @@ sample = [
     (25, "ביטוחי בריאות וחיים", "", 450), (27, "חדר כושר", "", 250),
     (28, "סופרמרקט", "", 690), (29, "שונות", "", 120), (30, "בית ותחזוקה", "אינסטלטור", 350),
 ]
-for i, (day, cat, desc, amt) in enumerate(sample):
+for i, (day, cat, desc, amt) in enumerate([] if CLEAN else sample):
     rr = T_FIRST + i
     ws.cell(rr, 1, dt.date(YEAR, 1, day))
     ws.cell(rr, 2, cat)
@@ -880,7 +883,7 @@ for color, text in legend:
 rr += 1
 style(ws.cell(rr, 2, "⚠️ חשוב לדעת"), f=font(12, True, DARK), al=RIGHT)
 tips = [
-    "בלשונית 'תנועות' יש תנועות לדוגמה בחודש ינואר כדי שתראו איך הכל עובד. כשאתם מוכנים – סמנו אותן ומחקו (מקש Delete).",
+    *([] if CLEAN else ["בלשונית 'תנועות' יש תנועות לדוגמה בחודש ינואר כדי שתראו איך הכל עובד. כשאתם מוכנים – סמנו אותן ומחקו (מקש Delete)."]),
     "שמות הקטגוריות בהגדרות צריכים להיות ייחודיים. שינוי שם בהגדרות מעדכן את כל הלשוניות; תנועות ישנות עם השם הקודם לא ייספרו.",
     "שמות תוכניות החיסכון והחובות נלקחים מההגדרות – הפקדה לחיסכון או החזר חוב פשוט נרשמים כתנועה עם אותה קטגוריה.",
     "הסכומים תמיד חיוביים – הסוג (הכנסה / הוצאה) נקבע לפי הקטגוריה.",
