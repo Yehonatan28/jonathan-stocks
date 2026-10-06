@@ -77,7 +77,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .k:first-child{border-inline-start:none}
 .k .kl{font-size:12px;color:var(--muted-s);font-weight:600}
 .k .kv{font-family:var(--f-num);font-size:22px;font-weight:700;margin-top:2px;letter-spacing:-.3px;direction:ltr;text-align:right;unicode-bidi:plaintext}
-.k .kd{font-size:11.5px;color:var(--ink-2);margin-top:2px}
+.k .kd{font-size:11.5px;color:var(--ink-2);margin-top:4px;min-height:20px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
 .k[data-tone="good"] .kv{color:var(--good)} .k[data-tone="bad"] .kv{color:var(--bad)}
 .pill{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:999px;font-size:11.5px;font-weight:600;line-height:1.6;white-space:nowrap}
 .pill.good{background:var(--good-soft);color:var(--good)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
@@ -676,20 +676,20 @@ function renderHead(){
   const k=(l,v,d,tone)=>`<div class="k" data-tone="${tone||''}"><div class="kl">${esc(l)}</div><div class="kv">${v}</div><div class="kd">${d}</div></div>`;
   const incCount=s.rows.filter(isInc).length,left=s.budgetTotal-s.expense;
   let cmp;
-  if(!p)cmp=k(MONTHS[+ui.month.slice(5)-1],'חודש ראשון','מכאן מתחילים. מ'+MONTHS[+addM(ui.month,1).slice(5)-1]+' תופיע כאן השוואה לחודש הקודם');
+  const pill=(cls,t)=>`<span class="pill ${cls}">${t}</span>`;
+  if(!p)cmp=k('השוואה',esc(MONTHS[+ui.month.slice(5)-1]),pill('acc','חודש פתיחה'));
   else{
     /* a month in progress is compared with the same days of the previous month */
     const pn=MONTHS[+pm.slice(5)-1],base=s.isCur?sum(p.rows.filter(r=>!isInc(r)&&dayOf(r.date)<=s.elapsed),r=>r.amount):p.expense,d=s.expense-base;
-    if(!p.count||base<=0)cmp=k('מול '+pn,'—','אין הוצאות ב'+pn+' להשוואה');
-    else cmp=k('מול '+pn+(s.isCur?' באותם ימים':''),(d<=0?'▼ ':'▲ ')+esc(money(Math.abs(d))),
-      (d<=0?'<b class="pos">פחות</b> הוצאות':'<b class="neg">יותר</b> הוצאות')+' מ'+pn+' ('+Math.round(Math.abs(d)/base*100)+'%)'+(s.isCur?' · 1–'+s.elapsed+' בחודש':''),d>0?'bad':'good');
+    if(!p.count||base<=0)cmp=k('מול '+pn,'—','אין נתונים');
+    else cmp=k('מול '+pn+(s.isCur?' (1–'+s.elapsed+')':''),(d<=0?'▼ ':'▲ ')+esc(money(Math.abs(d))),pill(d<=0?'good':'bad',(d<=0?'פחות':'יותר')+' הוצאות · '+Math.round(Math.abs(d)/base*100)+'%'),d>0?'bad':'good');
   }
   $('#kpis').innerHTML=[
-    k('הכנסות',esc(money(s.income)),incCount?incCount+' תנועות הכנסה':'<button class="pill warn" data-act="openIncome" style="border:none;cursor:pointer">＋ הוספת הכנסה</button>',s.income?'good':''),
-    k('הוצאות',esc(money(s.expense)),s.fixed?M(s.fixed)+' מהן קבועות':s.count+' תנועות','bad'),
-    k('מאזן',esc(money(s.balance)),s.income?(s.balance>=0?'<span class="pill good">▲ נשאר בפלוס</span>':'<span class="pill bad">▼ במינוס</span>'):'יתעדכן כשיוזנו הכנסות',s.income?(s.balance>=0?'good':'bad'):''),
-    k('נשאר בתקציב',s.budgetTotal?esc(money(left)):'—',s.budgetTotal?(left>=0?'מתוך '+M(s.budgetTotal):'<span class="pill bad">חריגה מהתקציב</span>'):'אפשר להגדיר בטאב תקציב',s.budgetTotal?(left>=0?'good':'bad'):''),
-    s.isCur?k('צפי לסוף החודש',esc(money(s.proj)),'לפי הקצב עד היום, קבועות בפנים',s.budgetTotal?(s.proj<=s.budgetTotal?'good':'bad'):''):k('ממוצע ליום',esc(money(s.expense/s.dim)),s.count+' תנועות ב-'+s.dim+' ימים'),
+    k('הכנסות',esc(money(s.income)),incCount?incCount+' תנועות':'<button class="pill warn" data-act="openIncome" style="border:none;cursor:pointer">＋ הוספת הכנסה</button>',s.income?'good':''),
+    k('הוצאות',esc(money(s.expense)),s.fixed?'מהן קבועות '+M(s.fixed):s.count?s.count+' תנועות':'אין עדיין','bad'),
+    k('מאזן',esc(money(s.balance)),s.income?pill(s.balance>=0?'good':'bad',s.balance>=0?'בפלוס':'במינוס'):'אין הכנסות עדיין',s.income?(s.balance>=0?'good':'bad'):''),
+    k('נשאר בתקציב',s.budgetTotal?esc(money(left)):'—',s.budgetTotal?(left>=0?'מתוך '+M(s.budgetTotal):pill('bad','חריגה')):'לא הוגדר',s.budgetTotal?(left>=0?'good':'bad'):''),
+    s.isCur?k('צפי לסוף החודש',esc(money(s.proj)),'לפי הקצב עד היום',s.budgetTotal?(s.proj<=s.budgetTotal?'good':'bad'):''):k('ממוצע ליום',esc(money(s.expense/s.dim)),s.count+' תנועות'),
     cmp
   ].join('');
 }
@@ -920,7 +920,7 @@ function monthOptions(sel){
 }
 function renderCompare(){
   const A=ui.cmpA||ui.month,B=ui.cmpB||prevWithData(A);
-  if(!B){$('#panel-compare').innerHTML=`<div class="sheet"><div class="empty"><b>${esc(mLabel(A))} הוא החודש הראשון במעקב.</b><br>מ${esc(mLabel(addM(A,1)))} תופיע כאן השוואה מלאה לחודש הקודם: כל קטגוריה, מי הוציא, וכל כרטיס.</div></div>`;return;}
+  if(!B){$('#panel-compare').innerHTML=`<div class="sheet"><div class="empty"><b>${esc(mLabel(A))} הוא חודש הפתיחה.</b><br>אין לו חודש קודם להשוות אליו. בכל חודש אחריו תופיע כאן השוואה מלאה לחודש שלפניו.</div></div>`;return;}
   const a=monthSums(A),b=monthSums(B);
   const dE=a.expense-b.expense,dI=a.income-b.income;
   const diffs=state.cats.filter(c=>c.type==='expense'&&((a.byCat[c.id]||0)||(b.byCat[c.id]||0))).map(c=>({c,A:a.byCat[c.id]||0,B:b.byCat[c.id]||0})).map(x=>({...x,d:x.A-x.B})).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
@@ -1470,7 +1470,7 @@ function render(){
 }
 function go(tab){ui.tab=tab;try{localStorage.setItem('budgetHH.tab',tab);}catch(e){}render();}
 const ACT={
-  mPrev:()=>{if(ui.month<=trackStart()){toast(mLabel(trackStart())+' הוא החודש הראשון במעקב');return;}ui.touched=true;ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=ui.year=null;render();},
+  mPrev:()=>{if(ui.month<=trackStart()){toast(mLabel(trackStart())+' הוא חודש הפתיחה');return;}ui.touched=true;ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=ui.year=null;render();},
   mNext:()=>{ui.touched=true;ui.month=addM(ui.month,1);ui.cmpA=ui.cmpB=ui.year=null;render();},
   mToday:()=>{ui.touched=true;ui.month=curMonth();ui.cmpA=ui.cmpB=ui.year=null;render();},
   theme:()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
