@@ -201,6 +201,22 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
 .save i{width:7px;height:7px;border-radius:50%;background:var(--muted-s)}
 .save.cloud i{background:var(--good)} .save.busy i{background:var(--warn)} .save.err i{background:var(--bad)}
 #mPick{width:auto;padding:6px 8px;font-size:13px}
+.ib:disabled{opacity:.35;cursor:not-allowed}
+.dlg{position:fixed;inset:0;z-index:110;background:rgba(8,14,13,.5);display:grid;place-items:center;padding:16px}
+.dlg[hidden]{display:none!important}
+.dlg .box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;width:min(620px,100%);max-height:92vh;overflow:auto;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.dlghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.dlghead h3{margin:0;font-size:17px}
+.dlg .entry{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dlg .entry .wide{grid-column:1/-1}
+.dlg #fAmount{font-size:20px;padding:9px 10px}
+.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px;margin-bottom:12px}
+.seg button{border:none;background:none;padding:6px 18px;border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg button[data-k="income"][aria-pressed="true"]{color:var(--good)}
+.fab{position:fixed;left:16px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:90;width:56px;height:56px;border-radius:50%;border:none;background:var(--accent);color:var(--accent-ink);font-size:28px;line-height:1;cursor:pointer;box-shadow:0 10px 24px -8px rgba(0,0,0,.45);display:none}
+@media(max-width:760px){.fab{display:block}.mnav .addbtn{display:none}}
+.mnav{flex-wrap:wrap}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -213,6 +229,7 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
       <div class="who"><span id="whoLine"></span> · <span class="save" id="saveState"><i></i><span>שמור בדפדפן</span></span></div>
     </div>
     <div class="mnav">
+      <button class="btn pri addbtn" data-act="openAdd">＋ תנועה</button>
       <button class="ib" data-act="mPrev" title="חודש קודם" aria-label="חודש קודם">→</button>
       <input type="month" id="mPick" aria-label="בחירת חודש"><button class="btn" data-act="mToday">החודש</button>
       <button class="ib" data-act="mNext" title="חודש הבא" aria-label="חודש הבא">←</button>
@@ -226,7 +243,7 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
     <button class="tab" role="tab" data-tab="entry">תנועות</button>
     <button class="tab" role="tab" data-tab="budget">תקציב</button>
     <button class="tab" role="tab" data-tab="compare">השוואה</button>
-    <button class="tab" role="tab" data-tab="year">שנה</button>
+    <button class="tab" role="tab" data-tab="year">מגמה</button>
     <button class="tab" role="tab" data-tab="insights">תובנות</button>
     <button class="tab" role="tab" data-tab="settings">הגדרות וגיבוי</button>
   </nav>
@@ -244,22 +261,6 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
         <div class="hint" id="impStatus"></div>
       </div>
       <div id="impReview"></div>
-      <div class="sheet">
-        <h2>תנועה חדשה <span class="sub" id="formMode">Enter מוסיף · תיאור מוכר ממלא קטגוריה לבד</span></h2>
-        <form class="entry" id="rowForm" autocomplete="off">
-          <div class="f"><label for="fDate">תאריך</label><input type="date" id="fDate" required></div>
-          <div class="f wide"><label for="fDesc">תיאור / בית עסק</label><input id="fDesc" list="descList" placeholder="למשל: שופרסל"></div>
-          <div class="f"><label for="fCat">קטגוריה</label><select id="fCat" required></select></div>
-          <div class="f"><label for="fWho">מי שילם</label><select id="fWho"></select></div>
-          <div class="f"><label for="fAmount">סכום</label><input type="number" id="fAmount" step="0.01" min="0" required inputmode="decimal"></div>
-          <div class="f"><label for="fNote">כרטיס / אמצעי</label><input id="fNote" list="noteList" placeholder="כאל, מקס…"></div>
-          <label class="chk" for="fFixed"><input type="checkbox" id="fFixed"> קבוע</label>
-          <div class="row"><button type="submit" class="btn pri" id="fSubmit">הוסף</button><button type="button" class="btn ghost" id="fCancel" data-act="cancelEdit" hidden>ביטול</button></div>
-        </form>
-        <div class="hint" id="fHint"></div>
-        <datalist id="descList"></datalist><datalist id="noteList"></datalist>
-        <div class="chips" id="quick"></div>
-      </div>
       <div class="g2">
         <div class="sheet"><h2>לאן הלך הכסף <span class="sub" id="donutSub"></span></h2><div id="donutBox"></div></div>
         <div class="sheet"><h2>מול התקציב <span class="sub">הכי קרובות לגבול</span></h2><div id="budgetBars"></div></div>
@@ -293,7 +294,25 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
     <section class="panel stack" id="panel-settings" hidden></section>
   </main>
 </div>
-<script type="application/json" id="seed">{"v": 1, "settings": {"cur": "₪", "names": {"a": "יהונתן", "b": "נוני"}, "shared": 50, "names2": {}, "sheetsURL": "", "sheetsLastSync": 0, "goal": 20}, "cats": [{"id": "rent", "name": "שכר דירה / משכנתא", "type": "expense", "group": "מגורים", "budget": 4200}, {"id": "arnona", "name": "ארנונה", "type": "expense", "group": "מגורים", "budget": 520}, {"id": "vaad", "name": "ועד בית", "type": "expense", "group": "מגורים", "budget": 180}, {"id": "housemaint", "name": "תחזוקת הבית", "type": "expense", "group": "מגורים", "budget": 150}, {"id": "electric", "name": "חשמל", "type": "expense", "group": "חשבונות", "budget": 340}, {"id": "water", "name": "מים", "type": "expense", "group": "חשבונות", "budget": 120}, {"id": "gas", "name": "גז", "type": "expense", "group": "חשבונות", "budget": 90}, {"id": "internet", "name": "אינטרנט", "type": "expense", "group": "חשבונות", "budget": 109}, {"id": "cellular", "name": "סלולר", "type": "expense", "group": "חשבונות", "budget": 90}, {"id": "subs", "name": "מנויים דיגיטליים", "type": "expense", "group": "חשבונות", "budget": 60}, {"id": "fuel", "name": "דלק", "type": "expense", "group": "תחבורה", "budget": 520}, {"id": "transport", "name": "תחבורה ציבורית", "type": "expense", "group": "תחבורה", "budget": 150}, {"id": "parking", "name": "חניה ואגרות", "type": "expense", "group": "תחבורה", "budget": 60}, {"id": "carmaint", "name": "טיפולים לרכב", "type": "expense", "group": "תחבורה", "budget": 200}, {"id": "super", "name": "סופרמרקט", "type": "expense", "group": "מזון", "budget": 1900}, {"id": "veg", "name": "ירקות ופירות", "type": "expense", "group": "מזון", "budget": 350}, {"id": "eatout", "name": "אוכל בחוץ", "type": "expense", "group": "מזון", "budget": 500}, {"id": "coffee", "name": "קפה ומאפים", "type": "expense", "group": "מזון", "budget": 180}, {"id": "health", "name": "קופת חולים ותרופות", "type": "expense", "group": "בריאות", "budget": 180}, {"id": "doctor", "name": "רופאים פרטיים", "type": "expense", "group": "בריאות", "budget": 150}, {"id": "gym", "name": "ספורט וכושר", "type": "expense", "group": "בריאות", "budget": 199}, {"id": "kindergarten", "name": "גנים וצהרון", "type": "expense", "group": "ילדים וחינוך", "budget": 1200}, {"id": "classes", "name": "חוגים", "type": "expense", "group": "ילדים וחינוך", "budget": 380}, {"id": "kidgear", "name": "ציוד ובגדים לילדים", "type": "expense", "group": "ילדים וחינוך", "budget": 250}, {"id": "fun", "name": "בילויים", "type": "expense", "group": "פנאי", "budget": 400}, {"id": "vacation", "name": "חופשות וטיולים", "type": "expense", "group": "פנאי", "budget": 150}, {"id": "clothes", "name": "ביגוד והנעלה", "type": "expense", "group": "פנאי", "budget": 300}, {"id": "gifts", "name": "מתנות ואירועים", "type": "expense", "group": "פנאי", "budget": 250}, {"id": "insurance", "name": "ביטוחים", "type": "expense", "group": "ביטוח ופיננסים", "budget": 420}, {"id": "savings", "name": "חיסכון והשקעות", "type": "expense", "group": "ביטוח ופיננסים", "budget": 1000}, {"id": "loan", "name": "החזרי הלוואות", "type": "expense", "group": "ביטוח ופיננסים", "budget": 900}, {"id": "fees", "name": "עמלות בנק וכרטיס", "type": "expense", "group": "ביטוח ופיננסים", "budget": 45}, {"id": "pets", "name": "חיות מחמד", "type": "expense", "group": "שונות", "budget": 0}, {"id": "other", "name": "הוצאות אחרות", "type": "expense", "group": "שונות", "budget": 0}, {"id": "salary1", "name": "משכורת", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "salary2", "name": "משכורת 2 / בן זוג", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "extra", "name": "הכנסה נוספת / פרילנס", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "refund", "name": "החזרים וקצבאות", "type": "income", "group": "הכנסות", "budget": 0}], "data": {"2026-04": {"rows": [{"id": "NQKAa9AgjQ4R", "date": "2026-04-21", "desc": "ביטוח קלאי (תשלום מרובד)", "cat": "insurance", "who": "a", "amount": 1486.0, "fixed": false, "note": "מקס"}]}, "2026-08": {"rows": [{"id": "xjQBNeIg67CO", "date": "2026-08-28", "desc": "שפע פירות וירקות", "cat": "veg", "who": "b", "amount": 22.1, "fixed": false, "note": "ישראכרד"}]}, "2026-09": {"rows": [{"id": "GRthw09Ldjxr", "date": "2026-09-30", "desc": "נמרוד שפיר", "cat": "other", "who": "a", "amount": 41.0, "fixed": false, "note": "כאל"}, {"id": "n6t09WDrOQsQ", "date": "2026-09-30", "desc": "פרדי למון במה בשוק", "cat": "super", "who": "a", "amount": 35.0, "fixed": false, "note": "כאל"}, {"id": "fg0Qxh2Ume6J", "date": "2026-09-30", "desc": "בקלאוויש בע\"מ", "cat": "eatout", "who": "a", "amount": 47.0, "fixed": false, "note": "כאל"}, {"id": "Xs1oS5Oa05MV", "date": "2026-09-30", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "iQ7SG7EdSLPL", "date": "2026-09-30", "desc": "נייקי ישראל חנויות", "cat": "clothes", "who": "a", "amount": 9.0, "fixed": false, "note": "כאל"}, {"id": "RjwwMpsTOQqG", "date": "2026-09-30", "desc": "ארקפה ראשונים", "cat": "coffee", "who": "a", "amount": 14.0, "fixed": false, "note": "כאל"}, {"id": "WtWtQWmW6mvu", "date": "2026-09-29", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "a", "amount": 6.0, "fixed": false, "note": "כאל"}, {"id": "Nn8EHBj0P5iK", "date": "2026-09-28", "desc": "רובט יקנעם", "cat": "other", "who": "a", "amount": 340.0, "fixed": false, "note": "כאל"}, {"id": "dslbij0z8KBt", "date": "2026-09-28", "desc": "ירקא מרכזא (מסעדה)", "cat": "eatout", "who": "a", "amount": 625.9, "fixed": false, "note": "כאל"}, {"id": "nZEzFuUcT32D", "date": "2026-09-27", "desc": "פינגו חשבונית חודשית", "cat": "parking", "who": "a", "amount": 17.04, "fixed": true, "note": "כאל"}, {"id": "lBAdVJ4ZyrXW", "date": "2026-09-25", "desc": "פיתה פיקניק ראשון לציון", "cat": "super", "who": "a", "amount": 100.0, "fixed": false, "note": "כאל"}, {"id": "MCliXK31RXz3", "date": "2026-09-25", "desc": "מיקס סטוק שיווק ואחזקות", "cat": "housemaint", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "C4izW3R74DJW", "date": "2026-09-24", "desc": "שי תכשיטים", "cat": "gifts", "who": "a", "amount": 1400.0, "fixed": false, "note": "כאל"}, {"id": "ydtGnQ5jBqDm", "date": "2026-09-24", "desc": "סקארה-קניון סודשילד", "cat": "other", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "SlJucEG9pInT", "date": "2026-09-23", "desc": "א.י מרקט", "cat": "super", "who": "a", "amount": 23.9, "fixed": false, "note": "כאל"}, {"id": "EbM1zYcywLK7", "date": "2026-09-23", "desc": "הסביח של עובד", "cat": "eatout", "who": "a", "amount": 125.0, "fixed": false, "note": "כאל"}, {"id": "L1laX2ENErxH", "date": "2026-09-23", "desc": "דהן מחסני גלידות", "cat": "eatout", "who": "a", "amount": 6.0, "fixed": false, "note": "כאל"}, {"id": "qrqOnGUyPWEy", "date": "2026-09-23", "desc": "משק תכלת שיווק", "cat": "other", "who": "a", "amount": 119.9, "fixed": false, "note": "כאל"}, {"id": "n0Ovutkb4yG2", "date": "2026-09-23", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "9jHcCLooAILh", "date": "2026-09-19", "desc": "פוד אפיל מתחם", "cat": "eatout", "who": "a", "amount": 17.45, "fixed": false, "note": "כאל"}, {"id": "KhQy20byQUm9", "date": "2026-09-18", "desc": "פאנס ראשון", "cat": "other", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "qiTW5rYrxuZ2", "date": "2026-09-18", "desc": "אדמונד", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "כאל"}, {"id": "6J4ozOgegIBo", "date": "2026-09-18", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 28.4, "fixed": false, "note": "כאל"}, {"id": "2ybYjWkKXOFC", "date": "2026-09-17", "desc": "מגדלי הים התיכון נחובות", "cat": "other", "who": "a", "amount": 1006.0, "fixed": false, "note": "כאל"}, {"id": "jKNEdJew1NZ8", "date": "2026-09-17", "desc": "אושר עד ראשל\"צ (ריהוט)", "cat": "housemaint", "who": "a", "amount": 1003.46, "fixed": false, "note": "כאל"}, {"id": "IeIyNzRAAPzC", "date": "2026-09-17", "desc": "תינוקות זה אנחנו", "cat": "kidgear", "who": "a", "amount": 229.0, "fixed": false, "note": "כאל"}, {"id": "y4t4R8EIs90x", "date": "2026-09-16", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "EbAjf6NSpWMJ", "date": "2026-09-16", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "a", "amount": 14.0, "fixed": false, "note": "כאל"}, {"id": "kHkP5quqGH1I", "date": "2026-09-11", "desc": "מכולת דגל תורה", "cat": "super", "who": "a", "amount": 60.0, "fixed": false, "note": "כאל"}, {"id": "vSCKMiBPQWLE", "date": "2026-09-11", "desc": "לומייר", "cat": "other", "who": "a", "amount": 50.0, "fixed": false, "note": "כאל"}, {"id": "TLfL3zpJc6ao", "date": "2026-09-11", "desc": "לומייר", "cat": "other", "who": "a", "amount": 550.0, "fixed": false, "note": "כאל"}, {"id": "bato4jvJt7Lh", "date": "2026-09-10", "desc": "מכבסת גן", "cat": "housemaint", "who": "a", "amount": 245.0, "fixed": false, "note": "כאל"}, {"id": "nc9qbclsEBTf", "date": "2026-09-10", "desc": "ויקטורי ראשל\"צ מזרח", "cat": "super", "who": "a", "amount": 85.0, "fixed": false, "note": "כאל"}, {"id": "PL4a8Eevijww", "date": "2026-09-10", "desc": "פז YELLOW (תחנת דלק)", "cat": "fuel", "who": "a", "amount": 407.55, "fixed": false, "note": "כאל"}, {"id": "fVFA73IhVgDg", "date": "2026-09-09", "desc": "באר יעקב 365 סוויט", "cat": "other", "who": "a", "amount": 40.0, "fixed": false, "note": "כאל"}, {"id": "9WFgfRAUJeBd", "date": "2026-09-09", "desc": "באר יעקב 365 סוויט", "cat": "other", "who": "a", "amount": 60.0, "fixed": false, "note": "כאל"}, {"id": "tuv60yIXxXAJ", "date": "2026-09-09", "desc": "רמי לוי סודשילד", "cat": "super", "who": "a", "amount": 14.9, "fixed": false, "note": "כאל"}, {"id": "aS1b6UzPcvQI", "date": "2026-09-09", "desc": "רמי לוי סודשילד", "cat": "super", "who": "a", "amount": 16.6, "fixed": false, "note": "כאל"}, {"id": "mcAIy7BTrVAj", "date": "2026-09-08", "desc": "נתנלי כלים חד פעמיים", "cat": "super", "who": "a", "amount": 23.0, "fixed": false, "note": "כאל"}, {"id": "AeOuAQA0lueq", "date": "2026-09-08", "desc": "פאנס ראשון", "cat": "other", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "N5qgFtFOeENv", "date": "2026-09-08", "desc": "פירות וירקות", "cat": "veg", "who": "a", "amount": 71.24, "fixed": false, "note": "כאל"}, {"id": "HiuUrUPz0ZXu", "date": "2026-09-08", "desc": "קצבית שמואל", "cat": "super", "who": "a", "amount": 41.89, "fixed": false, "note": "כאל"}, {"id": "n54d4OH4WK7H", "date": "2026-09-08", "desc": "ביבים סודשילד", "cat": "eatout", "who": "a", "amount": 2.92, "fixed": false, "note": "כאל"}, {"id": "JMh8klzaIqzj", "date": "2026-09-08", "desc": "סופר פארם סודשילד", "cat": "health", "who": "a", "amount": 19.9, "fixed": false, "note": "כאל"}, {"id": "qg6YwFIPE3Eg", "date": "2026-09-08", "desc": "סופר פארם סודשילד", "cat": "health", "who": "a", "amount": 51.66, "fixed": false, "note": "כאל"}, {"id": "FDPrwMI3Xdam", "date": "2026-09-07", "desc": "סבן אקספרס נרקיסים", "cat": "eatout", "who": "a", "amount": 113.0, "fixed": false, "note": "כאל"}, {"id": "vWjzVBLgUFpp", "date": "2026-09-07", "desc": "הפינה המתוקה של אודל", "cat": "coffee", "who": "a", "amount": 39.0, "fixed": false, "note": "כאל"}, {"id": "NHM5ncHE7Uku", "date": "2026-09-07", "desc": "הפינה המתוקה של אודל", "cat": "coffee", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "xNWf7z8ORP8d", "date": "2026-09-06", "desc": "ירון שטרית עידן המזל", "cat": "other", "who": "a", "amount": 52.0, "fixed": false, "note": "כאל"}, {"id": "2f5ENl5W7zpz", "date": "2026-09-06", "desc": "terminal 3", "cat": "transport", "who": "a", "amount": 59.9, "fixed": false, "note": "כאל"}, {"id": "gzag1OWAfFxd", "date": "2026-09-06", "desc": "שוקולנד שלומי", "cat": "eatout", "who": "a", "amount": 7.0, "fixed": false, "note": "כאל"}, {"id": "C5RxIJDfmlUk", "date": "2026-09-06", "desc": "קריספי", "cat": "eatout", "who": "a", "amount": 33.0, "fixed": false, "note": "כאל"}, {"id": "QyWG6TbYza7e", "date": "2026-09-06", "desc": "ר-מתנות", "cat": "gifts", "who": "a", "amount": 20.0, "fixed": false, "note": "כאל"}, {"id": "gBO9IykFyeXS", "date": "2026-09-06", "desc": "מעדניית איבגי", "cat": "super", "who": "a", "amount": 56.0, "fixed": false, "note": "כאל"}, {"id": "oz3bFArIYk75", "date": "2026-09-05", "desc": "ראלי וויס-מפעל הפיס", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "XXH5P2tdI6yx", "date": "2026-09-02", "desc": "ראלי וויס-מפעל הפיס", "cat": "other", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "t4YL1GpxWLDw", "date": "2026-09-24", "desc": "ANTHROPIC (חו\"ל)", "cat": "subs", "who": "a", "amount": 62.77, "fixed": false, "note": "מקס"}, {"id": "cPM8Sowi0OwO", "date": "2026-09-23", "desc": "SPOTIFY (חו\"ל)", "cat": "subs", "who": "a", "amount": 12.9, "fixed": false, "note": "מקס"}, {"id": "NVBgHMBtWe0w", "date": "2026-09-10", "desc": "APPLE.COM (חו\"ל)", "cat": "subs", "who": "a", "amount": 11.9, "fixed": false, "note": "מקס"}, {"id": "qMFa3lWf381T", "date": "2026-09-03", "desc": "NETFLIX (חו\"ל)", "cat": "subs", "who": "a", "amount": 32.9, "fixed": false, "note": "מקס"}, {"id": "UhKSvyL8uMfF", "date": "2026-09-24", "desc": "ביטוח קלאי (הוראת קבע)", "cat": "insurance", "who": "a", "amount": 289.8, "fixed": true, "note": "מקס"}, {"id": "owA7BkmJDjPp", "date": "2026-09-16", "desc": "סלקום ישראל (הוראת קבע)", "cat": "cellular", "who": "a", "amount": 49.9, "fixed": true, "note": "מקס"}, {"id": "bYNYD1pmz6MC", "date": "2026-09-16", "desc": "HOT (הוראת קבע)", "cat": "internet", "who": "a", "amount": 79.0, "fixed": true, "note": "מקס"}, {"id": "CljskZA3qGPG", "date": "2026-09-12", "desc": "המוסד לביטוח (הוראת קבע)", "cat": "other", "who": "a", "amount": 171.0, "fixed": true, "note": "מקס"}, {"id": "Ybxk821IonRD", "date": "2026-09-10", "desc": "פז גזדלק חשמל וגז (הוראת קבע)", "cat": "gas", "who": "a", "amount": 137.6, "fixed": true, "note": "מקס"}, {"id": "xH9tQtRDPt27", "date": "2026-09-07", "desc": "פרי טיווישן (הוראת קבע)", "cat": "cellular", "who": "a", "amount": 44.9, "fixed": true, "note": "מקס"}, {"id": "SzmMynZIcLqz", "date": "2026-09-02", "desc": "קרן מכבי (הוראת קבע)", "cat": "health", "who": "a", "amount": 99.22, "fixed": true, "note": "מקס"}, {"id": "TfpQHwV59cWA", "date": "2026-09-27", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "RvDO6iF1vZ7I", "date": "2026-09-25", "desc": "GETT (תחבורה)", "cat": "transport", "who": "a", "amount": 57.9, "fixed": false, "note": "מקס"}, {"id": "2Scu2QTb9zJf", "date": "2026-09-24", "desc": "GETT (תחבורה)", "cat": "transport", "who": "a", "amount": 12.0, "fixed": false, "note": "מקס"}, {"id": "01rYXpQDVmWS", "date": "2026-09-24", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 100.0, "fixed": false, "note": "מקס"}, {"id": "SNUSg9G0r09w", "date": "2026-09-23", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "QHWJw7GXxPNS", "date": "2026-09-23", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 220.0, "fixed": false, "note": "מקס"}, {"id": "sPJp8P65REMr", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "k7IirrfCF5Op", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "QsItDxvyZ9qd", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 60.0, "fixed": false, "note": "מקס"}, {"id": "TEszfExngI81", "date": "2026-09-10", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "PPWFv7KOMbwq", "date": "2026-09-10", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "a", "amount": 299.9, "fixed": false, "note": "מקס"}, {"id": "bz1AA8WWVx31", "date": "2026-09-08", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 140.0, "fixed": false, "note": "מקס"}, {"id": "VnNQlV5lr74l", "date": "2026-09-08", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "59R6603NImfZ", "date": "2026-09-05", "desc": "PAYBOX", "cat": "other", "who": "a", "amount": 20.0, "fixed": false, "note": "מקס"}, {"id": "RjWfFQM25YGX", "date": "2026-09-03", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "a", "amount": 61.0, "fixed": false, "note": "מקס"}, {"id": "0wbK4myJtDZF", "date": "2026-09-01", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 300.0, "fixed": false, "note": "מקס"}, {"id": "YlJT9YAcSIB4", "date": "2026-09-30", "desc": "דלק מנטה ניות", "cat": "fuel", "who": "b", "amount": 423.78, "fixed": false, "note": "ישראכרד"}, {"id": "zUfUEJlUFI80", "date": "2026-09-29", "desc": "המרכז לגביית קנסות", "cat": "fees", "who": "b", "amount": 1250.0, "fixed": false, "note": "ישראכרד"}, {"id": "twVN9X42TTqX", "date": "2026-09-29", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 34.5, "fixed": false, "note": "ישראכרד"}, {"id": "kn4Ukcittrvi", "date": "2026-09-28", "desc": "RE רי", "cat": "other", "who": "b", "amount": 28.0, "fixed": false, "note": "ישראכרד"}, {"id": "uC5zLAi4ZUIT", "date": "2026-09-28", "desc": "YESSTYLE (אתר חו\"ל)", "cat": "clothes", "who": "b", "amount": 510.17, "fixed": false, "note": "ישראכרד"}, {"id": "OVWrNPkp0bMj", "date": "2026-09-27", "desc": "סודוך", "cat": "other", "who": "b", "amount": 125.0, "fixed": false, "note": "ישראכרד"}, {"id": "i77I1AWeonBF", "date": "2026-09-27", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 14.95, "fixed": false, "note": "ישראכרד"}, {"id": "fHiprnM34RjS", "date": "2026-09-25", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 12.9, "fixed": true, "note": "ישראכרד"}, {"id": "kPH94ghjOXCX", "date": "2026-09-22", "desc": "משקאות דודיק שיווק", "cat": "super", "who": "b", "amount": 146.0, "fixed": false, "note": "ישראכרד"}, {"id": "oAgTrfYXkyET", "date": "2026-09-22", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 32.39, "fixed": false, "note": "ישראכרד"}, {"id": "RMEDhOVfPOkl", "date": "2026-09-21", "desc": "פיצה דון פאפא", "cat": "eatout", "who": "b", "amount": 88.0, "fixed": false, "note": "ישראכרד"}, {"id": "iHl3BTKoGN2V", "date": "2026-09-21", "desc": "דור פארק חדרה", "cat": "fun", "who": "b", "amount": 434.48, "fixed": false, "note": "ישראכרד"}, {"id": "qKuTorRJFK21", "date": "2026-09-21", "desc": "אלונית פארק חדרה", "cat": "fun", "who": "b", "amount": 15.0, "fixed": false, "note": "ישראכרד"}, {"id": "GiaXILqM2uTe", "date": "2026-09-17", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 29.36, "fixed": false, "note": "ישראכרד"}, {"id": "TuFRmeGvR9An", "date": "2026-09-17", "desc": "ADOBE (הוראת קבע)", "cat": "subs", "who": "b", "amount": 239.0, "fixed": true, "note": "ישראכרד"}, {"id": "Qpb2nehwg7by", "date": "2026-09-15", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 31.9, "fixed": true, "note": "ישראכרד"}, {"id": "bzwH6bIVTx3a", "date": "2026-09-14", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "b", "amount": 38.0, "fixed": false, "note": "ישראכרד"}, {"id": "zowjf356Ts5p", "date": "2026-09-14", "desc": "דני דרס", "cat": "clothes", "who": "b", "amount": 150.0, "fixed": false, "note": "ישראכרד"}, {"id": "48Qe4hBFXFRk", "date": "2026-09-14", "desc": "קפאו מסעדה תאילנדית", "cat": "eatout", "who": "b", "amount": 626.0, "fixed": false, "note": "ישראכרד"}, {"id": "kOoKiRIJua2w", "date": "2026-09-14", "desc": "צ'יקן פיק בני ברק", "cat": "eatout", "who": "b", "amount": 60.0, "fixed": false, "note": "ישראכרד"}, {"id": "Xk85bZf6zTcY", "date": "2026-09-13", "desc": "USA פיצה", "cat": "eatout", "who": "b", "amount": 105.0, "fixed": false, "note": "ישראכרד"}, {"id": "IY137FxmVpJ4", "date": "2026-09-13", "desc": "תחנת דלק מפגש אולגה", "cat": "fuel", "who": "b", "amount": 423.85, "fixed": false, "note": "ישראכרד"}, {"id": "mSJDYivWOq1Z", "date": "2026-09-11", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "b", "amount": 91.88, "fixed": false, "note": "ישראכרד"}, {"id": "7R85FcdJ8bSE", "date": "2026-09-10", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 25.38, "fixed": false, "note": "ישראכרד"}, {"id": "Vq28fKuOO9gs", "date": "2026-09-09", "desc": "קפה טו סבידון", "cat": "coffee", "who": "b", "amount": 31.0, "fixed": false, "note": "ישראכרד"}, {"id": "oE5tX1F0Uc4r", "date": "2026-09-09", "desc": "תבל טארו כרטוס", "cat": "other", "who": "b", "amount": 50.0, "fixed": false, "note": "ישראכרד"}, {"id": "wIRBzEDlKr8K", "date": "2026-09-09", "desc": "ביי-מי שוברי מתנה", "cat": "gifts", "who": "b", "amount": 400.0, "fixed": false, "note": "ישראכרד"}, {"id": "Td4bGbyT2Bxw", "date": "2026-09-08", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 97.41, "fixed": false, "note": "ישראכרד"}, {"id": "tFp73mXKJKT4", "date": "2026-09-07", "desc": "פאנס ראשון", "cat": "other", "who": "b", "amount": 19.0, "fixed": false, "note": "ישראכרד"}, {"id": "m0nOZGfccOI8", "date": "2026-09-07", "desc": "ארגמן חנויות", "cat": "other", "who": "b", "amount": 120.0, "fixed": false, "note": "ישראכרד"}, {"id": "fdsBNWh3Cg6Q", "date": "2026-09-07", "desc": "פיצה סטורי ראשון לציון", "cat": "eatout", "who": "b", "amount": 282.0, "fixed": false, "note": "ישראכרד"}, {"id": "Yo8tgyiv0PWM", "date": "2026-09-06", "desc": "בית מרקחת בקשי", "cat": "health", "who": "b", "amount": 40.25, "fixed": false, "note": "ישראכרד"}, {"id": "ulvvalx2Qrpg", "date": "2026-09-06", "desc": "סיאם יפו (מסעדה)", "cat": "eatout", "who": "b", "amount": 120.0, "fixed": false, "note": "ישראכרד"}, {"id": "NvD1F84ysNLr", "date": "2026-09-06", "desc": "סקופ יבוא בע\"מ", "cat": "other", "who": "b", "amount": 119.9, "fixed": false, "note": "ישראכרד"}, {"id": "OYdX8XvQN7uM", "date": "2026-09-06", "desc": "מיני אלנבי", "cat": "eatout", "who": "b", "amount": 100.0, "fixed": false, "note": "ישראכרד"}, {"id": "2UVHNgBmDXys", "date": "2026-09-04", "desc": "ארוחה גבעת שמואל", "cat": "eatout", "who": "b", "amount": 37.0, "fixed": false, "note": "ישראכרד"}, {"id": "qHfxe5DIhIdZ", "date": "2026-09-03", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 39.9, "fixed": true, "note": "ישראכרד"}, {"id": "wnm2aiVHdF99", "date": "2026-09-02", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "b", "amount": 256.9, "fixed": false, "note": "ישראכרד"}]}, "2026-10": {"rows": [{"id": "CBO3HLjI1ATP", "date": "2026-10-04", "desc": "פוד אפיל מתחם", "cat": "eatout", "who": "a", "amount": 12.5, "fixed": false, "note": "כאל"}]}}, "lastMonth": "2026-09"}</script>
+<script type="application/json" id="seed">{"v": 1, "settings": {"cur": "₪", "names": {"a": "יהונתן", "b": "נוני"}, "shared": 50, "names2": {}, "sheetsURL": "", "sheetsLastSync": 0, "goal": 20, "startMonth": "2026-09"}, "cats": [{"id": "rent", "name": "שכר דירה / משכנתא", "type": "expense", "group": "מגורים", "budget": 4200}, {"id": "arnona", "name": "ארנונה", "type": "expense", "group": "מגורים", "budget": 520}, {"id": "vaad", "name": "ועד בית", "type": "expense", "group": "מגורים", "budget": 180}, {"id": "housemaint", "name": "תחזוקת הבית", "type": "expense", "group": "מגורים", "budget": 150}, {"id": "electric", "name": "חשמל", "type": "expense", "group": "חשבונות", "budget": 340}, {"id": "water", "name": "מים", "type": "expense", "group": "חשבונות", "budget": 120}, {"id": "gas", "name": "גז", "type": "expense", "group": "חשבונות", "budget": 90}, {"id": "internet", "name": "אינטרנט", "type": "expense", "group": "חשבונות", "budget": 109}, {"id": "cellular", "name": "סלולר", "type": "expense", "group": "חשבונות", "budget": 90}, {"id": "subs", "name": "מנויים דיגיטליים", "type": "expense", "group": "חשבונות", "budget": 60}, {"id": "fuel", "name": "דלק", "type": "expense", "group": "תחבורה", "budget": 520}, {"id": "transport", "name": "תחבורה ציבורית", "type": "expense", "group": "תחבורה", "budget": 150}, {"id": "parking", "name": "חניה ואגרות", "type": "expense", "group": "תחבורה", "budget": 60}, {"id": "carmaint", "name": "טיפולים לרכב", "type": "expense", "group": "תחבורה", "budget": 200}, {"id": "super", "name": "סופרמרקט", "type": "expense", "group": "מזון", "budget": 1900}, {"id": "veg", "name": "ירקות ופירות", "type": "expense", "group": "מזון", "budget": 350}, {"id": "eatout", "name": "אוכל בחוץ", "type": "expense", "group": "מזון", "budget": 500}, {"id": "coffee", "name": "קפה ומאפים", "type": "expense", "group": "מזון", "budget": 180}, {"id": "health", "name": "קופת חולים ותרופות", "type": "expense", "group": "בריאות", "budget": 180}, {"id": "doctor", "name": "רופאים פרטיים", "type": "expense", "group": "בריאות", "budget": 150}, {"id": "gym", "name": "ספורט וכושר", "type": "expense", "group": "בריאות", "budget": 199}, {"id": "kindergarten", "name": "גנים וצהרון", "type": "expense", "group": "ילדים וחינוך", "budget": 1200}, {"id": "classes", "name": "חוגים", "type": "expense", "group": "ילדים וחינוך", "budget": 380}, {"id": "kidgear", "name": "ציוד ובגדים לילדים", "type": "expense", "group": "ילדים וחינוך", "budget": 250}, {"id": "fun", "name": "בילויים", "type": "expense", "group": "פנאי", "budget": 400}, {"id": "vacation", "name": "חופשות וטיולים", "type": "expense", "group": "פנאי", "budget": 150}, {"id": "clothes", "name": "ביגוד והנעלה", "type": "expense", "group": "פנאי", "budget": 300}, {"id": "gifts", "name": "מתנות ואירועים", "type": "expense", "group": "פנאי", "budget": 250}, {"id": "insurance", "name": "ביטוחים", "type": "expense", "group": "ביטוח ופיננסים", "budget": 420}, {"id": "savings", "name": "חיסכון והשקעות", "type": "expense", "group": "ביטוח ופיננסים", "budget": 1000}, {"id": "loan", "name": "החזרי הלוואות", "type": "expense", "group": "ביטוח ופיננסים", "budget": 900}, {"id": "fees", "name": "עמלות בנק וכרטיס", "type": "expense", "group": "ביטוח ופיננסים", "budget": 45}, {"id": "pets", "name": "חיות מחמד", "type": "expense", "group": "שונות", "budget": 0}, {"id": "other", "name": "הוצאות אחרות", "type": "expense", "group": "שונות", "budget": 0}, {"id": "salary1", "name": "משכורת", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "salary2", "name": "משכורת 2 / בן זוג", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "extra", "name": "הכנסה נוספת / פרילנס", "type": "income", "group": "הכנסות", "budget": 0}, {"id": "refund", "name": "החזרים וקצבאות", "type": "income", "group": "הכנסות", "budget": 0}], "data": {"2026-04": {"rows": [{"id": "NQKAa9AgjQ4R", "date": "2026-04-21", "desc": "ביטוח קלאי (תשלום מרובד)", "cat": "insurance", "who": "a", "amount": 1486.0, "fixed": false, "note": "מקס"}]}, "2026-08": {"rows": [{"id": "xjQBNeIg67CO", "date": "2026-08-28", "desc": "שפע פירות וירקות", "cat": "veg", "who": "b", "amount": 22.1, "fixed": false, "note": "ישראכרד"}]}, "2026-09": {"rows": [{"id": "GRthw09Ldjxr", "date": "2026-09-30", "desc": "נמרוד שפיר", "cat": "other", "who": "a", "amount": 41.0, "fixed": false, "note": "כאל"}, {"id": "n6t09WDrOQsQ", "date": "2026-09-30", "desc": "פרדי למון במה בשוק", "cat": "super", "who": "a", "amount": 35.0, "fixed": false, "note": "כאל"}, {"id": "fg0Qxh2Ume6J", "date": "2026-09-30", "desc": "בקלאוויש בע\"מ", "cat": "eatout", "who": "a", "amount": 47.0, "fixed": false, "note": "כאל"}, {"id": "Xs1oS5Oa05MV", "date": "2026-09-30", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "iQ7SG7EdSLPL", "date": "2026-09-30", "desc": "נייקי ישראל חנויות", "cat": "clothes", "who": "a", "amount": 9.0, "fixed": false, "note": "כאל"}, {"id": "RjwwMpsTOQqG", "date": "2026-09-30", "desc": "ארקפה ראשונים", "cat": "coffee", "who": "a", "amount": 14.0, "fixed": false, "note": "כאל"}, {"id": "WtWtQWmW6mvu", "date": "2026-09-29", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "a", "amount": 6.0, "fixed": false, "note": "כאל"}, {"id": "Nn8EHBj0P5iK", "date": "2026-09-28", "desc": "רובט יקנעם", "cat": "other", "who": "a", "amount": 340.0, "fixed": false, "note": "כאל"}, {"id": "dslbij0z8KBt", "date": "2026-09-28", "desc": "ירקא מרכזא (מסעדה)", "cat": "eatout", "who": "a", "amount": 625.9, "fixed": false, "note": "כאל"}, {"id": "nZEzFuUcT32D", "date": "2026-09-27", "desc": "פינגו חשבונית חודשית", "cat": "parking", "who": "a", "amount": 17.04, "fixed": true, "note": "כאל"}, {"id": "lBAdVJ4ZyrXW", "date": "2026-09-25", "desc": "פיתה פיקניק ראשון לציון", "cat": "super", "who": "a", "amount": 100.0, "fixed": false, "note": "כאל"}, {"id": "MCliXK31RXz3", "date": "2026-09-25", "desc": "מיקס סטוק שיווק ואחזקות", "cat": "housemaint", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "C4izW3R74DJW", "date": "2026-09-24", "desc": "שי תכשיטים", "cat": "gifts", "who": "a", "amount": 1400.0, "fixed": false, "note": "כאל"}, {"id": "ydtGnQ5jBqDm", "date": "2026-09-24", "desc": "סקארה-קניון סודשילד", "cat": "other", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "SlJucEG9pInT", "date": "2026-09-23", "desc": "א.י מרקט", "cat": "super", "who": "a", "amount": 23.9, "fixed": false, "note": "כאל"}, {"id": "EbM1zYcywLK7", "date": "2026-09-23", "desc": "הסביח של עובד", "cat": "eatout", "who": "a", "amount": 125.0, "fixed": false, "note": "כאל"}, {"id": "L1laX2ENErxH", "date": "2026-09-23", "desc": "דהן מחסני גלידות", "cat": "eatout", "who": "a", "amount": 6.0, "fixed": false, "note": "כאל"}, {"id": "qrqOnGUyPWEy", "date": "2026-09-23", "desc": "משק תכלת שיווק", "cat": "other", "who": "a", "amount": 119.9, "fixed": false, "note": "כאל"}, {"id": "n0Ovutkb4yG2", "date": "2026-09-23", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "9jHcCLooAILh", "date": "2026-09-19", "desc": "פוד אפיל מתחם", "cat": "eatout", "who": "a", "amount": 17.45, "fixed": false, "note": "כאל"}, {"id": "KhQy20byQUm9", "date": "2026-09-18", "desc": "פאנס ראשון", "cat": "other", "who": "a", "amount": 15.0, "fixed": false, "note": "כאל"}, {"id": "qiTW5rYrxuZ2", "date": "2026-09-18", "desc": "אדמונד", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "כאל"}, {"id": "6J4ozOgegIBo", "date": "2026-09-18", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 28.4, "fixed": false, "note": "כאל"}, {"id": "2ybYjWkKXOFC", "date": "2026-09-17", "desc": "מגדלי הים התיכון נחובות", "cat": "other", "who": "a", "amount": 1006.0, "fixed": false, "note": "כאל"}, {"id": "jKNEdJew1NZ8", "date": "2026-09-17", "desc": "אושר עד ראשל\"צ (ריהוט)", "cat": "housemaint", "who": "a", "amount": 1003.46, "fixed": false, "note": "כאל"}, {"id": "IeIyNzRAAPzC", "date": "2026-09-17", "desc": "תינוקות זה אנחנו", "cat": "kidgear", "who": "a", "amount": 229.0, "fixed": false, "note": "כאל"}, {"id": "y4t4R8EIs90x", "date": "2026-09-16", "desc": "משקאות דודיק שיווק וסחר", "cat": "super", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "EbAjf6NSpWMJ", "date": "2026-09-16", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "a", "amount": 14.0, "fixed": false, "note": "כאל"}, {"id": "kHkP5quqGH1I", "date": "2026-09-11", "desc": "מכולת דגל תורה", "cat": "super", "who": "a", "amount": 60.0, "fixed": false, "note": "כאל"}, {"id": "vSCKMiBPQWLE", "date": "2026-09-11", "desc": "לומייר", "cat": "other", "who": "a", "amount": 50.0, "fixed": false, "note": "כאל"}, {"id": "TLfL3zpJc6ao", "date": "2026-09-11", "desc": "לומייר", "cat": "other", "who": "a", "amount": 550.0, "fixed": false, "note": "כאל"}, {"id": "bato4jvJt7Lh", "date": "2026-09-10", "desc": "מכבסת גן", "cat": "housemaint", "who": "a", "amount": 245.0, "fixed": false, "note": "כאל"}, {"id": "nc9qbclsEBTf", "date": "2026-09-10", "desc": "ויקטורי ראשל\"צ מזרח", "cat": "super", "who": "a", "amount": 85.0, "fixed": false, "note": "כאל"}, {"id": "PL4a8Eevijww", "date": "2026-09-10", "desc": "פז YELLOW (תחנת דלק)", "cat": "fuel", "who": "a", "amount": 407.55, "fixed": false, "note": "כאל"}, {"id": "fVFA73IhVgDg", "date": "2026-09-09", "desc": "באר יעקב 365 סוויט", "cat": "other", "who": "a", "amount": 40.0, "fixed": false, "note": "כאל"}, {"id": "9WFgfRAUJeBd", "date": "2026-09-09", "desc": "באר יעקב 365 סוויט", "cat": "other", "who": "a", "amount": 60.0, "fixed": false, "note": "כאל"}, {"id": "tuv60yIXxXAJ", "date": "2026-09-09", "desc": "רמי לוי סודשילד", "cat": "super", "who": "a", "amount": 14.9, "fixed": false, "note": "כאל"}, {"id": "aS1b6UzPcvQI", "date": "2026-09-09", "desc": "רמי לוי סודשילד", "cat": "super", "who": "a", "amount": 16.6, "fixed": false, "note": "כאל"}, {"id": "mcAIy7BTrVAj", "date": "2026-09-08", "desc": "נתנלי כלים חד פעמיים", "cat": "super", "who": "a", "amount": 23.0, "fixed": false, "note": "כאל"}, {"id": "AeOuAQA0lueq", "date": "2026-09-08", "desc": "פאנס ראשון", "cat": "other", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "N5qgFtFOeENv", "date": "2026-09-08", "desc": "פירות וירקות", "cat": "veg", "who": "a", "amount": 71.24, "fixed": false, "note": "כאל"}, {"id": "HiuUrUPz0ZXu", "date": "2026-09-08", "desc": "קצבית שמואל", "cat": "super", "who": "a", "amount": 41.89, "fixed": false, "note": "כאל"}, {"id": "n54d4OH4WK7H", "date": "2026-09-08", "desc": "ביבים סודשילד", "cat": "eatout", "who": "a", "amount": 2.92, "fixed": false, "note": "כאל"}, {"id": "JMh8klzaIqzj", "date": "2026-09-08", "desc": "סופר פארם סודשילד", "cat": "health", "who": "a", "amount": 19.9, "fixed": false, "note": "כאל"}, {"id": "qg6YwFIPE3Eg", "date": "2026-09-08", "desc": "סופר פארם סודשילד", "cat": "health", "who": "a", "amount": 51.66, "fixed": false, "note": "כאל"}, {"id": "FDPrwMI3Xdam", "date": "2026-09-07", "desc": "סבן אקספרס נרקיסים", "cat": "eatout", "who": "a", "amount": 113.0, "fixed": false, "note": "כאל"}, {"id": "vWjzVBLgUFpp", "date": "2026-09-07", "desc": "הפינה המתוקה של אודל", "cat": "coffee", "who": "a", "amount": 39.0, "fixed": false, "note": "כאל"}, {"id": "NHM5ncHE7Uku", "date": "2026-09-07", "desc": "הפינה המתוקה של אודל", "cat": "coffee", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "xNWf7z8ORP8d", "date": "2026-09-06", "desc": "ירון שטרית עידן המזל", "cat": "other", "who": "a", "amount": 52.0, "fixed": false, "note": "כאל"}, {"id": "2f5ENl5W7zpz", "date": "2026-09-06", "desc": "terminal 3", "cat": "transport", "who": "a", "amount": 59.9, "fixed": false, "note": "כאל"}, {"id": "gzag1OWAfFxd", "date": "2026-09-06", "desc": "שוקולנד שלומי", "cat": "eatout", "who": "a", "amount": 7.0, "fixed": false, "note": "כאל"}, {"id": "C5RxIJDfmlUk", "date": "2026-09-06", "desc": "קריספי", "cat": "eatout", "who": "a", "amount": 33.0, "fixed": false, "note": "כאל"}, {"id": "QyWG6TbYza7e", "date": "2026-09-06", "desc": "ר-מתנות", "cat": "gifts", "who": "a", "amount": 20.0, "fixed": false, "note": "כאל"}, {"id": "gBO9IykFyeXS", "date": "2026-09-06", "desc": "מעדניית איבגי", "cat": "super", "who": "a", "amount": 56.0, "fixed": false, "note": "כאל"}, {"id": "oz3bFArIYk75", "date": "2026-09-05", "desc": "ראלי וויס-מפעל הפיס", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "כאל"}, {"id": "XXH5P2tdI6yx", "date": "2026-09-02", "desc": "ראלי וויס-מפעל הפיס", "cat": "other", "who": "a", "amount": 18.0, "fixed": false, "note": "כאל"}, {"id": "t4YL1GpxWLDw", "date": "2026-09-24", "desc": "ANTHROPIC (חו\"ל)", "cat": "subs", "who": "a", "amount": 62.77, "fixed": false, "note": "מקס"}, {"id": "cPM8Sowi0OwO", "date": "2026-09-23", "desc": "SPOTIFY (חו\"ל)", "cat": "subs", "who": "a", "amount": 12.9, "fixed": false, "note": "מקס"}, {"id": "NVBgHMBtWe0w", "date": "2026-09-10", "desc": "APPLE.COM (חו\"ל)", "cat": "subs", "who": "a", "amount": 11.9, "fixed": false, "note": "מקס"}, {"id": "qMFa3lWf381T", "date": "2026-09-03", "desc": "NETFLIX (חו\"ל)", "cat": "subs", "who": "a", "amount": 32.9, "fixed": false, "note": "מקס"}, {"id": "UhKSvyL8uMfF", "date": "2026-09-24", "desc": "ביטוח קלאי (הוראת קבע)", "cat": "insurance", "who": "a", "amount": 289.8, "fixed": true, "note": "מקס"}, {"id": "owA7BkmJDjPp", "date": "2026-09-16", "desc": "סלקום ישראל (הוראת קבע)", "cat": "cellular", "who": "a", "amount": 49.9, "fixed": true, "note": "מקס"}, {"id": "bYNYD1pmz6MC", "date": "2026-09-16", "desc": "HOT (הוראת קבע)", "cat": "internet", "who": "a", "amount": 79.0, "fixed": true, "note": "מקס"}, {"id": "CljskZA3qGPG", "date": "2026-09-12", "desc": "המוסד לביטוח (הוראת קבע)", "cat": "other", "who": "a", "amount": 171.0, "fixed": true, "note": "מקס"}, {"id": "Ybxk821IonRD", "date": "2026-09-10", "desc": "פז גזדלק חשמל וגז (הוראת קבע)", "cat": "gas", "who": "a", "amount": 137.6, "fixed": true, "note": "מקס"}, {"id": "xH9tQtRDPt27", "date": "2026-09-07", "desc": "פרי טיווישן (הוראת קבע)", "cat": "cellular", "who": "a", "amount": 44.9, "fixed": true, "note": "מקס"}, {"id": "SzmMynZIcLqz", "date": "2026-09-02", "desc": "קרן מכבי (הוראת קבע)", "cat": "health", "who": "a", "amount": 99.22, "fixed": true, "note": "מקס"}, {"id": "TfpQHwV59cWA", "date": "2026-09-27", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "RvDO6iF1vZ7I", "date": "2026-09-25", "desc": "GETT (תחבורה)", "cat": "transport", "who": "a", "amount": 57.9, "fixed": false, "note": "מקס"}, {"id": "2Scu2QTb9zJf", "date": "2026-09-24", "desc": "GETT (תחבורה)", "cat": "transport", "who": "a", "amount": 12.0, "fixed": false, "note": "מקס"}, {"id": "01rYXpQDVmWS", "date": "2026-09-24", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 100.0, "fixed": false, "note": "מקס"}, {"id": "SNUSg9G0r09w", "date": "2026-09-23", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "QHWJw7GXxPNS", "date": "2026-09-23", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 220.0, "fixed": false, "note": "מקס"}, {"id": "sPJp8P65REMr", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "k7IirrfCF5Op", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "QsItDxvyZ9qd", "date": "2026-09-11", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 60.0, "fixed": false, "note": "מקס"}, {"id": "TEszfExngI81", "date": "2026-09-10", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 10.0, "fixed": false, "note": "מקס"}, {"id": "PPWFv7KOMbwq", "date": "2026-09-10", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "a", "amount": 299.9, "fixed": false, "note": "מקס"}, {"id": "bz1AA8WWVx31", "date": "2026-09-08", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 140.0, "fixed": false, "note": "מקס"}, {"id": "VnNQlV5lr74l", "date": "2026-09-08", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 70.0, "fixed": false, "note": "מקס"}, {"id": "59R6603NImfZ", "date": "2026-09-05", "desc": "PAYBOX", "cat": "other", "who": "a", "amount": 20.0, "fixed": false, "note": "מקס"}, {"id": "RjWfFQM25YGX", "date": "2026-09-03", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "a", "amount": 61.0, "fixed": false, "note": "מקס"}, {"id": "0wbK4myJtDZF", "date": "2026-09-01", "desc": "BIT העברת כספים", "cat": "other", "who": "a", "amount": 300.0, "fixed": false, "note": "מקס"}, {"id": "YlJT9YAcSIB4", "date": "2026-09-30", "desc": "דלק מנטה ניות", "cat": "fuel", "who": "b", "amount": 423.78, "fixed": false, "note": "ישראכרד"}, {"id": "zUfUEJlUFI80", "date": "2026-09-29", "desc": "המרכז לגביית קנסות", "cat": "fees", "who": "b", "amount": 1250.0, "fixed": false, "note": "ישראכרד"}, {"id": "twVN9X42TTqX", "date": "2026-09-29", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 34.5, "fixed": false, "note": "ישראכרד"}, {"id": "kn4Ukcittrvi", "date": "2026-09-28", "desc": "RE רי", "cat": "other", "who": "b", "amount": 28.0, "fixed": false, "note": "ישראכרד"}, {"id": "uC5zLAi4ZUIT", "date": "2026-09-28", "desc": "YESSTYLE (אתר חו\"ל)", "cat": "clothes", "who": "b", "amount": 510.17, "fixed": false, "note": "ישראכרד"}, {"id": "OVWrNPkp0bMj", "date": "2026-09-27", "desc": "סודוך", "cat": "other", "who": "b", "amount": 125.0, "fixed": false, "note": "ישראכרד"}, {"id": "i77I1AWeonBF", "date": "2026-09-27", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 14.95, "fixed": false, "note": "ישראכרד"}, {"id": "fHiprnM34RjS", "date": "2026-09-25", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 12.9, "fixed": true, "note": "ישראכרד"}, {"id": "kPH94ghjOXCX", "date": "2026-09-22", "desc": "משקאות דודיק שיווק", "cat": "super", "who": "b", "amount": 146.0, "fixed": false, "note": "ישראכרד"}, {"id": "oAgTrfYXkyET", "date": "2026-09-22", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 32.39, "fixed": false, "note": "ישראכרד"}, {"id": "RMEDhOVfPOkl", "date": "2026-09-21", "desc": "פיצה דון פאפא", "cat": "eatout", "who": "b", "amount": 88.0, "fixed": false, "note": "ישראכרד"}, {"id": "iHl3BTKoGN2V", "date": "2026-09-21", "desc": "דור פארק חדרה", "cat": "fun", "who": "b", "amount": 434.48, "fixed": false, "note": "ישראכרד"}, {"id": "qKuTorRJFK21", "date": "2026-09-21", "desc": "אלונית פארק חדרה", "cat": "fun", "who": "b", "amount": 15.0, "fixed": false, "note": "ישראכרד"}, {"id": "GiaXILqM2uTe", "date": "2026-09-17", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 29.36, "fixed": false, "note": "ישראכרד"}, {"id": "TuFRmeGvR9An", "date": "2026-09-17", "desc": "ADOBE (הוראת קבע)", "cat": "subs", "who": "b", "amount": 239.0, "fixed": true, "note": "ישראכרד"}, {"id": "Qpb2nehwg7by", "date": "2026-09-15", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 31.9, "fixed": true, "note": "ישראכרד"}, {"id": "bzwH6bIVTx3a", "date": "2026-09-14", "desc": "סוף סודשילד (שופרסל)", "cat": "super", "who": "b", "amount": 38.0, "fixed": false, "note": "ישראכרד"}, {"id": "zowjf356Ts5p", "date": "2026-09-14", "desc": "דני דרס", "cat": "clothes", "who": "b", "amount": 150.0, "fixed": false, "note": "ישראכרד"}, {"id": "48Qe4hBFXFRk", "date": "2026-09-14", "desc": "קפאו מסעדה תאילנדית", "cat": "eatout", "who": "b", "amount": 626.0, "fixed": false, "note": "ישראכרד"}, {"id": "kOoKiRIJua2w", "date": "2026-09-14", "desc": "צ'יקן פיק בני ברק", "cat": "eatout", "who": "b", "amount": 60.0, "fixed": false, "note": "ישראכרד"}, {"id": "Xk85bZf6zTcY", "date": "2026-09-13", "desc": "USA פיצה", "cat": "eatout", "who": "b", "amount": 105.0, "fixed": false, "note": "ישראכרד"}, {"id": "IY137FxmVpJ4", "date": "2026-09-13", "desc": "תחנת דלק מפגש אולגה", "cat": "fuel", "who": "b", "amount": 423.85, "fixed": false, "note": "ישראכרד"}, {"id": "mSJDYivWOq1Z", "date": "2026-09-11", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "b", "amount": 91.88, "fixed": false, "note": "ישראכרד"}, {"id": "7R85FcdJ8bSE", "date": "2026-09-10", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 25.38, "fixed": false, "note": "ישראכרד"}, {"id": "Vq28fKuOO9gs", "date": "2026-09-09", "desc": "קפה טו סבידון", "cat": "coffee", "who": "b", "amount": 31.0, "fixed": false, "note": "ישראכרד"}, {"id": "oE5tX1F0Uc4r", "date": "2026-09-09", "desc": "תבל טארו כרטוס", "cat": "other", "who": "b", "amount": 50.0, "fixed": false, "note": "ישראכרד"}, {"id": "wIRBzEDlKr8K", "date": "2026-09-09", "desc": "ביי-מי שוברי מתנה", "cat": "gifts", "who": "b", "amount": 400.0, "fixed": false, "note": "ישראכרד"}, {"id": "Td4bGbyT2Bxw", "date": "2026-09-08", "desc": "שוק העיר ב.ס.ר", "cat": "super", "who": "b", "amount": 97.41, "fixed": false, "note": "ישראכרד"}, {"id": "tFp73mXKJKT4", "date": "2026-09-07", "desc": "פאנס ראשון", "cat": "other", "who": "b", "amount": 19.0, "fixed": false, "note": "ישראכרד"}, {"id": "m0nOZGfccOI8", "date": "2026-09-07", "desc": "ארגמן חנויות", "cat": "other", "who": "b", "amount": 120.0, "fixed": false, "note": "ישראכרד"}, {"id": "fdsBNWh3Cg6Q", "date": "2026-09-07", "desc": "פיצה סטורי ראשון לציון", "cat": "eatout", "who": "b", "amount": 282.0, "fixed": false, "note": "ישראכרד"}, {"id": "Yo8tgyiv0PWM", "date": "2026-09-06", "desc": "בית מרקחת בקשי", "cat": "health", "who": "b", "amount": 40.25, "fixed": false, "note": "ישראכרד"}, {"id": "ulvvalx2Qrpg", "date": "2026-09-06", "desc": "סיאם יפו (מסעדה)", "cat": "eatout", "who": "b", "amount": 120.0, "fixed": false, "note": "ישראכרד"}, {"id": "NvD1F84ysNLr", "date": "2026-09-06", "desc": "סקופ יבוא בע\"מ", "cat": "other", "who": "b", "amount": 119.9, "fixed": false, "note": "ישראכרד"}, {"id": "OYdX8XvQN7uM", "date": "2026-09-06", "desc": "מיני אלנבי", "cat": "eatout", "who": "b", "amount": 100.0, "fixed": false, "note": "ישראכרד"}, {"id": "2UVHNgBmDXys", "date": "2026-09-04", "desc": "ארוחה גבעת שמואל", "cat": "eatout", "who": "b", "amount": 37.0, "fixed": false, "note": "ישראכרד"}, {"id": "qHfxe5DIhIdZ", "date": "2026-09-03", "desc": "APPLE.COM/BILL (הוראת קבע)", "cat": "subs", "who": "b", "amount": 39.9, "fixed": true, "note": "ישראכרד"}, {"id": "wnm2aiVHdF99", "date": "2026-09-02", "desc": "WOLT (משלוח אוכל)", "cat": "eatout", "who": "b", "amount": 256.9, "fixed": false, "note": "ישראכרד"}]}, "2026-10": {"rows": [{"id": "CBO3HLjI1ATP", "date": "2026-10-04", "desc": "פוד אפיל מתחם", "cat": "eatout", "who": "a", "amount": 12.5, "fixed": false, "note": "כאל"}]}}, "lastMonth": "2026-09"}</script>
+<div id="addDlg" class="dlg" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+  <div class="dlghead"><h3 id="formTitle">תנועה חדשה</h3><button class="ib sm" data-act="closeAdd" aria-label="סגירה">✕</button></div>
+  <div class="seg" role="group" aria-label="סוג"><button type="button" data-act="kind" data-k="expense" aria-pressed="true">הוצאה</button><button type="button" data-act="kind" data-k="income" aria-pressed="false">הכנסה</button></div>
+  <form class="entry" id="rowForm" autocomplete="off">
+    <div class="f"><label for="fAmount">סכום</label><input type="number" id="fAmount" step="0.01" min="0" required inputmode="decimal"></div>
+    <div class="f"><label for="fDate">תאריך</label><input type="date" id="fDate" required></div>
+    <div class="f wide"><label for="fDesc">תיאור / בית עסק</label><input id="fDesc" list="descList" placeholder="למשל: שופרסל, משכורת, מסעדה בחופשה"></div>
+    <div class="f"><label for="fCat">קטגוריה</label><select id="fCat" required></select></div>
+    <div class="f"><label for="fWho">מי</label><select id="fWho"></select></div>
+    <div class="f"><label for="fNote">כרטיס / אמצעי</label><input id="fNote" list="noteList" placeholder="כאל, מקס, מזומן…"></div>
+    <label class="chk" for="fFixed" style="align-self:end"><input type="checkbox" id="fFixed"> חוזר כל חודש</label>
+    <div class="row wide" style="margin-top:4px"><button type="submit" class="btn pri" id="fSubmit" style="flex:1;padding:10px">הוסף</button><button type="button" class="btn danger" id="fDelete" data-act="delEdit" hidden>מחיקה</button></div>
+  </form>
+  <div class="hint" id="fHint"></div>
+  <datalist id="descList"></datalist><datalist id="noteList"></datalist>
+  <div class="chips" id="quick"></div>
+</div></div>
+<button class="fab" data-act="openAdd" aria-label="הוספת תנועה">＋</button>
 <div id="tip" role="tooltip"></div>
 <div id="toast" role="status" hidden></div>
 <div id="modal" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle"></h3><div class="mb" id="mBody"></div><div class="mf" id="mFoot"></div></div></div>
@@ -448,7 +467,13 @@ const catById=id=>state.cats.find(c=>c.id===id)||{id,name:'(קטגוריה שנ�
 const isInc=r=>catById(r.cat).type==='income';
 const whoName=w=>w==='s'?'משותף':(state.settings.names[w]||(w==='a'?'אני':'בן/בת הזוג'));
 const WHO=['a','b','s'];
-const monthsWithData=()=>Object.keys(state.data).filter(k=>rowsOf(k).length).sort();
+/* tracking starts at a chosen month; anything earlier is kept but not counted */
+function trackStart(){
+  const st=state.settings.startMonth;if(/^\d{4}-\d{2}$/.test(st||''))return st;
+  const all=Object.keys(state.data).filter(k=>rowsOf(k).length).sort();
+  return all.find(k=>rowsOf(k).length>=5)||all[0]||curMonth();
+}
+const monthsWithData=()=>{const st=trackStart();return Object.keys(state.data).filter(k=>k>=st&&rowsOf(k).length).sort();};
 const memo=new Map();
 function monthSums(mk){
   if(memo.has(mk))return memo.get(mk);
@@ -470,16 +495,17 @@ function monthSums(mk){
     byCat,byGroup,byWho,byWhoInc,byNote,dim,elapsed,isCur,proj,projBalance:income-proj,budgetTotal};
   memo.set(mk,res);return res;
 }
-function startMonth(){
+function openMonth(){
   const cm=curMonth(),ms=monthsWithData();
-  if(rowsOf(cm).length>=5||!ms.length)return cm;
+  if(rowsOf(cm).length>=5||!ms.length)return cm<trackStart()?trackStart():cm;
   const full=ms.filter(k=>k<=cm&&rowsOf(k).length>=5);
   return full.length?full[full.length-1]:(ms.includes(cm)?cm:ms[ms.length-1]);
 }
-function prevWithData(mk){const ms=monthsWithData().filter(k=>k<mk);return ms.length?ms[ms.length-1]:addM(mk,-1);}
+/* the comparison month is always the calendar month before, never a skip back to an old one */
+function prevWithData(mk){const p=addM(mk,-1);return p>=trackStart()?p:null;}
 function avg3(mk){
   const res={};let n=0;
-  for(let i=1;i<=3;i++){const s=monthSums(addM(mk,-i));if(!s.count)continue;n++;
+  for(let i=1;i<=3;i++){const k=addM(mk,-i);if(k<trackStart())break;const s=monthSums(k);if(!s.count)continue;n++;
     Object.keys(s.byCat).forEach(c=>{if(catById(c).type==='expense')res[c]=(res[c]||0)+s.byCat[c];});}
   Object.keys(res).forEach(c=>res[c]/=Math.max(1,n));
   return {avg:res,n};
@@ -562,8 +588,8 @@ function progress(used,budget){
   const p=used/budget*100,col=p>100?'var(--bad)':p>85?'var(--warn)':'var(--good)';
   return `<div class="track mini${p>100?' over':''}" data-tip="${Math.round(p)}% מהתקציב"><i style="width:${Math.min(100,p)}%;background:${col}"></i></div>`;
 }
-function catOptions(sel,withAll){
-  return (withAll?'<option value="all">כל הקטגוריות</option>':'')+GROUPS.map(g=>{const cs=state.cats.filter(c=>c.group===g);
+function catOptions(sel,withAll,type){
+  return (withAll?'<option value="all">כל הקטגוריות</option>':'')+GROUPS.map(g=>{const cs=state.cats.filter(c=>c.group===g&&(!type||c.type===type));
     return cs.length?`<optgroup label="${esc(g)}">${cs.map(c=>`<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.name)}</option>`).join('')}</optgroup>`:'';}).join('');
 }
 
@@ -618,29 +644,37 @@ function exportBox(title,name,text,type){
 })();
 
 /* ---------- 8. masthead & summary band ---------- */
-const ui={tab:'entry',month:curMonth(),search:'',fCat:'all',fWho:'all',fNote:'all',sort:'date-desc',editId:null,catTouched:false,quick:[],cmpA:null,cmpB:null,year:null,recat:null};
+const ui={kind:'expense',tab:'entry',month:curMonth(),search:'',fCat:'all',fWho:'all',fNote:'all',sort:'date-desc',editId:null,catTouched:false,quick:[],cmpA:null,cmpB:null,year:null,recat:null};
 function renderHead(){
+  const st=trackStart();
   $('#mLabel').textContent=mLabel(ui.month);
-  $('#eyebrow').textContent='פנקס הבית'+(state.demo?' · נתוני דוגמה':'');
-  $('#whoLine').textContent=whoName('a')+' ו'+whoName('b')+' · '+monthsWithData().length+' חודשים בפנקס';
-  const s=monthSums(ui.month),pm=prevWithData(ui.month),p=monthSums(pm),goal=+state.settings.goal||20;
-  const dExp=p.expense>0&&p.count>=5?(s.expense-p.expense)/p.expense*100:null;
+  $('#eyebrow').textContent='פנקס הבית'+(state.demo?' · נתוני דוגמה':ui.month===st?' · החודש הראשון במעקב':'');
+  $('#whoLine').textContent=whoName('a')+' ו'+whoName('b')+' · מעקב מאז '+mLabel(st);
+  $('[data-act="mPrev"]').disabled=ui.month<=st;$('#mPick').min=st;
+  const s=monthSums(ui.month),pm=prevWithData(ui.month),p=pm?monthSums(pm):null;
   const k=(l,v,d,tone)=>`<div class="k" data-tone="${tone||''}"><div class="kl">${esc(l)}</div><div class="kv">${v}</div><div class="kd">${d}</div></div>`;
-  const incCount=s.rows.filter(isInc).length;
+  const incCount=s.rows.filter(isInc).length,left=s.budgetTotal-s.expense;
+  let cmp;
+  if(!p)cmp=k('השוואה','—','החודש הראשון במעקב. ההשוואה תתחיל ב'+MONTHS[+addM(ui.month,1).slice(5)-1]);
+  else if(!p.count)cmp=k('מול '+MONTHS[+pm.slice(5)-1],'—','אין נתונים ב'+MONTHS[+pm.slice(5)-1]);
+  else{
+    /* a month in progress is compared with the same days of the previous month */
+    const base=s.isCur?sum(p.rows.filter(r=>!isInc(r)&&dayOf(r.date)<=s.elapsed),r=>r.amount):p.expense;
+    const pn=MONTHS[+pm.slice(5)-1],d=base>0?(s.expense-base)/base*100:null;
+    cmp=k((s.isCur?'מול '+pn+' עד ה-'+s.elapsed:'מול '+pn),d==null?'—':esc(pctS(d)),(s.isCur?M(s.expense)+' מול '+M(base)+' באותם ימים':M(Math.abs(s.expense-base))+(s.expense>=base?' יותר בהוצאות':' פחות בהוצאות')),d==null?'':(d>0?'bad':'good'));}
   $('#kpis').innerHTML=[
-    k('הכנסות',esc(money(s.income)),incCount?incCount+' תנועות הכנסה':'<span class="pill warn">לא הוזנו הכנסות</span>',s.income?'good':''),
-    k('הוצאות',esc(money(s.expense)),s.fixed?M(s.fixed)+' מהן קבועות':'ללא קבועות','bad'),
-    k('מאזן',esc(money(s.balance)),s.income?(s.balance>=0?'<span class="pill good">▲ נשאר בפלוס</span>':'<span class="pill bad">▼ במינוס</span>'):'צריך הכנסות כדי לחשב',s.income?(s.balance>=0?'good':'bad'):''),
-    k('שיעור חיסכון',s.saveRate==null?'—':Math.round(s.saveRate)+'%',s.saveRate==null?'יעד '+goal+'%':(s.saveRate>=goal?`<span class="pill good">✓ מעל היעד (${goal}%)</span>`:`<span class="pill warn">מתחת ליעד (${goal}%)</span>`),s.saveRate==null?'':(s.saveRate>=goal?'good':'bad')),
-    s.isCur?k('תחזית לסוף החודש',esc(money(s.proj)),'לפי '+s.elapsed+' ימים, קבועות כבר בפנים',s.income?(s.projBalance>=0?'good':'bad'):''):k('ימים בחודש',String(s.dim),s.count+' תנועות'),
-    k('מול '+MONTHS[+pm.slice(5)-1],dExp==null?'—':esc(pctS(dExp)),dExp==null?(p.count?M(Math.abs(s.expense-p.expense))+(s.expense>=p.expense?' יותר':' פחות')+' · חודש חלקי':'אין נתונים להשוואה'):M(Math.abs(s.expense-p.expense))+(s.expense>=p.expense?' יותר בהוצאות':' פחות בהוצאות'),dExp==null?'':(dExp>0?'bad':'good'))
+    k('הכנסות',esc(money(s.income)),incCount?incCount+' תנועות הכנסה':'<button class="pill warn" data-act="openIncome" style="border:none;cursor:pointer">＋ הוספת הכנסה</button>',s.income?'good':''),
+    k('הוצאות',esc(money(s.expense)),s.fixed?M(s.fixed)+' מהן קבועות':s.count+' תנועות','bad'),
+    k('מאזן',esc(money(s.balance)),s.income?(s.balance>=0?'<span class="pill good">▲ נשאר בפלוס</span>':'<span class="pill bad">▼ במינוס</span>'):'יתעדכן כשיוזנו הכנסות',s.income?(s.balance>=0?'good':'bad'):''),
+    k('נשאר בתקציב',s.budgetTotal?esc(money(left)):'—',s.budgetTotal?(left>=0?'מתוך '+M(s.budgetTotal):'<span class="pill bad">חריגה מהתקציב</span>'):'לא הוגדר תקציב',s.budgetTotal?(left>=0?'good':'bad'):''),
+    s.isCur?k('צפי לסוף החודש',esc(money(s.proj)),'לפי הקצב עד היום, קבועות בפנים',s.budgetTotal?(s.proj<=s.budgetTotal?'good':'bad'):''):k('ממוצע ליום',esc(money(s.expense/s.dim)),s.count+' תנועות ב-'+s.dim+' ימים'),
+    cmp
   ].join('');
 }
 
 /* ---------- 9. transactions tab ---------- */
 function fillForm(){
-  const keep=$('#fCat').value;
-  $('#fCat').innerHTML=catOptions(keep||'super');
+  setKind(ui.kind,true);
   const kw=$('#fWho').value;$('#fWho').innerHTML=WHO.map(w=>`<option value="${w}">${esc(whoName(w))}</option>`).join('');if(kw)$('#fWho').value=kw;
   $('#fFilterCat').innerHTML=catOptions(ui.fCat,true);
   $('#fFilterWho').innerHTML='<option value="all">כל המשלמים</option>'+WHO.map(w=>`<option value="${w}"${ui.fWho===w?' selected':''}>${esc(whoName(w))}</option>`).join('');
@@ -662,7 +696,7 @@ function renderEntry(){
   let b='';
   if(state.demo)b+=`<div class="note"><span><b>אלה נתוני דוגמה.</b> הם כאן כדי להראות איך הפנקס עובד. ייבאו את הגיבוי שלכם או התחילו פנקס ריק.</span><span class="row"><button class="btn sm pri" data-act="goImport">ייבוא גיבוי</button><button class="btn sm" data-act="startEmpty">פנקס ריק</button></span></div>`;
   if(!storageOK)b+=`<div class="note warn"><span><b>הדפדפן חוסם שמירה מקומית בחלון הזה.</b> הנתונים יימחקו ברענון. פתחו את הקובץ ישירות ב-Chrome, Edge או Safari, או גבו מטאב ההגדרות.</span></div>`;
-  if(ui.month>curMonth())b+=`<div class="note warn"><span>אתם בחודש עתידי (${esc(mLabel(ui.month))}).</span></div>`;
+  if(ui.month>curMonth())b+=`<div class="note warn"><span>זה חודש עתידי (${esc(mLabel(ui.month))}). אפשר לרשום בו הוצאות צפויות.</span></div>`;
   $('#banner').innerHTML=b;
   /* quick chips */
   ui.quick=quickList();
@@ -690,7 +724,7 @@ function filteredRows(){
 function renderRows(){
   const rows=filteredRows(),net=sum(rows,r=>(isInc(r)?1:-1)*r.amount),exp=sum(rows.filter(r=>!isInc(r)),r=>r.amount);
   $('#rowsCount').innerHTML=rows.length+' תנועות · הוצאות '+M(exp);
-  if(!rows.length){$('#rowsTable').innerHTML=`<div class="empty">${rowsOf(ui.month).length?'אין תנועות שמתאימות לסינון.':'אין עדיין תנועות ב'+esc(mLabel(ui.month))+'. הוסיפו את הראשונה בטופס למעלה.'}</div>`;return;}
+  if(!rows.length){$('#rowsTable').innerHTML=`<div class="empty">${rowsOf(ui.month).length?'אין תנועות שמתאימות לסינון.':'אין עדיין תנועות ב'+esc(mLabel(ui.month))+'. העלו פירוט אשראי למעלה, או לחצו ＋ תנועה.'}</div>`;return;}
   const body=rows.map(r=>{const c=catById(r.cat),inc=c.type==='income';
     const catCell=ui.recat===r.id?`<select id="recat" data-id="${esc(r.id)}" aria-label="קטגוריה">${catOptions(r.cat)}</select>`
       :`<button class="catbtn" data-act="recat" data-id="${esc(r.id)}" title="שינוי קטגוריה"><span class="sw" style="background:${inc?'var(--good)':gcol(c.group)}"></span>${esc(c.name)}</button>`;
@@ -713,24 +747,42 @@ function submitRow(e){
   if(state.demo)dropDemo();
   const mk=date.slice(0,7);state.data[mk]=state.data[mk]||{rows:[]};
   const rec={id:ui.editId||uid(),date,desc:$('#fDesc').value.trim()||catById(cat).name,cat,who:$('#fWho').value,amount:amt,fixed:$('#fFixed').checked,note:$('#fNote').value.trim()};
-  if(ui.editId){removeRow(ui.editId);state.data[mk].rows.push(rec);endEdit();toast('התנועה עודכנה');}
-  else{state.data[mk].rows.push(rec);toast('נוסף: '+rec.desc+' · '+money(amt));}
-  ui.month=mk;$('#fDesc').value='';$('#fAmount').value='';$('#fFixed').checked=false;$('#fHint').textContent='';ui.catTouched=false;
-  commit();fillForm();$('#fDesc').focus();
+  const wasEdit=!!ui.editId;
+  if(wasEdit)removeRow(ui.editId);state.data[mk].rows.push(rec);
+  if(mk>=trackStart())ui.month=mk;closeAdd();
+  commit();fillForm();
+  toast(wasEdit?'התנועה עודכנה':(isInc(rec)?'נוספה הכנסה: ':'נוסף: ')+rec.desc+' · '+money(amt)+(mk<trackStart()?' (לפני תחילת המעקב, לא תיספר)':''));
 }
 function removeRow(id){for(const k in state.data){const i=state.data[k].rows.findIndex(r=>r.id===id);if(i>=0)return {k,i,row:state.data[k].rows.splice(i,1)[0]};}return null;}
 function findRow(id){for(const k in state.data){const r=state.data[k].rows.find(x=>x.id===id);if(r)return r;}return null;}
-function startEdit(id){
-  const r=findRow(id);if(!r)return;ui.editId=id;ui.catTouched=true;
-  $('#fDate').value=r.date;$('#fDesc').value=r.desc;$('#fCat').value=r.cat;$('#fWho').value=r.who;$('#fAmount').value=r.amount;$('#fNote').value=r.note||'';$('#fFixed').checked=!!r.fixed;
-  $('#fSubmit').textContent='עדכן';$('#fCancel').hidden=false;$('#formMode').textContent='עריכת תנועה קיימת';
-  window.scrollTo({top:$('#rowForm').getBoundingClientRect().top+scrollY-90,behavior:'smooth'});$('#fAmount').focus();renderRows();
+function setKind(k,keepSel){
+  ui.kind=k==='income'?'income':'expense';
+  $$('.seg [data-k]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.k===ui.kind)));
+  const prev=$('#fCat').value;$('#fCat').innerHTML=catOptions(prev,false,ui.kind);
+  if(!keepSel||catById(prev).type!==ui.kind||!state.cats.some(c=>c.id===prev))$('#fCat').value=ui.kind==='income'?'salary1':'super';
+  if(!$('#fCat').value&&$('#fCat').options.length)$('#fCat').selectedIndex=0;
 }
-function endEdit(){ui.editId=null;ui.catTouched=false;$('#fSubmit').textContent='הוסף';$('#fCancel').hidden=true;$('#formMode').textContent='Enter מוסיף · תיאור מוכר ממלא קטגוריה לבד';}
+function defaultDate(){const cm=curMonth();return ui.month===cm||ui.month<trackStart()?todayISO():ui.month+'-'+pad(Math.min(dayOf(todayISO()),dimOf(ui.month)));}
+function openAdd(kind){
+  endEdit();setKind(kind||'expense');
+  $('#rowForm').reset();setKind(kind||'expense');$('#fDate').value=defaultDate();$('#fHint').textContent='';
+  if(kind==='income'){$('#fWho').value='a';}
+  $('#addDlg').hidden=false;setTimeout(()=>$('#fAmount').focus(),30);
+}
+function closeAdd(){$('#addDlg').hidden=true;endEdit();}
+function startEdit(id){
+  const r=findRow(id);if(!r)return;
+  setKind(catById(r.cat).type);ui.editId=id;ui.catTouched=true;
+  $('#fDate').value=r.date;$('#fDesc').value=r.desc;$('#fCat').value=r.cat;$('#fWho').value=r.who;$('#fAmount').value=r.amount;$('#fNote').value=r.note||'';$('#fFixed').checked=!!r.fixed;
+  $('#fSubmit').textContent='שמור שינויים';$('#fDelete').hidden=false;$('#formTitle').textContent='עריכת תנועה';$('#fHint').textContent='';
+  $('#addDlg').hidden=false;setTimeout(()=>$('#fAmount').focus(),30);
+}
+function endEdit(){ui.editId=null;ui.catTouched=false;$('#fSubmit').textContent='הוסף';$('#fDelete').hidden=true;$('#formTitle').textContent='תנועה חדשה';}
 function onDescInput(){
   const v=$('#fDesc').value.trim().toLowerCase();if(!v||ui.editId){$('#fHint').textContent='';return;}
   const hit=merchantIndex().get(v);
   if(hit&&!ui.catTouched){
+    if(catById(hit.cat).type!==ui.kind)setKind(catById(hit.cat).type);
     $('#fCat').value=hit.cat;$('#fWho').value=hit.who;if(hit.note)$('#fNote').value=hit.note;$('#fFixed').checked=!!hit.fixed;
     if(!$('#fAmount').value&&hit.fixed)$('#fAmount').value=hit.amount;
     $('#fHint').textContent='זוהה מתנועה קודמת: '+catById(hit.cat).name+' · '+whoName(hit.who)+(hit.note?' · '+hit.note:'');
@@ -795,11 +847,13 @@ function suggestBudgets(onlyEmpty){
 
 /* ---------- 11. compare tab ---------- */
 function monthOptions(sel){
-  const set=new Set(monthsWithData());for(let i=0;i<13;i++)set.add(addM(curMonth(),-i));set.add(ui.month);set.add(sel);
+  const set=new Set(monthsWithData());for(let m=trackStart();m<=curMonth();m=addM(m,1))set.add(m);set.add(ui.month);set.add(sel);
   return [...set].sort().reverse().map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(mLabel(k))}</option>`).join('');
 }
 function renderCompare(){
-  const A=ui.cmpA||ui.month,B=ui.cmpB||prevWithData(A),a=monthSums(A),b=monthSums(B);
+  const A=ui.cmpA||ui.month,B=ui.cmpB||prevWithData(A);
+  if(!B){$('#panel-compare').innerHTML=`<div class="sheet"><div class="empty"><b>${esc(mLabel(A))} הוא החודש הראשון במעקב.</b><br>מ${esc(mLabel(addM(A,1)))} תופיע כאן השוואה מלאה לחודש הקודם: כל קטגוריה, מי הוציא, וכל כרטיס.</div></div>`;return;}
+  const a=monthSums(A),b=monthSums(B);
   const dE=a.expense-b.expense,dI=a.income-b.income;
   const diffs=state.cats.filter(c=>c.type==='expense'&&((a.byCat[c.id]||0)||(b.byCat[c.id]||0))).map(c=>({c,A:a.byCat[c.id]||0,B:b.byCat[c.id]||0})).map(x=>({...x,d:x.A-x.B})).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d));
   const top=diffs.slice(0,10),nA=MONTHS[+A.slice(5)-1],nB=MONTHS[+B.slice(5)-1];
@@ -832,13 +886,15 @@ function renderCompare(){
 }
 
 /* ---------- 12. year tab ---------- */
+/* trend: every tracked month in a row, running across the new year */
+function trendMonths(){
+  const st=trackStart(),ms=monthsWithData();let end=[curMonth(),ui.month,...ms].sort().pop();if(end<st)end=st;
+  const out=[];for(let m=st;m<=end&&out.length<120;m=addM(m,1))out.push(m);return out.slice(-12);
+}
+const mShort=k=>MSHORT[+k.slice(5)-1]+" '"+k.slice(2,4);
 function renderYear(){
-  const years=[...new Set([...monthsWithData().map(k=>k.slice(0,4)),String(new Date().getFullYear())])].sort().reverse();
-  if(!years.includes(ui.month.slice(0,4)))years.unshift(ui.month.slice(0,4));years.sort().reverse();
-  const Y=ui.year&&years.includes(ui.year)?ui.year:ui.month.slice(0,4);ui.year=Y;
-  const mks=Array.from({length:12},(_,i)=>Y+'-'+pad(i+1)),S=mks.map(monthSums),act=S.filter(s=>s.count);
-  const full=act.filter(s=>!s.isCur&&s.count>=5);
-  const inc=sum(S,s=>s.income),exp=sum(S,s=>s.expense),bal=inc-exp;
+  const mks=trendMonths(),S=mks.map(monthSums),act=S.filter(s=>s.count),full=act.filter(s=>!s.isCur&&s.count>=5);
+  const inc=sum(S,s=>s.income),exp=sum(S,s=>s.expense),bal=inc-exp,L=mks.map(mShort);
   const best=full.reduce((m,s)=>!m||s.expense<m.expense?s:m,null),worst=full.reduce((m,s)=>!m||s.expense>m.expense?s:m,null);
   let run=0;const cum=S.map(s=>run+=s.balance);
   const byCat={};state.cats.filter(c=>c.type==='expense').forEach(c=>{const v=sum(S,s=>s.byCat[c.id]||0);if(v)byCat[c.id]=v;});
@@ -846,27 +902,28 @@ function renderYear(){
     return `<tr class="grp"><td><span class="sw" style="background:${gcol(g)}"></span>${esc(g)}</td>${S.map(s=>`<td class="num">${s.byGroup[g]?kf(s.byGroup[g]):''}</td>`).join('')}<td class="num">${N(sum(cs,c=>byCat[c.id]))}</td></tr>`+
       cs.map(c=>{const mx=Math.max(1,...S.map(s=>s.byCat[c.id]||0));
         return `<tr><td style="padding-inline-start:26px;white-space:nowrap">${esc(c.name)}</td>${S.map((s,i)=>{const v=s.byCat[c.id]||0;
-          return `<td style="padding:2px"><span class="heat" style="background:color-mix(in srgb,var(--accent) ${v?Math.round(8+50*v/mx):0}%,transparent)" ${v?`data-tip="${esc(c.name)} · ${MONTHS[i]}: ${esc(money(v))}"`:''}>${v?kf(v):''}</span></td>`;}).join('')}<td class="num">${N(byCat[c.id])}</td></tr>`;}).join('');}).join('');
+          return `<td style="padding:2px"><span class="heat" style="background:color-mix(in srgb,var(--accent) ${v?Math.round(8+50*v/mx):0}%,transparent)" ${v?`data-tip="${esc(c.name)} · ${esc(mLabel(mks[i]))}: ${esc(money(v))}"`:''}>${v?kf(v):''}</span></td>`;}).join('')}<td class="num">${N(byCat[c.id])}</td></tr>`;}).join('');}).join('');
   const k=(l,v,d,tone)=>`<div class="k" data-tone="${tone||''}"><div class="kl">${esc(l)}</div><div class="kv">${v}</div><div class="kd">${d}</div></div>`;
+  const span=mLabel(mks[0])+(mks.length>1?' עד '+mLabel(mks[mks.length-1]):'');
   $('#panel-year').innerHTML=`
-   <div class="sheet"><h2>שנת ${Y} <select id="yearSel" aria-label="שנה" style="width:auto">${years.map(y=>`<option${y===Y?' selected':''}>${y}</option>`).join('')}</select></h2>
+   <div class="sheet"><h2>מאז שהתחלנו <span class="sub">${esc(span)}</span></h2>
     <div class="band" style="box-shadow:none;margin:0">
-      ${k('הכנסות השנה',esc(money(inc)),act.length+' חודשים עם נתונים','good')}${k('הוצאות השנה',esc(money(exp)),'','bad')}
-      ${k('נשאר השנה',esc(money(bal)),inc?(bal>=0?'<span class="pill good">▲ חיובי</span>':'<span class="pill bad">▼ גרעון</span>'):'אין הכנסות רשומות',inc?(bal>=0?'good':'bad'):'')}
-      ${k('שיעור חיסכון',inc?Math.round(bal/inc*100)+'%':'—','יעד '+(+state.settings.goal||20)+'%')}
-      ${k('ממוצע הוצאות לחודש',esc(money(act.length?exp/act.length:0)),'')}
-      ${k('החודש הזול',best?MONTHS[+best.mk.slice(5)-1]:'—',worst?'היקר: '+MONTHS[+worst.mk.slice(5)-1]+' · '+M(worst.expense):'')}
+      ${k('הכנסות',esc(money(inc)),act.length+' חודשים עם נתונים','good')}${k('הוצאות',esc(money(exp)),'','bad')}
+      ${k('נשאר',esc(money(bal)),inc?(bal>=0?'<span class="pill good">▲ חיובי</span>':'<span class="pill bad">▼ גרעון</span>'):'יתעדכן כשיוזנו הכנסות',inc?(bal>=0?'good':'bad'):'')}
+      ${k('ממוצע הוצאות לחודש',esc(money(full.length?sum(full,s=>s.expense)/full.length:(act.length?exp/act.length:0))),full.length?'לפי '+full.length+' חודשים מלאים':'')}
+      ${k('החודש הזול',best?esc(mLabel(best.mk)):'—',best?M(best.expense):'צריך שני חודשים מלאים')}
+      ${k('החודש היקר',worst&&full.length>1?esc(mLabel(worst.mk)):'—',worst&&full.length>1?M(worst.expense):'')}
     </div></div>
    <div class="g2">
-    <div class="sheet"><h2>הכנסות מול הוצאות</h2>${colChart({labels:MSHORT,series:[{name:'הכנסות',color:'var(--good)',values:S.map(s=>s.income)},{name:'הוצאות',color:'var(--bad)',values:S.map(s=>s.expense)}]})}</div>
-    <div class="sheet"><h2>מאזן מצטבר</h2>${lineChart({labels:MSHORT,values:cum})}<p class="small" style="margin:6px 0 0">הכנסות פחות הוצאות, מצטבר מינואר. בדצמבר: ${M(cum[11])}.</p></div>
+    <div class="sheet"><h2>הכנסות מול הוצאות</h2>${colChart({labels:L,series:[{name:'הכנסות',color:'var(--good)',values:S.map(s=>s.income)},{name:'הוצאות',color:'var(--bad)',values:S.map(s=>s.expense)}]})}</div>
+    <div class="sheet"><h2>מאזן מצטבר</h2>${lineChart({labels:L,values:cum})}<p class="small" style="margin:6px 0 0">הכנסות פחות הוצאות, מצטבר מ${esc(mLabel(mks[0]))}. עד עכשיו: ${M(cum[cum.length-1])}.</p></div>
    </div>
    <div class="sheet"><h2>מפת חום: קטגוריה לפי חודש <span class="sub">כהה יותר = יותר כסף</span></h2>
-    <div class="tw free"><table style="font-size:12.5px"><thead><tr><th>קטגוריה</th>${MSHORT.map(m=>`<th style="text-align:center">${m}</th>`).join('')}<th class="num">שנה</th></tr></thead>
-    <tbody>${heat||'<tr><td colspan="14" class="muted">אין נתונים לשנה הזו</td></tr>'}</tbody>
+    <div class="tw free"><table style="font-size:12.5px"><thead><tr><th>קטגוריה</th>${L.map(m=>`<th style="text-align:center">${esc(m)}</th>`).join('')}<th class="num">סה״כ</th></tr></thead>
+    <tbody>${heat||'<tr><td colspan="'+(mks.length+2)+'" class="muted">אין נתונים עדיין</td></tr>'}</tbody>
     <tfoot><tr><td>סה״כ</td>${S.map(s=>`<td class="num">${s.expense?kf(s.expense):''}</td>`).join('')}<td class="num">${N(exp)}</td></tr></tfoot></table></div></div>
    <div class="g2">
-    <div class="sheet"><h2>לפי קבוצה</h2>${donut(EXP_GROUPS.map(g=>({label:g,value:sum(S,s=>s.byGroup[g]||0),color:gcol(g)})).filter(i=>i.value>0).sort((a,b)=>b.value-a.value),{centerSub:'בשנה'})}</div>
+    <div class="sheet"><h2>לפי קבוצה</h2>${donut(EXP_GROUPS.map(g=>({label:g,value:sum(S,s=>s.byGroup[g]||0),color:gcol(g)})).filter(i=>i.value>0).sort((a,b)=>b.value-a.value),{centerSub:'מאז ההתחלה'})}</div>
     <div class="sheet"><h2>הקטגוריות הגדולות</h2>${bars(Object.keys(byCat).map(id=>({label:catById(id).name,value:byCat[id],color:gcol(catById(id).group),sw:true,html:N(byCat[id])+' <span class="small">'+Math.round(byCat[id]/(exp||1)*100)+'%</span>'})).sort((a,b)=>b.value-a.value).slice(0,10))}</div>
    </div>`;
 }
@@ -875,7 +932,7 @@ function renderYear(){
 function renderInsights(){
   const mk=ui.month,s=monthSums(mk);
   if(!s.count){$('#panel-insights').innerHTML=`<div class="sheet"><div class="empty">אין נתונים ב${esc(mLabel(mk))}. אחרי שתזינו תנועות התובנות יופיעו כאן.</div></div>`;return;}
-  const pm=prevWithData(mk),p=monthSums(pm),goal=+state.settings.goal||20,daysLeft=s.isCur?s.dim-s.elapsed:0,L=[];
+  const pm=prevWithData(mk),p=pm?monthSums(pm):{count:0,byCat:{},expense:0},goal=+state.settings.goal||20,daysLeft=s.isCur?s.dim-s.elapsed:0,L=[];
   if(s.isCur&&s.elapsed>=3)L.push(ins(s.income&&s.projBalance<0?'bad':'info','תחזית לסוף '+MONTHS[+mk.slice(5)-1],
     `הוצאות משתנות של ${M((s.expense-s.fixed)/s.elapsed)} ביום בממוצע. בקצב הזה החודש ייסגר על ${M(s.proj)}${s.income?' ומאזן של '+M(s.projBalance):''}.`));
   if(!s.income)L.push(ins('warn','לא הוזנו הכנסות החודש','בלי משכורות אי אפשר לחשב מאזן ושיעור חיסכון. הוסיפו את המשכורות כתנועות הכנסה.'));
@@ -940,7 +997,7 @@ function histograms(s){
 
 /* ---------- 14. settings tab ---------- */
 function renderSettings(){
-  const s=state.settings,mcount=monthsWithData().length,rcount=allRows().length;
+  const s=state.settings,mcount=monthsWithData().length,rcount=sum(monthsWithData(),k=>rowsOf(k).length);
   const catRows=GROUPS.map(g=>state.cats.filter(c=>c.group===g).map(c=>`<tr>
     <td><input value="${esc(c.name)}" data-cat-name="${esc(c.id)}" aria-label="שם קטגוריה" style="padding:4px 7px"></td>
     <td><select data-cat-group="${esc(c.id)}" aria-label="קבוצה" style="padding:4px 6px">${GROUPS.map(x=>`<option${x===c.group?' selected':''}>${esc(x)}</option>`).join('')}</select></td>
@@ -955,7 +1012,9 @@ function renderSettings(){
       <div class="f"><label for="sNameB">שם שני</label><input id="sNameB" data-set="nameB" value="${esc(s.names.b)}"></div></div>
       <div class="g2" style="gap:10px"><div class="f"><label for="sShared">חלק של ${esc(whoName('a'))} בהוצאות משותפות (%)</label><input id="sShared" type="number" min="0" max="100" data-set="shared" value="${+s.shared}"></div>
       <div class="f"><label for="sGoal">יעד חיסכון (% מההכנסה)</label><input id="sGoal" type="number" min="0" max="90" data-set="goal" value="${+s.goal||20}"></div></div>
-      <div class="g2" style="gap:10px"><div class="f"><label for="sCur">סמל מטבע</label><input id="sCur" data-set="cur" value="${esc(s.cur)}" maxlength="3"></div></div>
+      <div class="g2" style="gap:10px"><div class="f"><label for="sStart">תחילת המעקב</label><input id="sStart" type="month" data-set="startMonth" value="${trackStart()}"></div>
+      <div class="f"><label for="sCur">סמל מטבע</label><input id="sCur" data-set="cur" value="${esc(s.cur)}" maxlength="3"></div></div>
+      ${(()=>{const n=Object.keys(state.data).filter(k=>k<trackStart()).reduce((a,k)=>a+rowsOf(k).length,0);return n?`<p class="small" style="margin:0">${n} תנועות מלפני ${esc(mLabel(trackStart()))} שמורות אבל לא נספרות בחישובים.</p>`:'';})()}
      </div></div>
     <div class="sheet" id="backupSheet"><h2>גיבוי וייבוא <span class="sub">${mcount} חודשים · ${rcount} תנועות</span></h2>
      <div class="row" style="margin-bottom:12px"><button class="btn pri sm" data-act="exportJSON">ייצוא גיבוי (JSON)</button><button class="btn sm" data-act="exportCSVAll">כל התנועות ל-CSV</button></div>
@@ -1084,7 +1143,7 @@ async function connectCapabilities(){
       state.data={};synced.months={};
       if(cfg.exists)applyConfig(cfg.data());
       ms.docs.forEach(d=>applyMonthDoc(d.id,d.data()));
-      if(!ui.touched)ui.month=startMonth();
+      if(!ui.touched)ui.month=openMonth();
       setSave('cloud','נשמר בענן');
       if(local!==JSON.stringify(state.data))remoteChanged();else render();
       fillForm();
@@ -1282,7 +1341,7 @@ function renderImport(){
   const months=[...new Set(I.rows.map(r=>r.date.slice(0,7)))].sort();
   const dups=I.rows.filter(r=>r.dup).length,learned=I.rows.filter(r=>r.src==='history').length;
   const totNote=I.total?(Math.abs(all-I.total)<1?`<span class="pill good">✓ תואם לסה״כ בפירוט (${N(I.total)})</span>`:`<span class="pill warn">בפירוט כתוב ${N(I.total)}, נמצאו ${N(all)}</span>`):'';
-  const mOpts=[...new Set([...months,ui.month,addM(ui.month,-1),addM(ui.month,1)])].sort();
+  const mOpts=[...new Set([...months,ui.month,addM(ui.month,-1),addM(ui.month,1)])].filter(m=>m>=trackStart()).sort();
   box.innerHTML=`<div class="sheet imprev"><h2>בדיקה לפני הוספה <span class="sub">${esc(I.file)} · ${I.rows.length} תנועות${I.engine==='local'?' · פוענח בלי Claude, כדאי לבדוק קטגוריות':''}</span></h2>
    <div class="row" style="margin-bottom:10px;justify-content:space-between">
     <div class="row">${totNote}${dups?`<span class="pill flat">${dups} כבר קיימות בפנקס, לא מסומנות</span>`:''}${learned?`<span class="pill acc">${learned} סווגו לפי מה שבחרתם בעבר</span>`:''}</div>
@@ -1331,20 +1390,24 @@ function bindImport(){
 
 /* ---------- 16. render & events ---------- */
 function render(){
-  memo.clear();renderHead();$('#mPick').value=ui.month;
+  memo.clear();if(ui.month<trackStart())ui.month=trackStart();renderHead();$('#mPick').value=ui.month;
   $$('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===ui.tab)));
   $$('.panel').forEach(p=>p.hidden=p.id!=='panel-'+ui.tab);
   ({entry:renderEntry,budget:renderBudget,compare:renderCompare,year:renderYear,insights:renderInsights,settings:renderSettings})[ui.tab]();
 }
 function go(tab){ui.tab=tab;try{localStorage.setItem('budgetHH.tab',tab);}catch(e){}render();}
 const ACT={
-  mPrev:()=>{ui.touched=true;ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=ui.year=null;render();},
+  mPrev:()=>{if(ui.month<=trackStart()){toast(mLabel(trackStart())+' הוא החודש הראשון במעקב');return;}ui.touched=true;ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=ui.year=null;render();},
   mNext:()=>{ui.touched=true;ui.month=addM(ui.month,1);ui.cmpA=ui.cmpB=ui.year=null;render();},
   mToday:()=>{ui.touched=true;ui.month=curMonth();ui.cmpA=ui.cmpB=ui.year=null;render();},
   theme:()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
     r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('budgetHH.theme',r.dataset.theme);}catch(e){}},
-  cancelEdit:()=>{endEdit();$('#fDesc').value='';$('#fAmount').value='';$('#fNote').value='';$('#fDate').value=todayISO();renderRows();},
-  quick:b=>{const r=ui.quick[+b.dataset.i];if(!r)return;$('#fDate').value=todayISO();$('#fDesc').value=r.desc;$('#fCat').value=r.cat;$('#fWho').value=r.who;$('#fAmount').value=r.amount;$('#fNote').value=r.note||'';$('#fFixed').checked=!!r.fixed;ui.catTouched=true;$('#fAmount').focus();$('#fHint').textContent='הטופס מולא. Enter כדי להוסיף.';},
+  openAdd:()=>openAdd('expense'),
+  openIncome:()=>openAdd('income'),
+  closeAdd,
+  kind:b=>{setKind(b.dataset.k);ui.catTouched=false;},
+  delEdit:()=>{const id=ui.editId;closeAdd();const x=removeRow(id);if(!x)return;commit();toast('נמחק: '+x.row.desc,{label:'בטל',fn:()=>{state.data[x.k].rows.splice(x.i,0,x.row);commit();}});},
+  quick:b=>{const r=ui.quick[+b.dataset.i];if(!r)return;setKind(catById(r.cat).type);$('#fDate').value=defaultDate();$('#fDesc').value=r.desc;$('#fCat').value=r.cat;$('#fWho').value=r.who;$('#fAmount').value=r.amount;$('#fNote').value=r.note||'';$('#fFixed').checked=!!r.fixed;ui.catTouched=true;$('#fAmount').focus();$('#fHint').textContent='הטופס מולא. Enter כדי להוסיף.';},
   edit:b=>startEdit(b.dataset.id),
   del:b=>{const x=removeRow(b.dataset.id);if(!x)return;if(ui.editId===b.dataset.id)endEdit();commit();toast('נמחק: '+x.row.desc+' · '+money(x.row.amount),{label:'בטל',fn:()=>{state.data[x.k].rows.splice(x.i,0,x.row);commit();}});},
   recat:b=>{ui.recat=b.dataset.id;renderRows();},
@@ -1384,13 +1447,15 @@ function bind(){
     const b=e.target.closest('[data-act]');if(b&&!b.closest('#modal')&&ACT[b.dataset.act]){e.preventDefault();ACT[b.dataset.act](b);}
   });
   $('#rowForm').addEventListener('submit',submitRow);
+  $('#addDlg').addEventListener('mousedown',e=>{if(e.target.id==='addDlg')closeAdd();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#addDlg').hidden&&$('#modal').hidden)closeAdd();});
   $('#fDesc').addEventListener('input',onDescInput);
   $('#fCat').addEventListener('change',()=>{ui.catTouched=true;});
   $('#fSearch').addEventListener('input',e=>{ui.search=e.target.value;renderRows();});
   [['#fFilterCat','fCat'],['#fFilterWho','fWho'],['#fFilterNote','fNote'],['#fSort','sort']].forEach(([s,k])=>$(s).addEventListener('change',e=>{ui[k]=e.target.value;renderRows();}));
   document.addEventListener('change',e=>{
     const t=e.target,d=t.dataset;
-    if(t.id==='mPick'){if(/^\d{4}-\d{2}$/.test(t.value)){ui.touched=true;ui.month=t.value;ui.cmpA=ui.cmpB=ui.year=null;render();}return;}
+    if(t.id==='mPick'){if(/^\d{4}-\d{2}$/.test(t.value)){ui.touched=true;ui.month=t.value<trackStart()?trackStart():t.value;ui.cmpA=ui.cmpB=ui.year=null;render();}return;}
     if(t.id==='impFile'){if(t.files[0])importStatement(t.files[0]);t.value='';return;}
     if(t.closest&&t.closest('#impReview')){impEdit(t);return;}
     if(t.id==='recat'){recategorize(d.id,t.value);return;}
@@ -1407,6 +1472,7 @@ function bind(){
     else if(d.set==='shared')s.shared=Math.min(100,Math.max(0,parseInt(t.value)||0));
     else if(d.set==='goal')s.goal=Math.min(90,Math.max(0,parseInt(t.value)||20));
     else if(d.set==='sheetsURL')s.sheetsURL=t.value.trim();
+    else if(d.set==='startMonth'){if(/^\d{4}-\d{2}$/.test(t.value))s.startMonth=t.value;}
     else if(d.catName)catById(d.catName).name=t.value.trim()||catById(d.catName).name;
     else if(d.catGroup)catById(d.catGroup).group=t.value;
     else if(d.catType)catById(d.catType).type=t.value;
@@ -1416,7 +1482,7 @@ function bind(){
   });
   document.addEventListener('focusout',e=>{if(e.target.id==='recat')setTimeout(()=>{if(ui.recat){ui.recat=null;renderRows();}},150);});
   document.addEventListener('keydown',e=>{
-    if(e.target.matches('input,select,textarea')||!$('#modal').hidden)return;
+    if(e.target.matches('input,select,textarea')||!$('#modal').hidden||!$('#addDlg').hidden)return;
     if(e.key==='ArrowRight'&&e.altKey)ACT.mPrev();if(e.key==='ArrowLeft'&&e.altKey)ACT.mNext();
   });
 }
@@ -1429,7 +1495,7 @@ function bind(){
     try{seed=seedEl?JSON.parse(seedEl.textContent):null;}catch(e){}
     state=normalize(saved||seed||defState());
     if(!saved&&!seed){state.data=demoData(4);state.demo=true;state.settings.names={a:'יעל',b:'עידו'};}
-    ui.month=startMonth();
+    ui.month=openMonth();
     $('#fDate').value=todayISO();
     fillForm();bind();render();bindImport();
     connectCapabilities();
