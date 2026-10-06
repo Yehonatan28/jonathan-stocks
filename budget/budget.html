@@ -185,6 +185,22 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
 #modal h3{margin:0 0 6px;font-size:17px}
 #modal .mb{font-size:13.5px;color:var(--ink-2);margin-bottom:16px}
 #modal .mf{display:flex;gap:8px;justify-content:flex-start;flex-wrap:wrap}
+/* statement import */
+.imp{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end}
+@media(max-width:760px){.imp{grid-template-columns:minmax(0,1fr)}}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;border:1.5px dashed color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:10px;background:var(--accent-soft);cursor:pointer;text-align:center;padding:10px;font-size:13px;color:var(--ink-2)}
+.drop b{color:var(--accent);font-size:14px}
+.drop.over{border-style:solid;background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+.drop.busy{pointer-events:none;opacity:.7}
+.imprev td{padding:4px 6px}
+.imprev input,.imprev select{padding:4px 6px;font-size:13px}
+.imprev tr.off td{opacity:.45}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-1px;margin-inline-end:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.save{font-size:12px;color:var(--muted-s);display:inline-flex;align-items:center;gap:5px}
+.save i{width:7px;height:7px;border-radius:50%;background:var(--muted-s)}
+.save.cloud i{background:var(--good)} .save.busy i{background:var(--warn)} .save.err i{background:var(--bad)}
+#mPick{width:auto;padding:6px 8px;font-size:13px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -194,11 +210,11 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
     <div>
       <div class="eyebrow" id="eyebrow">פנקס הבית</div>
       <h1 id="mLabel">—</h1>
-      <div class="who" id="whoLine"></div>
+      <div class="who"><span id="whoLine"></span> · <span class="save" id="saveState"><i></i><span>שמור בדפדפן</span></span></div>
     </div>
     <div class="mnav">
       <button class="ib" data-act="mPrev" title="חודש קודם" aria-label="חודש קודם">→</button>
-      <button class="btn" data-act="mToday">החודש</button>
+      <input type="month" id="mPick" aria-label="בחירת חודש"><button class="btn" data-act="mToday">החודש</button>
       <button class="ib" data-act="mNext" title="חודש הבא" aria-label="חודש הבא">←</button>
       <button class="ib" data-act="theme" title="מצב תצוגה" aria-label="החלפת מצב תצוגה" id="themeBtn"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
     </div>
@@ -218,6 +234,16 @@ details ol{padding-inline-start:20px;font-size:13px;margin:8px 0}
   <main>
     <section class="panel stack" id="panel-entry">
       <div id="banner" class="stack"></div>
+      <div class="sheet" id="impSheet">
+        <h2>ייבוא פירוט אשראי <span class="sub" id="impSub">PDF מחברת האשראי. התנועות מסווגות אוטומטית ותוכלו לאשר לפני ההוספה.</span></h2>
+        <div class="imp">
+          <label class="drop" id="drop" for="impFile"><b>גררו לכאן קובץ PDF</b><span>או לחצו לבחירה. גם צילום מסך של הפירוט עובד.</span><input type="file" id="impFile" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp" hidden></label>
+          <div class="f"><label for="impCard">כרטיס</label><input id="impCard" list="noteList" placeholder="כאל / מקס / ישראכרד"></div>
+          <div class="f"><label for="impWho">של מי הכרטיס</label><select id="impWho"></select></div>
+        </div>
+        <div class="hint" id="impStatus"></div>
+      </div>
+      <div id="impReview"></div>
       <div class="sheet">
         <h2>תנועה חדשה <span class="sub" id="formMode">Enter מוסיף · תיאור מוכר ממלא קטגוריה לבד</span></h2>
         <form class="entry" id="rowForm" autocomplete="off">
@@ -311,6 +337,8 @@ const cur=()=>state.settings.cur||'₪';
 const money=n=>{const v=Math.round(+n||0);return (v<0?'-':'')+NF.format(Math.abs(v))+' '+cur();};
 const M=n=>`<span class="n">${esc(money(n))}</span>`;
 const N=n=>`<span class="n">${NF.format(Math.round(Math.abs(+n||0)))}</span>`;
+const NF2=new Intl.NumberFormat('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2});
+const N2=n=>`<span class="n">${NF2.format(Math.abs(+n||0))}</span>`;
 const kf=n=>{const a=Math.abs(n);if(a>=1e6)return (n/1e6).toFixed(1)+'M';if(a>=1000)return (n/1000).toFixed(a>=10000?0:1).replace(/\.0$/,'')+'k';return String(Math.round(n));};
 const pctS=n=>(n>0?'+':'')+Math.round(n)+'%';
 const sum=(a,f)=>a.reduce((s,x)=>s+(f?f(x):x),0);
@@ -318,7 +346,7 @@ const sum=(a,f)=>a.reduce((s,x)=>s+(f?f(x):x),0);
 /* ---------- 2. state & storage ---------- */
 const KEY='budgetHH.v2', OLD_KEY='budgetHH.v1';
 let state=null, storageOK=true;
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){storageOK=false;}}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){storageOK=false;}cloudPush();}
 function loadSaved(){
   try{const s=localStorage.getItem(KEY)||localStorage.getItem(OLD_KEY);if(s)return JSON.parse(s);}catch(e){storageOK=false;}
   return null;
@@ -553,6 +581,11 @@ function modal({title,body,buttons}){
   });
 }
 const confirmBox=(title,body,ok,danger)=>modal({title,body,buttons:[{label:ok,value:true,cls:danger?'danger':'pri'},{label:'ביטול',value:false,cls:'ghost'}]});
+let DL=null;
+async function saveFile(name,text,type){
+  if(DL){try{await DL.save({filename:name,data:new Blob([text],{type})});toast('הקובץ נשמר: '+name);return true;}catch(e){if(e&&e.code==='declined')return true;return false;}}
+  return download(name,text,type);
+}
 function download(name,text,type){
   try{const b=new Blob([text],{type}),u=URL.createObjectURL(b),a=document.createElement('a');
     a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove();},800);return true;}catch(e){return false;}
@@ -565,8 +598,8 @@ function copyText(text){
 /* export shows the text too, because some viewers block file downloads */
 function exportBox(title,name,text,type){
   modal({title,body:`<p style="margin:0 0 8px">הקובץ <b>${esc(name)}</b> ירד למחשב. אם ההורדה לא התחילה, העתיקו את התוכן ושמרו אותו בקובץ.</p><textarea id="exportText" rows="7" readonly style="font-family:monospace;font-size:12px;direction:ltr">${esc(text.length>400000?text.slice(0,400000)+'\n…':text)}</textarea>`,
-    buttons:[{label:'העתק',cls:'pri',keep:true,fn:()=>copyText(text)},{label:'הורד שוב',keep:true,fn:()=>download(name,text,type)},{label:'סגור',cls:'ghost',value:true}]});
-  download(name,text,type);
+    buttons:[{label:'העתק',cls:'pri',keep:true,fn:()=>copyText(text)},{label:'הורד שוב',keep:true,fn:()=>saveFile(name,text,type)},{label:'סגור',cls:'ghost',value:true}]});
+  saveFile(name,text,type);
 }
 (function tooltip(){
   const tip=$('#tip');
@@ -604,6 +637,7 @@ function fillForm(){
   const kw=$('#fWho').value;$('#fWho').innerHTML=WHO.map(w=>`<option value="${w}">${esc(whoName(w))}</option>`).join('');if(kw)$('#fWho').value=kw;
   $('#fFilterCat').innerHTML=catOptions(ui.fCat,true);
   $('#fFilterWho').innerHTML='<option value="all">כל המשלמים</option>'+WHO.map(w=>`<option value="${w}"${ui.fWho===w?' selected':''}>${esc(whoName(w))}</option>`).join('');
+  const iw=$('#impWho').value;$('#impWho').innerHTML=WHO.map(w=>`<option value="${w}">${esc(whoName(w))}</option>`).join('');if(iw)$('#impWho').value=iw;
   const notes=knownNotes();
   $('#fFilterNote').innerHTML='<option value="all">כל הכרטיסים</option>'+notes.map(x=>`<option${ui.fNote===x?' selected':''}>${esc(x)}</option>`).join('');
   $('#noteList').innerHTML=notes.map(x=>`<option value="${esc(x)}">`).join('');
@@ -754,7 +788,7 @@ function suggestBudgets(onlyEmpty){
 
 /* ---------- 11. compare tab ---------- */
 function monthOptions(sel){
-  const set=new Set(monthsWithData());for(let i=0;i<13;i++)set.add(addM(curMonth(),-i));
+  const set=new Set(monthsWithData());for(let i=0;i<13;i++)set.add(addM(curMonth(),-i));set.add(ui.month);set.add(sel);
   return [...set].sort().reverse().map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(mLabel(k))}</option>`).join('');
 }
 function renderCompare(){
@@ -793,6 +827,7 @@ function renderCompare(){
 /* ---------- 12. year tab ---------- */
 function renderYear(){
   const years=[...new Set([...monthsWithData().map(k=>k.slice(0,4)),String(new Date().getFullYear())])].sort().reverse();
+  if(!years.includes(ui.month.slice(0,4)))years.unshift(ui.month.slice(0,4));years.sort().reverse();
   const Y=ui.year&&years.includes(ui.year)?ui.year:ui.month.slice(0,4);ui.year=Y;
   const mks=Array.from({length:12},(_,i)=>Y+'-'+pad(i+1)),S=mks.map(monthSums),act=S.filter(s=>s.count);
   const full=act.filter(s=>!s.isCur&&s.count>=5);
@@ -905,7 +940,8 @@ function renderSettings(){
        <p class="small" style="margin:8px 0 0">כדאי לייצא גיבוי לפני איפוס. הנתונים נשמרים רק בדפדפן הזה, בלי שרת.</p></details>
      </div></div>
    </div>
-   <div class="sheet"><h2>סנכרון ל-Google Sheets <span class="sub">${s.sheetsURL?(s.sheetsLastSync?'סונכרן '+new Date(s.sheetsLastSync).toLocaleString('he-IL'):'מחובר, עוד לא סונכרן'):'לא מחובר'}</span></h2>
+   ${DB?`<div class="sheet"><h2>שמירה בענן <span class="sub">פעיל</span></h2><p style="margin:0;font-size:13.5px">הנתונים נשמרים בחשבון Claude שלכם ומסונכרנים בכל מכשיר שבו פותחים את הקישור. כדי ש${esc(whoName('b'))} יעבוד על אותו פנקס, שתפו את הקישור מתפריט השיתוף של העמוד.</p></div>`:''}
+   <div class="sheet"${DB?' hidden':''}><h2>סנכרון ל-Google Sheets <span class="sub">${s.sheetsURL?(s.sheetsLastSync?'סונכרן '+new Date(s.sheetsLastSync).toLocaleString('he-IL'):'מחובר, עוד לא סונכרן'):'לא מחובר'}</span></h2>
     <details><summary>איך מחברים</summary><ol>
      <li>פותחים Google Sheet חדש (<a href="https://sheets.new" target="_blank" rel="noopener">sheets.new</a>)</li>
      <li>בתפריט: Extensions ← Apps Script</li>
@@ -958,18 +994,325 @@ function mergeFrom(text){
 }
 function readFile(input,fn){const f=input.files&&input.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{fn(String(rd.result));input.value='';};rd.readAsText(f);}
 
+/* ---------- 15b. cloud save (artifact db): one doc per month + one config doc ---------- */
+let DB=null,SAMPLE=null;
+const synced={months:{},config:null};
+const writeChain=new Map();
+function setSave(kind,text){const el=$('#saveState');if(!el)return;el.className='save '+kind;el.lastChild.textContent=text;}
+function cfgOf(){return JSON.stringify({settings:Object.assign({},state.settings,{sheetsLastSync:0}),cats:state.cats});}
+function queueWrite(path,fn){
+  const prev=writeChain.get(path)||Promise.resolve();
+  const next=prev.catch(()=>{}).then(fn);writeChain.set(path,next);return next;
+}
+let pending=0;
+function cloudPush(){
+  if(!DB||state.demo)return;
+  const jobs=[];
+  Object.keys(state.data).forEach(mk=>{
+    const str=JSON.stringify(rowsOf(mk));if(synced.months[mk]===str)return;synced.months[mk]=str;
+    const rows=rowsOf(mk).map(r=>({...r}));
+    jobs.push(queueWrite('months/'+mk,()=>DB.doc('months/'+mk).set({rows})));
+  });
+  Object.keys(synced.months).forEach(mk=>{if(!state.data[mk]){delete synced.months[mk];jobs.push(queueWrite('months/'+mk,()=>DB.doc('months/'+mk).delete()));}});
+  const c=cfgOf();if(c!==synced.config){synced.config=c;const o=JSON.parse(c);jobs.push(queueWrite('meta/config',()=>DB.doc('meta/config').set(o)));}
+  if(!jobs.length)return;
+  pending+=jobs.length;setSave('busy','שומר…');
+  Promise.allSettled(jobs).then(res=>{pending-=jobs.length;
+    const bad=res.find(x=>x.status==='rejected');
+    if(bad){setSave('err','השמירה בענן נכשלה');toast('השמירה בענן נכשלה. השינוי שמור בדפדפן הזה, ננסה שוב בשינוי הבא.');synced.config=null;synced.months={};}
+    else if(!pending)setSave('cloud','נשמר בענן');});
+}
+let rerenderT=null;
+function remoteChanged(){clearTimeout(rerenderT);rerenderT=setTimeout(()=>{memo.clear();try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}fillForm();render();},120);}
+function applyMonthDoc(id,data){
+  if(!/^\d{4}-\d{2}$/.test(id))return false;
+  const rows=data&&Array.isArray(data.rows)?data.rows:[];const str=JSON.stringify(rows);
+  if(synced.months[id]===str)return false;synced.months[id]=str;
+  state.data[id]=normalize({data:{[id]:{rows}}}).data[id]||{rows:[]};return true;
+}
+function applyConfig(data){
+  if(!data)return false;const str=JSON.stringify(data);if(str===synced.config)return false;synced.config=str;
+  const n=normalize({settings:data.settings,cats:data.cats,data:{}});
+  const keepSync={sheetsURL:state.settings.sheetsURL,sheetsLastSync:state.settings.sheetsLastSync};
+  state.settings=Object.assign(n.settings,keepSync);state.cats=n.cats;return true;
+}
+async function connectCapabilities(){
+  if(!window.claude||typeof window.claude.use!=='function')return;
+  claude.use('downloads').then(d=>{DL=d;}).catch(()=>{});
+  claude.use('sample').then(sm=>{SAMPLE=sm;}).catch(()=>{});
+  let db=null;try{db=await claude.use('db');}catch(e){}
+  if(!db){setSave('','שמור בדפדפן הזה בלבד');return;}
+  setSave('busy','מתחבר…');
+  try{
+    const [cfg,ms]=await Promise.all([db.doc('meta/config').get(),db.collection('months').get()]);
+    DB=db;
+    if(!cfg.exists&&ms.empty){
+      /* first open with cloud save: move whatever this browser already has */
+      if(!state.demo&&allRows().length){persist();toast('הנתונים מהדפדפן הועברו לשמירה בענן');}
+      else setSave('cloud','מוכן לשמירה בענן');
+    }else{
+      if(state.demo){state.data={};delete state.demo;}
+      const local=JSON.stringify(state.data);
+      state.data={};synced.months={};
+      if(cfg.exists)applyConfig(cfg.data());
+      ms.docs.forEach(d=>applyMonthDoc(d.id,d.data()));
+      const ms2=monthsWithData();if(!rowsOf(ui.month).length&&ms2.length&&ui.month===curMonth()&&!ms2.includes(curMonth()))ui.month=ms2[ms2.length-1];
+      setSave('cloud','נשמר בענן');
+      if(local!==JSON.stringify(state.data))remoteChanged();else render();
+      fillForm();
+    }
+    db.collection('months').onSnapshot(snap=>{
+      let ch=false;
+      snap.docChanges().forEach(c=>{if(c.doc.metadata.hasPendingWrites)return;
+        if(c.type==='removed'){if(state.data[c.doc.id]){delete state.data[c.doc.id];delete synced.months[c.doc.id];ch=true;}}
+        else if(applyMonthDoc(c.doc.id,c.doc.data()))ch=true;});
+      if(ch)remoteChanged();
+    },()=>setSave('err','החיבור לענן נותק'));
+    db.doc('meta/config').onSnapshot(d=>{if(!d.metadata.hasPendingWrites&&d.exists&&applyConfig(d.data()))remoteChanged();});
+  }catch(e){DB=null;setSave('err','אין חיבור לענן, שומר בדפדפן');}
+}
+
+/* ---------- 15c. credit-card statement import ---------- */
+/* keyword rules for Israeli merchants; the household's own past choices always win over these */
+const KW=[
+ [/שופרסל|רמי לוי|ויקטורי|יוחננוף|מגה|טיב טעם|am:?pm|סופר יודה|אושר עד|חצי חינם|קרפור|יינות ביתן|מחסני השוק|סופרמרקט|מכולת|מינימרקט|קצביה|מעדני/i,'super'],
+ [/ירקות|פירות|ירקן|שוק /i,'veg'],
+ [/wolt|וולט|תן ביס|10bis|מסעד|פיצה|פיצריה|בורגר|שווארמה|פלאפל|סושי|מקדונלד|ארומה|ביסטרו|גריל|חומוס|סביח/i,'eatout'],
+ [/קפה|ארקפה|קופי|גרג|רולדין|מאפי|בייקרי|לחמים|cafe|coffee/i,'coffee'],
+ [/פז |פז$|^פז|yellow|דלק|סונול|דור אלון|אלונית|תחנת/i,'fuel'],
+ [/פנגו|pango|סלופארק|cellopark|חניון|חניה|כביש 6|נתיב/i,'parking'],
+ [/gett|יאנגו|yango|מונית|רב.?קו|רכבת|אגד|מוביט|moovit|דן /i,'transport'],
+ [/מוסך|צמיגים|טסט|רישוי/i,'carmaint'],
+ [/netflix|spotify|apple\.com|itunes|google|youtube|adobe|anthropic|openai|chatgpt|disney|amazon prime|microsoft|dropbox|canva|icloud/i,'subs'],
+ [/סלקום|פרטנר|פלאפון|גולן טלקום|הוט מובייל|we4g|019|012|רמי לוי תקשורת|פרי טיווישן|free tv/i,'cellular'],
+ [/\bhot\b|הוט |בזק|\byes\b|סטינג|אינטרנט/i,'internet'],
+ [/חברת החשמל|חשמל/i,'electric'],[/תאגיד|מי |מים /i,'water'],[/פזגז|סופרגז|אמישראגז|גז /i,'gas'],[/ארנונה|עירית|עיריית/i,'arnona'],
+ [/סופר.?פארם|בית מרקחת|פארם|מכבי|כללית|מאוחדת|לאומית/i,'health'],
+ [/רופא|מרפאה|שיניים|דנטל|אופטיקה/i,'doctor'],
+ [/הולמס|גו אקטיב|כושר|ספורט|יוגה|פילאטיס|סטודיו/i,'gym'],
+ [/ביטוח|הראל|מגדל|הפניקס|מנורה|איילון|כלל |ליברה|ישיר|aig|הכשרה/i,'insurance'],
+ [/עמלה|דמי כרטיס|דמי מנוי כרטיס|ריבית/i,'fees'],
+ [/קנסות|קנס/i,'fees'],
+ [/זארה|zara|h&m|קסטרו|פוקס|fox|נייקי|nike|אדידס|adidas|terminal ?x|asos|shein|ביגוד|הנעלה|גולף|רנואר|אמריקן איגל|yesstyle|דני דרס/i,'clothes'],
+ [/צעצוע|טויס|תינוקות|שילב|בייבי/i,'kidgear'],[/גן ילדים|גנון|צהרון|מעון/i,'kindergarten'],[/חוג/i,'classes'],
+ [/סינמה|קולנוע|יס פלאנט|הופעה|כרטיסים|לונה|פארק|תיאטרון/i,'fun'],
+ [/מלון|הוטל|hotel|booking|airbnb|אל על|elal|ryanair|wizz|טיסה/i,'vacation'],
+ [/תכשיט|מתנ|פרחים|שוברי/i,'gifts'],
+ [/איקאה|ikea|ace|הום סנטר|טמבור|אושר עד.*ריהוט|כלי בית|מכבסה|ניקוי/i,'housemaint'],
+ [/וטרינר|חיות|פט |pet/i,'pets'],
+ [/bit|ביט|paybox|פייבוקס|pepper pay/i,'other']
+];
+const normDesc=d=>String(d||'').trim().toLowerCase().replace(/\s+/g,' ');
+function guessCat(desc){
+  const hit=merchantIndex().get(normDesc(desc));if(hit)return {cat:hit.cat,src:'history'};
+  const kw=KW.find(([re])=>re.test(desc));if(kw&&state.cats.some(c=>c.id===kw[1]))return {cat:kw[1],src:'rule'};
+  return null;
+}
+function loadScript(src){return new Promise((res,rej)=>{if($$('script').some(s=>s.src===src))return res();const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('load '+src));document.head.appendChild(s);});}
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+async function loadPdfJs(){
+  if(window.pdfjsLib&&window.pdfjsWorker)return;
+  /* the worker runs on the main thread: the viewer only allows scripts from the CDN, not worker files */
+  await loadScript(PDFJS+'pdf.worker.min.js');
+  await loadScript(PDFJS+'pdf.min.js');
+}
+async function openPdf(buf){
+  let password;
+  for(;;){
+    try{return await pdfjsLib.getDocument({data:buf.slice(0),password,isEvalSupported:false,useSystemFonts:true}).promise;}
+    catch(e){
+      if(e&&e.name==='PasswordException'){
+        const v=await modal({title:'הקובץ מוגן בסיסמה',body:`<p style="margin:0 0 8px">${e.code===2?'הסיסמה לא נכונה. ':''}בחברות האשראי הסיסמה היא בדרך כלל מספר תעודת הזהות. היא לא נשמרת בשום מקום.</p><input type="password" id="pdfPass" autocomplete="off" style="direction:ltr">`,
+          buttons:[{label:'פתח',cls:'pri',value:'ok'},{label:'ביטול',cls:'ghost',value:null}]});
+        password=v==='ok'?($('#pdfPass')||{}).value:null;
+        if(!password)throw {code:'cancelled'};
+        continue;
+      }
+      throw e;
+    }
+  }
+}
+async function pdfToText(pdf){
+  const out=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p),tc=await page.getTextContent(),lines=new Map();
+    tc.items.forEach(it=>{if(!it.str||!it.str.trim())return;const y=Math.round(it.transform[5]/4);
+      if(!lines.has(y))lines.set(y,[]);lines.get(y).push({x:it.transform[4],s:it.str.trim()});});
+    [...lines.entries()].sort((a,b)=>b[0]-a[0]).forEach(([,items])=>out.push(items.sort((a,b)=>b.x-a.x).map(i=>i.s).join(' | ')));
+    out.push('--- סוף עמוד '+p+' ---');
+  }
+  return out.join('\n');
+}
+async function pdfToImages(pdf,max){
+  const blobs=[];
+  for(let p=1;p<=Math.min(pdf.numPages,max);p++){
+    const page=await pdf.getPage(p),vp=page.getViewport({scale:1.7}),cv=document.createElement('canvas');
+    cv.width=vp.width;cv.height=vp.height;await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+    blobs.push(await new Promise(r=>cv.toBlob(r,'image/jpeg',.85)));
+  }
+  return blobs;
+}
+function claudePrompt(text,card){
+  const cats=state.cats.map(c=>`${c.id} = ${c.name} (${c.group}${c.type==='income'?', הכנסה':''})`).join('\n');
+  const hints=[...merchantIndex().values()].slice(-150).map(r=>`${r.desc} -> ${r.cat}`).join('\n');
+  return `You are reading an Israeli credit-card statement (פירוט חיובים) for a household budget app.
+Extract EVERY purchase line. Card: ${card||'unknown'}. Today is ${todayISO()}.
+
+Rules:
+- date: the transaction date (תאריך עסקה) as YYYY-MM-DD. Two-digit years are 20xx.
+- desc: the merchant name in readable Hebrew/English. PDF extraction sometimes reverses Hebrew letter order; fix it so words read correctly.
+- amount: the amount CHARGED in this statement in ILS (סכום חיוב), a positive number. For installments (תשלום X מתוך Y) use this month's installment and set "installment":"X/Y". For foreign currency use the ILS charge.
+- credit: true for refunds/credits (זיכוי, negative amounts); amount stays positive.
+- fixed: true for standing orders / recurring subscriptions (הוראת קבע, מנוי, recurring monthly bills).
+- cat: the best category id from this list:
+${cats}
+- Prefer the household's past choices for the same merchant:
+${hints||'(no history yet)'}
+- Skip summary lines, totals, previous-balance lines, interest tables, and bank debit lines (חיוב לחשבון).
+- statementTotal: the total to be charged (סה"כ לחיוב) if printed, else null. chargeDate: the debit date (מועד חיוב) as YYYY-MM-DD if printed, else null.
+
+Return ONLY JSON:
+{"card":"<issuer name if visible>","statementTotal":number|null,"chargeDate":"YYYY-MM-DD"|null,"transactions":[{"date":"YYYY-MM-DD","desc":"...","amount":0,"cat":"<id>","fixed":false,"credit":false,"installment":null}]}
+${text?'\nStatement text (columns separated by |, right-to-left order):\n'+text.slice(0,200000):'\nThe statement pages are attached as images.'}`;
+}
+/* fallback when Claude is not available: dates + amounts from each line */
+function parseLocally(text){
+  const out=[];
+  text.split('\n').forEach(line=>{
+    const dm=line.match(/(\d{1,2})[./](\d{1,2})[./](\d{2,4})/);if(!dm)return;
+    const am=[...line.matchAll(/-?\d{1,3}(?:,\d{3})*\.\d{2}|-?\d+\.\d{2}/g)].map(m=>m[0]);if(!am.length)return;
+    let y=+dm[3];if(y<100)y+=2000;const d=+dm[1],m=+dm[2];if(m<1||m>12||d<1||d>31)return;
+    const raw=am[am.length-1],amt=parseFloat(raw.replace(/,/g,''));if(!amt)return;
+    let desc=line.replace(dm[0],'');am.forEach(a=>{desc=desc.replace(a,'');});
+    desc=desc.split('|').map(x=>x.trim()).filter(x=>x&&/[א-תa-z]/i.test(x)).sort((a,b)=>b.length-a.length)[0]||'';
+    if(!desc||/סה"?כ|יתרה|לחיוב/.test(desc))return;
+    out.push({date:y+'-'+pad(m)+'-'+pad(d),desc,amount:Math.abs(amt),credit:amt<0,fixed:/הוראת קבע|הו"ק/.test(line),installment:(line.match(/(\d+)\s*מתוך\s*(\d+)/)||[]).slice(1).join('/')||null});
+  });
+  return {transactions:out,statementTotal:null};
+}
+function finishImport(res,meta){
+  const tx=(res&&Array.isArray(res.transactions)?res.transactions:[]).filter(t=>t&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&+t.amount>0);
+  if(!tx.length){impStatus('לא מצאתי תנועות בקובץ. נסו קובץ PDF אחר מאתר חברת האשראי, או צילום מסך ברור של הפירוט.','bad');return;}
+  const existing=allRows();
+  const rows=tx.map(t=>{
+    const desc=String(t.desc||'').trim()||'ללא תיאור',amt=Math.round(+t.amount*100)/100;
+    let cat=t.credit?'refund':t.cat,src='claude';
+    const g=guessCat(desc);
+    if(g&&(g.src==='history'||!state.cats.some(c=>c.id===cat)))({cat,src}=g);
+    if(t.credit)cat='refund';
+    if(!state.cats.some(c=>c.id===cat)){cat='other';src='none';}
+    const dup=existing.some(r=>r.date===t.date&&Math.abs(r.amount-amt)<0.01)||existing.some(r=>r.date.slice(0,7)===t.date.slice(0,7)&&Math.abs(r.amount-amt)<0.01&&normDesc(r.desc)===normDesc(desc));
+    return {on:!dup,dup,date:t.date,desc,cat,src,amount:amt,fixed:!!t.fixed,credit:!!t.credit,inst:t.installment||null};
+  });
+  ui.imp={rows,file:meta.file,card:meta.card||res.card||'',who:meta.who,total:+res.statementTotal||null,engine:meta.engine,monthMode:'date'};
+  if(!$('#impCard').value&&res.card)$('#impCard').value=res.card;
+  impStatus('');renderImport();
+  $('#impReview').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function impStatus(msg,kind){const el=$('#impStatus');el.innerHTML=msg;el.style.color=kind==='bad'?'var(--bad)':'var(--accent)';}
+let impBusy=false;
+async function importStatement(file){
+  if(impBusy)return;impBusy=true;$('#drop').classList.add('busy');
+  const card=$('#impCard').value.trim(),who=$('#impWho').value;
+  try{
+    let text='',images=null;
+    if(file.type.startsWith('image/')){images=[file];}
+    else{
+      impStatus('<span class="spin"></span>פותח את הקובץ…');
+      await loadPdfJs();
+      const pdf=await openPdf(await file.arrayBuffer());
+      text=await pdfToText(pdf);
+      if(text.replace(/[\s|-]|סוף עמוד \d+/g,'').length<120){
+        const lim=SAMPLE?await SAMPLE.limits().catch(()=>null):null;
+        if(!lim||!lim.images){impStatus('הקובץ סרוק כתמונה, ובלי Claude אי אפשר לקרוא אותו. פתחו את הפנקס מהקישור ב-claude.ai.','bad');return;}
+        impStatus('<span class="spin"></span>הקובץ סרוק. ממיר עמודים לתמונה…');
+        images=await pdfToImages(pdf,lim.images.maxCount);text='';
+      }
+    }
+    if(SAMPLE){
+      impStatus('<span class="spin"></span>Claude קורא את הפירוט ומסווג את התנועות. זה לוקח בדרך כלל 20 עד 60 שניות…');
+      const res=await SAMPLE.json(claudePrompt(text,card),{modelTier:'default',images:images||undefined});
+      finishImport(res,{file:file.name,card,who,engine:'claude'});
+    }else if(text){
+      impStatus('<span class="spin"></span>מפענח…');
+      finishImport(parseLocally(text),{file:file.name,card,who,engine:'local'});
+    }else impStatus('קריאת תמונות דורשת את Claude. פתחו את הפנקס מהקישור ב-claude.ai.','bad');
+  }catch(e){
+    const code=e&&e.code;
+    const msg={cancelled:'הייבוא בוטל.',not_granted:'כדי לסווג אוטומטית צריך לאשר ל-Claude לקרוא את הפירוט. אפשר לנסות שוב ולאשר.',rate_limited:'יותר מדי בקשות ברגע זה. נסו שוב בעוד דקה.',prompt_too_large:'הקובץ ארוך מדי לקריאה אחת. נסו לייצא חודש אחד בכל פעם.',invalid_json:'התשובה לא התקבלה בפורמט הנכון. נסו שוב.',images_unavailable:'אי אפשר לשלוח תמונות מהתצוגה הזו.'}[code];
+    if(!msg&&text&&code){finishImport(parseLocally(text),{file:file.name,card,who,engine:'local'});return;}
+    impStatus(msg||'לא הצלחתי לקרוא את הקובץ ('+esc(e&&e.message||code||'שגיאה')+'). ודאו שזה PDF של פירוט חיובים.','bad');
+  }finally{impBusy=false;$('#drop').classList.remove('busy');}
+}
+function impTargetDate(r){
+  const m=ui.imp.monthMode;if(m==='date')return r.date;
+  return m+'-'+pad(Math.min(dayOf(r.date),dimOf(m)));
+}
+function renderImport(){
+  const box=$('#impReview'),I=ui.imp;if(!I){box.innerHTML='';return;}
+  const on=I.rows.filter(r=>r.on),tot=sum(on,r=>(r.credit?-1:1)*r.amount),all=sum(I.rows,r=>(r.credit?-1:1)*r.amount);
+  const months=[...new Set(I.rows.map(r=>r.date.slice(0,7)))].sort();
+  const dups=I.rows.filter(r=>r.dup).length,learned=I.rows.filter(r=>r.src==='history').length;
+  const totNote=I.total?(Math.abs(all-I.total)<1?`<span class="pill good">✓ תואם לסה״כ בפירוט (${N(I.total)})</span>`:`<span class="pill warn">בפירוט כתוב ${N(I.total)}, נמצאו ${N(all)}</span>`):'';
+  const mOpts=[...new Set([...months,ui.month,addM(ui.month,-1),addM(ui.month,1)])].sort();
+  box.innerHTML=`<div class="sheet imprev"><h2>בדיקה לפני הוספה <span class="sub">${esc(I.file)} · ${I.rows.length} תנועות${I.engine==='local'?' · פוענח בלי Claude, כדאי לבדוק קטגוריות':''}</span></h2>
+   <div class="row" style="margin-bottom:10px;justify-content:space-between">
+    <div class="row">${totNote}${dups?`<span class="pill flat">${dups} כבר קיימות בפנקס, לא מסומנות</span>`:''}${learned?`<span class="pill acc">${learned} סווגו לפי מה שבחרתם בעבר</span>`:''}</div>
+    <div class="row"><label class="small" for="impMonth">שיוך לחודש</label><select id="impMonth" style="width:auto"><option value="date"${I.monthMode==='date'?' selected':''}>לפי תאריך העסקה</option>${mOpts.map(m=>`<option value="${m}"${I.monthMode===m?' selected':''}>הכל ל${esc(mLabel(m))}</option>`).join('')}</select></div>
+   </div>
+   <div class="tw" style="max-height:520px"><table><thead><tr><th><input type="checkbox" id="impAll" aria-label="בחר הכל"${on.length===I.rows.length?' checked':''}></th><th>תאריך</th><th>תיאור</th><th>קטגוריה</th><th>קבוע</th><th class="num">סכום</th><th></th></tr></thead><tbody>
+   ${I.rows.map((r,i)=>`<tr class="${r.on?'':'off'}"><td><input type="checkbox" data-imp="on" data-i="${i}"${r.on?' checked':''} aria-label="כלול"></td>
+     <td class="num" style="text-align:right">${impTargetDate(r).slice(8,10)}/${impTargetDate(r).slice(5,7)}</td>
+     <td><input data-imp="desc" data-i="${i}" value="${esc(r.desc)}" aria-label="תיאור" style="min-width:140px"></td>
+     <td><select data-imp="cat" data-i="${i}" aria-label="קטגוריה" style="min-width:140px">${catOptions(r.cat)}</select></td>
+     <td><input type="checkbox" data-imp="fixed" data-i="${i}"${r.fixed?' checked':''} aria-label="קבוע"></td>
+     <td class="num ${r.credit?'pos':''}">${r.credit?'+':''}${N2(r.amount)}</td>
+     <td>${r.dup?'<span class="tag">קיים</span> ':''}${r.inst?`<span class="tag">תשלום ${esc(r.inst)}</span> `:''}${r.credit?'<span class="tag">זיכוי</span>':''}</td></tr>`).join('')}
+   </tbody><tfoot><tr><td colspan="5">${on.length} מסומנות</td><td class="num">${esc(money(tot))}</td><td></td></tr></tfoot></table></div>
+   <div class="row" style="margin-top:12px"><button class="btn pri" data-act="impAdd"${on.length?'':' disabled'}>הוסף ${on.length} תנועות לפנקס</button><button class="btn ghost" data-act="impCancel">ביטול</button>
+    <span class="small">כרטיס: <b>${esc($('#impCard').value.trim()||I.card||'לא צוין')}</b> · של ${esc(whoName(I.who))}. שינוי קטגוריה כאן נלמד לפעם הבאה.</span></div></div>`;
+}
+function impEdit(t){
+  const I=ui.imp;if(!I)return;
+  if(t.id==='impMonth'){I.monthMode=t.value;renderImport();return;}
+  if(t.id==='impAll'){I.rows.forEach(r=>r.on=t.checked);renderImport();return;}
+  const r=I.rows[+t.dataset.i];if(!r)return;const f=t.dataset.imp;
+  if(f==='on'){r.on=t.checked;renderImport();}
+  else if(f==='fixed')r.fixed=t.checked;
+  else if(f==='desc')r.desc=t.value.trim()||r.desc;
+  else if(f==='cat'){r.cat=t.value;r.src='user';
+    /* same merchant elsewhere in this statement follows the change */
+    I.rows.forEach(x=>{if(x!==r&&normDesc(x.desc)===normDesc(r.desc)&&x.src!=='user')x.cat=t.value;});renderImport();}
+}
+function impAdd(){
+  const I=ui.imp;if(!I)return;if(state.demo)dropDemo();
+  const card=$('#impCard').value.trim()||I.card||'';const added=I.rows.filter(r=>r.on);
+  added.forEach(r=>{const date=impTargetDate(r),mk=date.slice(0,7);
+    (state.data[mk]=state.data[mk]||{rows:[]}).rows.push({id:uid(),date,desc:r.desc,cat:r.credit&&catById(r.cat).type!=='income'?'refund':r.cat,who:I.who,amount:r.amount,fixed:r.fixed,note:card});});
+  const months=[...new Set(added.map(r=>impTargetDate(r).slice(0,7)))].sort();
+  const counts=months.map(m=>({m,n:added.filter(r=>impTargetDate(r).startsWith(m)).length})).sort((a,b)=>b.n-a.n);
+  ui.imp=null;renderImport();if(counts.length)ui.month=counts[0].m;
+  commit();fillForm();toast(`נוספו ${added.length} תנועות מ${card||'הפירוט'}`+(months.length>1?` ב-${months.length} חודשים`:''));
+}
+function bindImport(){
+  const d=$('#drop');
+  ['dragenter','dragover'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,()=>d.classList.remove('over')));
+  d.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)importStatement(f);});
+}
+
 /* ---------- 16. render & events ---------- */
 function render(){
-  memo.clear();renderHead();
+  memo.clear();renderHead();$('#mPick').value=ui.month;
   $$('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===ui.tab)));
   $$('.panel').forEach(p=>p.hidden=p.id!=='panel-'+ui.tab);
   ({entry:renderEntry,budget:renderBudget,compare:renderCompare,year:renderYear,insights:renderInsights,settings:renderSettings})[ui.tab]();
 }
 function go(tab){ui.tab=tab;try{localStorage.setItem('budgetHH.tab',tab);}catch(e){}render();}
 const ACT={
-  mPrev:()=>{ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=null;render();},
-  mNext:()=>{ui.month=addM(ui.month,1);ui.cmpA=ui.cmpB=null;render();},
-  mToday:()=>{ui.month=curMonth();ui.cmpA=ui.cmpB=null;render();},
+  mPrev:()=>{ui.month=addM(ui.month,-1);ui.cmpA=ui.cmpB=ui.year=null;render();},
+  mNext:()=>{ui.month=addM(ui.month,1);ui.cmpA=ui.cmpB=ui.year=null;render();},
+  mToday:()=>{ui.month=curMonth();ui.cmpA=ui.cmpB=ui.year=null;render();},
   theme:()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
     r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('budgetHH.theme',r.dataset.theme);}catch(e){}},
   cancelEdit:()=>{endEdit();$('#fDesc').value='';$('#fAmount').value='';$('#fNote').value='';$('#fDate').value=todayISO();renderRows();},
@@ -978,6 +1321,8 @@ const ACT={
   del:b=>{const x=removeRow(b.dataset.id);if(!x)return;if(ui.editId===b.dataset.id)endEdit();commit();toast('נמחק: '+x.row.desc+' · '+money(x.row.amount),{label:'בטל',fn:()=>{state.data[x.k].rows.splice(x.i,0,x.row);commit();}});},
   recat:b=>{ui.recat=b.dataset.id;renderRows();},
   copyFixed,
+  impAdd,
+  impCancel:()=>{ui.imp=null;renderImport();impStatus('');},
   exportCSV:()=>exportBox('ייצוא CSV','budget-'+ui.month+'.csv',toCSV([ui.month]),'text/csv;charset=utf-8'),
   clearMonth:async()=>{const n=rowsOf(ui.month).length;if(!n){toast('החודש כבר ריק');return;}
     if(await confirmBox('איפוס '+mLabel(ui.month),n+' תנועות ב'+mLabel(ui.month)+' יימחקו. חודשים אחרים לא ייפגעו.','מחק '+n+' תנועות',true)){state.data[ui.month]={rows:[]};commit();toast('החודש אופס');}},
@@ -1017,6 +1362,9 @@ function bind(){
   [['#fFilterCat','fCat'],['#fFilterWho','fWho'],['#fFilterNote','fNote'],['#fSort','sort']].forEach(([s,k])=>$(s).addEventListener('change',e=>{ui[k]=e.target.value;renderRows();}));
   document.addEventListener('change',e=>{
     const t=e.target,d=t.dataset;
+    if(t.id==='mPick'){if(/^\d{4}-\d{2}$/.test(t.value)){ui.month=t.value;ui.cmpA=ui.cmpB=ui.year=null;render();}return;}
+    if(t.id==='impFile'){if(t.files[0])importStatement(t.files[0]);t.value='';return;}
+    if(t.closest&&t.closest('#impReview')){impEdit(t);return;}
     if(t.id==='recat'){recategorize(d.id,t.value);return;}
     if(t.id==='cmpA'){ui.cmpA=t.value;renderCompare();return;}
     if(t.id==='cmpB'){ui.cmpB=t.value;renderCompare();return;}
@@ -1054,7 +1402,8 @@ function bind(){
     const ms=monthsWithData();
     if(!rowsOf(ui.month).length&&ms.length)ui.month=ms[ms.length-1];
     $('#fDate').value=todayISO();
-    fillForm();bind();render();
+    fillForm();bind();render();bindImport();
+    connectCapabilities();
   }catch(ex){
     console.error(ex);
     document.body.insertAdjacentHTML('afterbegin',`<div class="note bad" style="margin:16px"><b>שגיאה בטעינה:</b> ${esc(ex.message)}</div>`);
