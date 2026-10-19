@@ -7,11 +7,12 @@ import hashlib
 import secrets
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
 import engine
 import news as newsfeed
+import market
 
 app = Flask(__name__)
 # Session cookies are signed with this key. The fallback is random per process
@@ -19,6 +20,16 @@ app = Flask(__name__)
 # forge a session cookie and sign in as any user. Set SECRET_KEY in the host's
 # environment so sessions survive a restart.
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    # Lax still sends the cookie on a normal top-level visit but not on a
+    # cross-site POST, which is what a CSRF attempt against these routes is.
+    SESSION_COOKIE_SAMESITE='Lax',
+    # Set on any real deployment; left off locally so http://localhost works.
+    SESSION_COOKIE_SECURE=bool(os.environ.get('VERCEL') or os.environ.get('RENDER')
+                               or os.environ.get('FORCE_HTTPS')),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
 
 HEADERS = {'User-Agent': 'Mozilla/5.0'}
 # Serverless hosts (Vercel) mount a read-only filesystem with only /tmp
@@ -104,8 +115,38 @@ def init_db():
 init_db()
 
 
-def hash_pw(pw):
-    return hashlib.sha256(('js-salt-' + pw).encode()).hexdigest()
+# Password storage. SHA-256 with one shared salt was a single fast hash over
+# every account: a rainbow table built once breaks all of them, and a GPU tries
+# billions a second. PBKDF2 gives each account its own random salt and a work
+# factor, both stored alongside the digest so they can be raised later without
+# invalidating anyone.
+PBKDF2_ROUNDS = 240_000
+LEGACY_SALT = 'js-salt-'
+
+
+def hash_pw(pw, salt=None, rounds=PBKDF2_ROUNDS):
+    salt = salt or secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt.encode(), rounds)
+    return f'pbkdf2${rounds}${salt}${digest.hex()}'
+
+
+def verify_pw(pw, stored):
+    """True when the password matches. Also reports whether the stored form is
+    outdated, so a legacy account upgrades silently on the next sign-in."""
+    if not stored:
+        return False, False
+    if stored.startswith('pbkdf2$'):
+        try:
+            _, rounds, salt, _ = stored.split('$', 3)
+            rounds = int(rounds)
+        except ValueError:
+            return False, False
+        ok = secrets.compare_digest(hash_pw(pw, salt, rounds), stored)
+        return ok, ok and rounds < PBKDF2_ROUNDS
+    # pre-PBKDF2 account: verify the old way, then ask the caller to re-hash
+    legacy = hashlib.sha256((LEGACY_SALT + pw).encode()).hexdigest()
+    ok = secrets.compare_digest(legacy, stored)
+    return ok, ok
 
 
 def _num(v):
@@ -116,6 +157,33 @@ def _num(v):
         return float(v)
     except (TypeError, ValueError):
         return None
+
+
+# Sign-in throttle. Without one, a weak password is only as safe as how fast an
+# attacker can POST. Keyed per source address and held in memory, which is the
+# right scope here: the window is minutes and a restart losing it is harmless.
+_LOGIN_FAILS = {}
+LOGIN_MAX_FAILS = 8
+LOGIN_WINDOW = 600
+
+
+def _client_ip():
+    fwd = request.headers.get('X-Forwarded-For', '')
+    return (fwd.split(',')[0].strip() if fwd else request.remote_addr) or 'unknown'
+
+
+def _login_blocked(ip):
+    fails = [t for t in _LOGIN_FAILS.get(ip, []) if t > time.time() - LOGIN_WINDOW]
+    _LOGIN_FAILS[ip] = fails
+    return len(fails) >= LOGIN_MAX_FAILS
+
+
+def _login_fail(ip):
+    _LOGIN_FAILS.setdefault(ip, []).append(time.time())
+
+
+def _login_ok(ip):
+    _LOGIN_FAILS.pop(ip, None)
 
 
 def current_user():
@@ -157,11 +225,24 @@ def login():
     d = request.get_json(silent=True) or {}
     email = (d.get('email') or '').strip().lower()
     password = d.get('password') or ''
+    ip = _client_ip()
+    if _login_blocked(ip):
+        return jsonify({'error': 'Too many attempts. Try again in a few minutes.'}), 429
     conn = db()
     row = conn.execute('SELECT * FROM users WHERE email=?', (email,)).fetchone()
-    conn.close()
-    if not row or row['password_hash'] != hash_pw(password):
+    matched, needs_upgrade = verify_pw(password, row['password_hash']) if row else (False, False)
+    if not matched:
+        conn.close()
+        _login_fail(ip)
+        # one message for both cases: saying which half was wrong tells an
+        # attacker which emails are registered
         return jsonify({'error': 'Wrong email or password'}), 401
+    if needs_upgrade:
+        conn.execute('UPDATE users SET password_hash=? WHERE id=?',
+                     (hash_pw(password), row['id']))
+        conn.commit()
+    conn.close()
+    _login_ok(ip)
     session['user_id'] = row['id']
     session['username'] = row['username']
     session.permanent = True
@@ -603,6 +684,50 @@ def treemap(idx):
     return jsonify(out)
 
 
+# ---------- Market-wide: Fear & Greed, sector heatmap ----------
+
+@app.route('/api/feargreed')
+def feargreed():
+    """CNN's own index, not a local approximation of it."""
+    return jsonify(market.fear_greed())
+
+
+@app.route('/api/heatmap/<index>')
+def heatmap(index):
+    """Constituents with sector, market cap and live change, for the treemap."""
+    key = 'hm:' + index.lower()
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    rows = market.constituents(index)
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        quotes = list(ex.map(quick_quote, [r['ticker'] for r in rows]))
+    qmap = {q['ticker']: q for q in quotes}
+    out = []
+    for r in rows:
+        q = qmap.get(r['ticker'], {})
+        out.append({**r, 'price': q.get('price'), 'chg': q.get('chg')})
+    # A name with no quote would be an unexplained grey block; drop it.
+    out = [r for r in out if r['price'] is not None]
+    total = sum(r['cap'] for r in out) or 1
+    sectors = {}
+    for r in out:
+        sectors.setdefault(r['sector'], []).append(r)
+    summary = []
+    for name, members in sectors.items():
+        cap = sum(m['cap'] for m in members)
+        # cap-weighted, because an equal-weighted sector move misrepresents it
+        chg = sum((m['chg'] or 0) * m['cap'] for m in members) / (cap or 1)
+        summary.append({'sector': name, 'cap': cap, 'chg': round(chg, 2),
+                        'count': len(members), 'weight': round(cap / total * 100, 2)})
+    summary.sort(key=lambda s: market.SECTOR_ORDER.index(s['sector'])
+                 if s['sector'] in market.SECTOR_ORDER else 99)
+    payload = {'index': index.upper(), 'stocks': out, 'sectors': summary,
+               'total_cap': total, 'generated_at': int(time.time())}
+    cache_set(key, payload, 120)
+    return jsonify(payload)
+
+
 @app.route('/api/search')
 def search():
     q = request.args.get('q', '').strip()
@@ -708,7 +833,7 @@ def engine_backtest(ticker):
         out = engine.backtest(ticker, years=years, settings={'risk_pct': risk_pct})
     except Exception as e:
         return jsonify({'ticker': ticker.upper(), 'ok': False,
-                        'error': f'שגיאה בבדיקה ההיסטורית: {e}'}), 500
+                        'error': f'Backtest failed: {e}'}), 500
     cache_set(key, out, 1800 if out.get('ok') else 60)
     return jsonify(out)
 
@@ -745,7 +870,7 @@ def engine_plan():
     try:
         return jsonify(engine.build_plan(positions, watch, settings))
     except Exception as e:
-        return jsonify({'error': f'שגיאה בחישוב התוכנית: {e}'}), 500
+        return jsonify({'error': f'Could not build the plan: {e}'}), 500
 
 
 @app.route('/')
@@ -918,7 +1043,7 @@ def market_news():
         extra = list(dict.fromkeys(extra))[:6]
         if not extra:
             return jsonify({'items': [], 'failed': [],
-                            'error': 'הוסף מניות לתיק או למעקב כדי לראות חדשות עליהן'})
+                            'error': 'Add stocks to your portfolio or watchlist to see news about them'})
         key = 'news:mine:' + ','.join(sorted(extra))
 
     hit = cache_get(key)
