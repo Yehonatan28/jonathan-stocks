@@ -1,4 +1,4 @@
-"""אגרגטור חדשות פיננסיות מפידי RSS.
+"""Financial news aggregator built on RSS feeds.
 
 Yahoo's search endpoint rate-limits and silently returns nothing, which is why
 the news tab kept coming up empty. RSS is the right transport instead: it is
@@ -43,11 +43,11 @@ GLOBAL_FEEDS = [
 # Hebrew outlets: this is an Israeli portfolio, and TA names are barely covered
 # in the English press.
 ISRAEL_FEEDS = [
-    ('globes-capital', 'גלובס', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=2', 'he', 'il'),
-    ('globes-main', 'גלובס', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=1725', 'he', 'il'),
-    ('calcalist', 'כלכליסט', 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml', 'he', 'il'),
-    ('themarker', 'דה־מרקר', 'https://www.themarker.com/srv/themarker---markets', 'he', 'il'),
-    ('bizportal', 'ביזפורטל', 'https://www.bizportal.co.il/rss', 'he', 'il'),
+    ('globes-capital', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=2', 'he', 'il'),
+    ('globes-main', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=1725', 'he', 'il'),
+    ('calcalist', 'Calcalist', 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml', 'he', 'il'),
+    ('themarker', 'TheMarker', 'https://www.themarker.com/srv/themarker---markets', 'he', 'il'),
+    ('bizportal', 'Bizportal', 'https://www.bizportal.co.il/rss', 'he', 'il'),
 ]
 
 ALL_FEEDS = GLOBAL_FEEDS + ISRAEL_FEEDS

@@ -1,4 +1,4 @@
-"""מנוע ניתוח טכני וניהול סיכונים.
+"""Technical analysis and risk-management engine.
 
 The module is deliberately stateless: every function takes prices (or a
 position dict) and returns plain JSON-ready structures, so the same code
@@ -138,12 +138,12 @@ def _bars_since_flip(flags, i, limit=30):
 
 # Regime codes and their Hebrew labels, used across the UI.
 REGIMES = {
-    'strong_up': 'מגמת עלייה חזקה',
-    'up': 'מגמת עלייה',
-    'recovering': 'התאוששות',
-    'range': 'דשדוש',
-    'weak': 'היחלשות',
-    'down': 'מגמת ירידה',
+    'strong_up': 'Strong uptrend',
+    'up': 'Uptrend',
+    'recovering': 'Recovering',
+    'range': 'Range-bound',
+    'weak': 'Weakening',
+    'down': 'Downtrend',
 }
 
 
@@ -289,11 +289,11 @@ def analyze(ticker):
     df = fetch_daily(ticker)
     if df is None or len(df) < 60:
         return {'ticker': ticker, 'ok': False,
-                'error': 'אין מספיק נתונים היסטוריים לניתוח'}
+                'error': 'Not enough price history to analyse this symbol'}
     ind = _indicators(df)
     out = _snapshot(ticker, ind, len(df) - 1)
     if out is None:
-        return {'ticker': ticker, 'ok': False, 'error': 'נתוני המחיר פגומים'}
+        return {'ticker': ticker, 'ok': False, 'error': 'Price data for this symbol is unusable'}
     out['entries'] = _entry_setups(out)
     out['history'] = [round(float(p), 2) for p in df['Close'].iloc[-120:].tolist()]
     return out
@@ -362,21 +362,21 @@ def _entry_setups(an):
             anchor = ma['sma20'] if near20 else ma['sma50']
             label = 'MA20' if near20 else 'MA50'
             add('PULLBACK_MA',
-                f'תיקון לממוצע הנע {label}',
-                [f'המגמה עולה ({an["regime_he"]}) והמחיר חזר לאזור {label} — '
-                 f'נקודת כניסה עם סיכון מוגדר',
-                 f'RSI {rsi_v} מעיד על תיקון בריא ולא על חולשה',
-                 f'ממוצע 50 {"מעל" if an["golden_cross"] else "מתחת ל"}ממוצע 200'],
+                f'Pullback to the {label}',
+                [f'The trend is up ({an["regime_he"].lower()}) and price has come back '
+                 f'to the {label} — an entry with clearly defined risk',
+                 f'RSI {rsi_v} reads as a healthy pullback rather than weakness',
+                 f'The 50-day average is {"above" if an["golden_cross"] else "below"} the 200-day'],
                 62 + an['trend_score'] // 4 + (6 if near20 else 0),
                 anchor * 0.995, max(price, anchor * 1.02))
 
     # 2. breakout of the 20-day range on volume
     if price >= lv['resistance'] and (an['vol_ratio'] or 0) >= 1.3 and healthy:
         add('BREAKOUT',
-            'פריצת שיא 20 ימים',
-            [f'המחיר פרץ את ההתנגדות ${lv["resistance"]} — השיא של 20 הימים האחרונים',
-             f'נפח המסחר פי {an["vol_ratio"]} מהממוצע — הפריצה מגובה בכסף אמיתי',
-             'הסטופ ממוקם מתחת לאזור הפריצה'],
+            '20-day breakout',
+            [f'Price cleared ${lv["resistance"]} — the highest close of the last 20 days',
+             f'Volume is {an["vol_ratio"]}x the average, so real money is behind the move',
+             'The stop sits just under the breakout level'],
             60 + an['trend_score'] // 3,
             lv['resistance'], price + 0.5 * atr_v,
             min(lv['resistance'] - 0.3 * atr_v, price - 1.5 * atr_v))
@@ -384,39 +384,39 @@ def _entry_setups(an):
     # 3. fresh golden cross - a regime change worth acting on
     if an['golden_cross_bars'] is not None and an['golden_cross_bars'] <= 15:
         add('GOLDEN_CROSS',
-            'צלב זהב טרי',
-            [f'ממוצע 50 חצה מעל ממוצע 200 לפני {an["golden_cross_bars"]} ימי מסחר',
-             'היסטורית זהו שינוי מגמה ארוך־טווח, לא רעש יומי',
-             'עדיף להיכנס בתיקון הראשון ולא במרדף'],
+            'Fresh golden cross',
+            [f'The 50-day average crossed above the 200-day {an["golden_cross_bars"]} sessions ago',
+             'Historically this marks a change of long-term trend, not daily noise',
+             'Better entered on the first pullback than chased'],
             58 + an['trend_score'] // 3, ma['sma50'], price + 0.5 * atr_v)
 
     # 4. momentum turning up while the long-term trend is intact
     if (an['macd_cross_bars'] is not None and an['macd_cross_bars'] <= 5
             and healthy and rsi_v is not None and rsi_v < 68):
         add('MACD_CROSS',
-            'היפוך מומנטום MACD',
-            [f'קו ה־MACD חצה מעל קו האיתות לפני {an["macd_cross_bars"]} ימים',
-             'המחיר מעל ממוצע 200 — המומנטום מתיישר עם המגמה הראשית',
-             'איתות מוקדם יחסית, מתאים לכניסה חלקית'],
+            'MACD momentum turn',
+            [f'The MACD line crossed above its signal {an["macd_cross_bars"]} sessions ago',
+             'Price is above the 200-day average, so momentum agrees with the main trend',
+             'A relatively early signal — suits a partial position'],
             52 + an['trend_score'] // 4, price - 0.5 * atr_v, price + atr_v)
 
     # 5. deep oversold inside a long-term uptrend
     if healthy and rsi_v is not None and rsi_v <= 34:
         add('OVERSOLD_UPTREND',
-            'מכירת יתר במגמה עולה',
-            [f'RSI {rsi_v} — מכירת יתר, אך המחיר עדיין מעל ממוצע 200',
-             'תיקונים כאלה במגמה ראשית עולה נוטים להיות הזדמנות',
-             'המתן לנר ירוק ראשון לאישור לפני כניסה'],
+            'Oversold inside an uptrend',
+            [f'RSI {rsi_v} is oversold, yet price is still above the 200-day average',
+             'Pullbacks like this inside a primary uptrend tend to be opportunities',
+             'Wait for the first green close as confirmation before entering'],
             48 + an['trend_score'] // 4, price - atr_v, price + 0.5 * atr_v)
 
     # 6. reclaiming the 200-day average after being below it
     if (ma['dist200'] is not None and 0 <= ma['dist200'] <= 3
             and not an['golden_cross']):
         add('RECLAIM_200',
-            'חזרה מעל ממוצע 200',
-            ['המחיר חזר לסגור מעל ממוצע 200 — סימן ראשון להתאוששות',
-             'ממוצע 50 עדיין מתחת ל־200, לכן זו כניסה מוקדמת ולא מגמה מאושרת',
-             'שמור על פוזיציה קטנה יותר מהרגיל'],
+            'Reclaiming the 200-day',
+            ['Price has closed back above the 200-day average — a first sign of recovery',
+             'The 50-day is still below the 200-day, so this is early rather than confirmed',
+             'Size this one smaller than usual'],
             44 + an['trend_score'] // 5, ma['sma200'], price + atr_v)
 
     setups.sort(key=lambda s: -s['quality'])
@@ -486,63 +486,64 @@ def manage_position(pos, an, settings):
     if stop is None:
         actions.append(_action(
             'SET_STOP', 'high', ticker,
-            'אין סטופ מוגדר לפוזיציה',
-            f'הפוזיציה חשופה לכל ירידה. הסטופ המומלץ הוא ${suggested_initial} '
-            f'(מתחת לשפל האחרון ו־2×ATR מהמחיר) — סיכון של '
-            f'{_f((price / suggested_initial - 1) * 100)}% מהמחיר הנוכחי.',
+            'No stop set on this position',
+            f'The position is exposed to any decline. The suggested stop is '
+            f'${suggested_initial} — below the recent swing low and 2x ATR from price, '
+            f'which risks {_f((price / suggested_initial - 1) * 100)}% from here.',
             suggest=suggested_initial, stop_type='fixed'))
     else:
         # --- the stop has already been breached
         if price <= stop:
             actions.append(_action(
                 'STOP_HIT', 'critical', ticker,
-                'הסטופ נפרץ — יש לצאת',
-                f'המחיר ${price} נמצא מתחת לסטופ שהגדרת ${_f(stop)}. '
-                f'זו הנקודה שבה החלטת מראש לצאת — צא לפי התוכנית, לא לפי התחושה.',
+                'Stop breached — time to exit',
+                f'Price ${price} is below the stop you set at ${_f(stop)}. '
+                f'This is the point you decided in advance to exit — follow the plan, not the feeling.',
                 suggest=None))
         elif price <= stop * 1.02:
             actions.append(_action(
                 'STOP_NEAR', 'high', ticker,
-                'המחיר קרוב מאוד לסטופ',
-                f'נותרו {_f((price / stop - 1) * 100)}% בלבד עד הסטופ ב־${_f(stop)}. '
-                f'ודא שהפקודה אכן קיימת אצל הברוקר.',
+                'Price is very close to the stop',
+                f'Only {_f((price / stop - 1) * 100)}% is left to the stop at ${_f(stop)}. '
+                f'Check the order is actually live with your broker.',
                 suggest=None))
 
         # --- profit is real: move the stop to entry and remove the risk
         if r_multiple is not None and r_multiple >= 1 and stop < entry and price > entry:
             actions.append(_action(
                 'BREAKEVEN', 'high', ticker,
-                'העלה סטופ לנקודת האיזון',
-                f'הרווח הפתוח הוא {r_multiple}R — מעל הסיכון שלקחת. '
-                f'העלאת הסטופ ל־${_f(entry)} הופכת את העסקה לחסרת סיכון.',
+                'Move the stop to breakeven',
+                f'Open profit is {r_multiple}R — more than the risk you took. '
+                f'Raising the stop to ${_f(entry)} makes this trade risk-free.',
                 suggest=_f(entry), stop_type='fixed'))
         # --- trend still running: ratchet the trailing stop up
         elif trail and stop is not None and trail > stop * 1.005 and price > entry:
             actions.append(_action(
                 'TRAIL_UP', 'medium', ticker,
-                'העלה את הטריילינג סטופ',
-                f'הסטופ הנגרר (Chandelier) עלה ל־${trail} לפי השיא של 22 הימים '
-                f'(${an["levels"]["high22"]}) פחות מכפלת ATR. '
-                f'הסטופ הנוכחי ${_f(stop)} מיותר ומרוחק — נעל עוד רווח.',
+                'Raise the trailing stop',
+                f'The chandelier trail has risen to ${trail}, anchored to the 22-day high '
+                f'(${an["levels"]["high22"]}) less an ATR multiple. '
+                f'Your current stop at ${_f(stop)} is further away than it needs to be — lock in more.',
                 suggest=trail, stop_type='trail'))
 
     # --- the thesis itself is breaking down
     if an['ma']['dist50'] is not None and an['ma']['dist50'] < 0 and an['regime'] in ('weak', 'down'):
         actions.append(_action(
             'TREND_BREAK', 'high', ticker,
-            'שבירת מגמה — המחיר מתחת לממוצע 50',
-            f'המחיר ${price} נסגר מתחת לממוצע הנע 50 (${an["ma"]["sma50"]}) '
-            f'והמגמה הוגדרה כ{an["regime_he"]}. שקול הקטנת פוזיציה או הידוק הסטופ.',
+            'Trend break — price is below the 50-day average',
+            f'Price ${price} closed below the 50-day average (${an["ma"]["sma50"]}) '
+            f'and the trend now reads as {an["regime_he"].lower()}. '
+            f'Consider trimming the position or tightening the stop.',
             suggest=trail))
 
     # --- extended move: take something off the table
     if r_multiple is not None and r_multiple >= 3 and (an['rsi'] or 0) >= 72:
         actions.append(_action(
             'TAKE_PARTIAL', 'medium', ticker,
-            'שקול מימוש חלקי',
-            f'רווח של {r_multiple}R ו־RSI {an["rsi"]} — המהלך מתוח. '
-            f'מימוש שליש עד חצי מהפוזיציה והשארת היתר עם טריילינג סטופ '
-            f'מקבע רווח בלי לוותר על המשך המגמה.',
+            'Consider taking partial profit',
+            f'{r_multiple}R of profit with RSI at {an["rsi"]} — the move is extended. '
+            f'Selling a third to a half and trailing the rest banks profit without '
+            f'giving up the trend if it continues.',
             suggest=trail, stop_type='trail'))
 
     # --- position size is out of line with the risk budget
@@ -551,10 +552,10 @@ def manage_position(pos, an, settings):
     if equity and open_risk and open_risk > equity * (risk_pct / 100) * 1.6:
         actions.append(_action(
             'RISK_OVERSIZE', 'medium', ticker,
-            'הסיכון בפוזיציה חורג מהמדיניות',
-            f'הסיכון הפתוח ${open_risk} הוא '
-            f'{_f(open_risk / equity * 100)}% מהתיק, לעומת מדיניות של {risk_pct}% לעסקה. '
-            f'הקטן כמות או הדק את הסטופ.',
+            'Position risk exceeds your policy',
+            f'Open risk of ${open_risk} is {_f(open_risk / equity * 100)}% of the account, '
+            f'against your policy of {risk_pct}% per trade. '
+            f'Reduce the size or tighten the stop.',
             suggest=None))
 
     return actions, metrics
@@ -596,9 +597,10 @@ def build_plan(positions, watch, settings=None):
     if risk['heat_pct'] is not None and risk['heat_pct'] > 8:
         actions.append(_action(
             'PORTFOLIO_HEAT', 'high', '—',
-            'חשיפת הסיכון הכוללת גבוהה',
-            f'סך הסיכון הפתוח (מרחק מהסטופים) הוא {risk["heat_pct"]}% מהתיק. '
-            f'מקובל להחזיק את המספר הזה מתחת ל־6%. הדק סטופים או הקטן פוזיציות.'))
+            'Total open risk is high',
+            f'Open risk across the portfolio — the distance to every stop — is '
+            f'{risk["heat_pct"]}% of the account. Keeping that under 6% is the usual '
+            f'guidance. Tighten stops or reduce position sizes.'))
 
     # Entry candidates: watchlist names that are not already held. A ticker can
     # fire several setups at once; show its strongest one and list the rest as
@@ -694,7 +696,7 @@ def backtest(ticker, years=3, settings=None):
     df = fetch_daily(ticker, range_='5y')
     if df is None or len(df) < WARMUP_BARS + 60:
         return {'ticker': ticker, 'ok': False,
-                'error': 'אין מספיק היסטוריה לבדיקה אמינה (נדרשות כשנתיים לפחות)'}
+                'error': 'Not enough history for a meaningful backtest (about two years minimum)'}
 
     ind = _indicators(df)
     closes, opens, highs, lows = ind['close'], ind['open'], ind['high'], ind['low']
@@ -703,7 +705,7 @@ def backtest(ticker, years=3, settings=None):
     first = max(WARMUP_BARS, len(df) - int(years * 252))
     last = len(df) - 1
     if first >= last - 20:
-        return {'ticker': ticker, 'ok': False, 'error': 'טווח הבדיקה קצר מדי'}
+        return {'ticker': ticker, 'ok': False, 'error': 'The requested window is too short to test'}
 
     equity = 100.0
     curve, trades = [], []
