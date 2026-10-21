@@ -694,21 +694,32 @@ def feargreed():
 
 @app.route('/api/heatmap/<index>')
 def heatmap(index):
-    """Constituents with sector, market cap and live change, for the treemap."""
+    """Constituents with sector, market cap and live change, for the treemap.
+
+    500 names cannot each have their own request, so quotes come from the
+    batch endpoints and only whatever they miss falls back to per-ticker.
+    """
     key = 'hm:' + index.lower()
     hit = cache_get(key)
     if hit:
         return jsonify(hit)
     rows = market.constituents(index)
-    with ThreadPoolExecutor(max_workers=16) as ex:
-        quotes = list(ex.map(quick_quote, [r['ticker'] for r in rows]))
-    qmap = {q['ticker']: q for q in quotes}
+    quotes = market.batch_quotes([r['ticker'] for r in rows],
+                                 per_ticker_fallback=quick_quote)
     out = []
     for r in rows:
-        q = qmap.get(r['ticker'], {})
-        out.append({**r, 'price': q.get('price'), 'chg': q.get('chg')})
-    # A name with no quote would be an unexplained grey block; drop it.
-    out = [r for r in out if r['price'] is not None]
+        q = quotes.get(r['ticker'])
+        if not q or q.get('price') is None:
+            continue          # an unexplained grey block is worse than omitting it
+        out.append({**r,
+                    'price': q['price'],
+                    'chg': q.get('chg'),
+                    # live cap when the feed gave one, the static estimate otherwise
+                    'cap': q.get('cap') or r['cap']})
+    if not out:
+        return jsonify({'index': index.upper(), 'stocks': [], 'sectors': [],
+                        'total_cap': 0, 'generated_at': int(time.time()),
+                        'error': 'No quotes available right now'})
     total = sum(r['cap'] for r in out) or 1
     sectors = {}
     for r in out:
@@ -716,15 +727,62 @@ def heatmap(index):
     summary = []
     for name, members in sectors.items():
         cap = sum(m['cap'] for m in members)
-        # cap-weighted, because an equal-weighted sector move misrepresents it
+        # cap-weighted: an equal-weighted sector move misrepresents the sector
         chg = sum((m['chg'] or 0) * m['cap'] for m in members) / (cap or 1)
         summary.append({'sector': name, 'cap': cap, 'chg': round(chg, 2),
                         'count': len(members), 'weight': round(cap / total * 100, 2)})
     summary.sort(key=lambda s: market.SECTOR_ORDER.index(s['sector'])
                  if s['sector'] in market.SECTOR_ORDER else 99)
     payload = {'index': index.upper(), 'stocks': out, 'sectors': summary,
-               'total_cap': total, 'generated_at': int(time.time())}
+               'total_cap': total, 'covered': len(out), 'listed': len(rows),
+               'generated_at': int(time.time())}
     cache_set(key, payload, 120)
+    return jsonify(payload)
+
+
+@app.route('/api/gaps')
+def gaps():
+    """Opening gaps across a universe: the index, or your own names."""
+    scope = request.args.get('scope', 'sp100')
+    try:
+        min_pct = max(0.25, min(20.0, float(request.args.get('min', 1.0))))
+    except (TypeError, ValueError):
+        min_pct = 1.0
+
+    if scope == 'mine':
+        uid = current_user()
+        if uid:
+            conn = db()
+            names = [r['ticker'] for r in conn.execute(
+                'SELECT DISTINCT ticker FROM portfolio WHERE user_id=?', (uid,))]
+            names += [r['ticker'] for r in conn.execute(
+                'SELECT ticker FROM watchlist WHERE user_id=?', (uid,))]
+            conn.close()
+        else:
+            names = [t.strip().upper()
+                     for t in request.args.get('tickers', '').split(',') if t.strip()]
+        names = list(dict.fromkeys(names))
+        if not names:
+            return jsonify({'gaps': [], 'scanned': 0,
+                            'error': 'Add stocks to your portfolio or watchlist first'})
+    else:
+        # the largest names by default: a gap in a mega cap moves the index
+        limit = 100 if scope == 'sp100' else 60
+        names = [c['ticker'] for c in market.constituents('sp500')[:limit]]
+
+    key = f'gaps:{scope}:{min_pct}:' + ','.join(sorted(names))[:120]
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    try:
+        found = engine.scan_gaps(names, min_pct=min_pct)
+    except Exception as e:
+        return jsonify({'gaps': [], 'scanned': 0, 'error': f'Gap scan failed: {e}'}), 500
+    payload = {'gaps': found, 'scanned': len(names), 'min_pct': min_pct,
+               'up': sum(1 for g in found if g['direction'] == 'up'),
+               'down': sum(1 for g in found if g['direction'] == 'down'),
+               'generated_at': int(time.time())}
+    cache_set(key, payload, 180)
     return jsonify(payload)
 
 
@@ -1010,9 +1068,11 @@ def get_chart(ticker):
                    for idx, r in hist.iterrows()]
         return jsonify({
             'candles': candles,
-            'ma20': arr(close.rolling(20).mean()),
             'ma50': arr(close.rolling(50).mean()),
+            'ma100': arr(close.rolling(100).mean()),
+            'ma150': arr(close.rolling(150).mean()),
             'ma200': arr(close.rolling(200).mean()),
+            'ma20': arr(close.rolling(20).mean()),
             'rsi': arr(rsi_s, 2),
             'macd': arr(macd_line), 'signal': arr(macd_sig),
         })

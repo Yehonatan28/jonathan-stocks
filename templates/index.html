@@ -331,7 +331,10 @@ option{background:var(--s2);color:var(--tx)}
 .hm-head span{margin-left:auto;font-family:var(--mono);font-weight:700}
 .hm-cell{position:absolute;overflow:hidden;cursor:pointer;border:1px solid rgba(8,11,18,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;transition:outline-color .12s;outline:2px solid transparent;outline-offset:-2px}
 .hm-cell:hover{outline-color:#fff;z-index:3}
-.hm-logo{width:var(--lg);height:var(--lg);object-fit:contain;border-radius:3px;background:rgba(255,255,255,.92);padding:1px;flex:none}
+/* Invisible until it actually decodes: a pending or failed logo would
+   otherwise sit on the block as a white square covering the symbol. */
+.hm-logo{width:var(--lg);height:var(--lg);object-fit:contain;border-radius:3px;padding:1px;flex:none;opacity:0;transition:opacity .18s}
+.hm-logo.ready{opacity:1;background:rgba(255,255,255,.92)}
 .hm-sym{font-family:var(--mono);font-weight:700;color:#fff;line-height:1;text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .hm-chg{font-family:var(--mono);font-weight:600;color:#fff;line-height:1;opacity:.95;text-shadow:0 1px 3px rgba(0,0,0,.55)}
 .hm-nm{font-size:9px;color:rgba(255,255,255,.85);line-height:1.1;max-width:94%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -349,6 +352,30 @@ option{background:var(--s2);color:var(--tx)}
 .hm-s .n{font-size:10.5px;color:var(--tx2);font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hm-s .v{font-family:var(--mono);font-size:16px;font-weight:700}
 .hm-s .w{font-size:9.5px;color:var(--tx3);margin-top:2px;font-family:var(--mono)}
+/* == gap detector == */
+.gap-row{display:grid;grid-template-columns:auto 86px 1fr auto;gap:14px;align-items:center;padding:13px 16px;margin-bottom:8px;transition:border-color .15s;border-inline-start:3px solid var(--tx3)}
+.gap-row:hover{border-color:var(--line3)}
+.gap-row.up{border-inline-start-color:var(--up)}
+.gap-row.down{border-inline-start-color:var(--dn)}
+.gap-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:15px;font-weight:700;flex:none}
+.gap-row.up .gap-ic{background:var(--up-bg);color:var(--up)}
+.gap-row.down .gap-ic{background:var(--dn-bg);color:var(--dn)}
+.gap-sym{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--gold);cursor:pointer}
+.gap-sub{font-size:10.5px;color:var(--tx3);margin-top:2px;white-space:nowrap}
+.gap-pct{font-family:var(--mono);font-size:19px;font-weight:700;line-height:1}
+/* The fill bar is the real signal: how much of the gap price has already
+   taken back. Full bar = filled. */
+.gap-bar{height:7px;border-radius:4px;background:var(--s3);overflow:hidden;position:relative;margin-bottom:5px}
+.gap-bar i{display:block;height:100%;border-radius:4px}
+.gap-meta{display:flex;gap:14px;font-family:var(--mono);font-size:10.5px;color:var(--tx3);flex-wrap:wrap}
+.gap-meta b{color:var(--tx2);font-weight:600}
+.gap-badge{font-size:9px;letter-spacing:1px;font-weight:700;padding:3px 8px;border-radius:5px;border:1px solid;text-transform:uppercase;white-space:nowrap}
+.gap-badge.open{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-br)}
+.gap-badge.filled{background:var(--s3);color:var(--tx3);border-color:var(--line2)}
+.gap-badge.held{background:var(--up-bg);color:var(--up);border-color:var(--up-br)}
+.gap-badge.faded{background:var(--dn-bg);color:var(--dn);border-color:var(--dn-br)}
+.gap-acts{display:flex;gap:6px;align-items:center}
+@media(max-width:860px){.gap-row{grid-template-columns:auto 1fr}.gap-acts{grid-column:1/-1}}
 /* == chart modal == */
 .modal{position:fixed;inset:0;z-index:2000;background:rgba(4,7,12,.82);display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .modal.open{display:flex}
@@ -522,6 +549,7 @@ option{background:var(--s2);color:var(--tx)}
  <button class="nav-item on" data-v="home" onclick="go('home')">⌂ Overview</button>
  <button class="nav-item" data-v="command" onclick="go('command')">🎯 Command</button>
  <button class="nav-item" data-v="heatmap" onclick="go('heatmap')">🗺 Heatmap</button>
+ <button class="nav-item" data-v="gaps" onclick="go('gaps')">⚡ Gaps</button>
  <button class="nav-item" data-v="backtest" onclick="go('backtest')">🧪 Backtest</button>
  <button class="nav-item" data-v="portfolio" onclick="go('portfolio')">💼 Portfolio</button>
  <button class="nav-item" data-v="watchlist" onclick="go('watchlist')">★ Watchlist</button>
@@ -628,6 +656,30 @@ option{background:var(--s2);color:var(--tx)}
  <div class="ent-grid" id="ccEntryGrid"></div>
 </div></section>
 
+<section id="v-gaps" class="view"><div class="wrap">
+ <div class="cc-head">
+  <div class="sec" style="margin:0;flex:1">Gap detector <span class="tag">OVERNIGHT</span></div>
+  <span class="cc-stamp" id="gapStamp"></span>
+ </div>
+ <div class="sub">A gap is the distance between today's open and yesterday's close — price that never traded. What matters is less the size than whether it has been <b>filled</b>: an unfilled gap leaves an untested level behind, a filled one has already been rejected intraday. Size is also shown in <b>ATR</b>, because 2% is routine in one stock and a shock in another.</div>
+ <div class="filters" id="gapScopes">
+  <button class="btn btn-gold btn-sm" data-scope="sp100" onclick="loadGaps('sp100',this)">S&amp;P 100 largest</button>
+  <button class="btn btn-ghost btn-sm" data-scope="mine" onclick="loadGaps('mine',this)">★ My stocks</button>
+  <select class="inp" id="gapMin" style="max-width:150px" onchange="loadGaps(S.gapScope)">
+   <option value="0.75">Over 0.75%</option><option value="1" selected>Over 1%</option>
+   <option value="2">Over 2%</option><option value="3">Over 3%</option><option value="5">Over 5%</option>
+  </select>
+  <span class="seg" style="margin-left:auto">
+   <button class="on" data-f="all" onclick="setGapFilter('all',this)">All</button>
+   <button data-f="up" onclick="setGapFilter('up',this)">Gap up</button>
+   <button data-f="down" onclick="setGapFilter('down',this)">Gap down</button>
+   <button data-f="open" onclick="setGapFilter('open',this)">Unfilled</button>
+  </span>
+ </div>
+ <div class="tiles" id="gapTiles"></div>
+ <div id="gapBox"></div>
+</div></section>
+
 <section id="v-backtest" class="view"><div class="wrap">
  <div class="sec">Backtest <span class="tag">SAME RULES, ON HISTORY</span></div>
  <div class="sub">The engine replays <b>exactly the rules it gives you today</b> — the same entry signals, the same initial stop, the same move to breakeven and the same trailing stop — bar by bar over the stock's history. No lookahead: a signal detected at a close is entered at the next session's open.</div>
@@ -729,9 +781,10 @@ option{background:var(--s2);color:var(--tx)}
    <button class="ind" data-ind="line" onclick="setChartType('line',this)">Line</button>
    <button class="ind" data-ind="area" onclick="setChartType('area',this)">Area</button>
    <span class="ind-sep"></span>
-   <button class="ind on" data-ind="ma20" onclick="toggleInd(this)">MA20</button>
    <button class="ind on" data-ind="ma50" onclick="toggleInd(this)">MA50</button>
-   <button class="ind" data-ind="ma200" onclick="toggleInd(this)">MA200</button>
+   <button class="ind" data-ind="ma100" onclick="toggleInd(this)">MA100</button>
+   <button class="ind" data-ind="ma150" onclick="toggleInd(this)">MA150</button>
+   <button class="ind on" data-ind="ma200" onclick="toggleInd(this)">MA200</button>
    <button class="ind" data-ind="bb" onclick="toggleInd(this)">Bollinger</button>
    <span class="ind-sep"></span>
    <button class="ind on" data-ind="vol" onclick="toggleInd(this)">Volume</button>
@@ -843,11 +896,12 @@ async function loadUserData(){S.watch=await store.getWatch().catch(()=>[]);S.ale
  await loadSettings();renderWatch();renderAlerts();loadPortfolio();loadPlan(true)}
 
 /* ===================== navigation ===================== */
-const VIEWS=['home','command','heatmap','backtest','portfolio','watchlist','news','compare','alerts'];
+const VIEWS=['home','command','heatmap','gaps','backtest','portfolio','watchlist','news','compare','alerts'];
 function go(v){document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('on',n.dataset.v===v));
  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
  const el=$('v-'+v);if(!el)return;el.classList.add('on');window.scrollTo({top:0,behavior:'instant'});
  if(v==='heatmap'&&!S.hm)loadHeatmap('sp500',document.querySelector('.hm-bar .btn'));
+ if(v==='gaps'&&!S.gaps)loadGaps('sp100',document.querySelector('#gapScopes .btn'));
  if(v==='news'&&!S._newsLoaded){S._newsLoaded=1;loadNews('all',document.querySelector('#newsScopes .btn'))}
  if(v==='watchlist')renderWatch();if(v==='portfolio')loadPortfolio();if(v==='command')loadPlan(!S.plan)}
 
@@ -1011,7 +1065,11 @@ function renderHeatmap(){
  const showLogos=$('hmLogos').checked;
  const board=$('hmBoard');
  const W=board.clientWidth||1200;
- const H=Math.max(440,Math.min(760,Math.round(W*0.50)));
+ /* 500 names need more canvas than 100, or the tail becomes unreadable
+    confetti. Height grows with the count and stops at a screenful and a half. */
+ const n=d.stocks.length;
+ const ratio=n>300?0.78:n>150?0.62:0.50;
+ const H=Math.max(460,Math.min(1180,Math.round(W*ratio)));
  board.style.height=H+'px';
 
  /* Sectors are laid out first, then each sector's companies inside its box -
@@ -1023,21 +1081,23 @@ function renderHeatmap(){
  let html='';
  boxes.forEach(b=>{
   const members=(byS[b.sector]||[]).slice().sort((a,c)=>c.cap-a.cap).map(s=>({...s,value:s.cap}));
-  const PAD=1,HEAD=b.h>54?19:0;
+  const PAD=1,HEAD=(b.h>60&&b.w>110)?19:0;
   const inner=squarify(members,PAD,HEAD+PAD,Math.max(0,b.w-PAD*2),Math.max(0,b.h-HEAD-PAD*2));
   const cells=inner.map(c=>{
    const area=c.w*c.h;
-   /* What fits decides what is drawn: a symbol needs room, a name needs more.
-      Below that, the logo alone still identifies the company - which is the
-      improvement over a bare coloured square. */
-   const sym=Math.min(17,Math.max(8,Math.sqrt(area)/4.6));
-   const showSym=c.w>34&&c.h>22;
-   const showChg=c.w>46&&c.h>36;
-   const showName=c.w>92&&c.h>62;
-   const logoPx=Math.round(Math.min(34,Math.max(13,Math.sqrt(area)/3.4)));
-   const wantLogo=showLogos&&c.w>17&&c.h>17&&(!showSym||c.w>58&&c.h>46);
+   /* What fits decides what is drawn. The logo is deliberately shown at
+      sizes where no label would fit: on a 500-name map most of the tail is
+      too small for text, and a logo still says which company it is where a
+      bare coloured square says nothing. */
+   const side=Math.min(c.w,c.h);
+   const sym=Math.min(18,Math.max(7.5,Math.sqrt(area)/4.4));
+   const showSym=c.w>32&&c.h>26;
+   const showChg=c.w>44&&c.h>42;
+   const showName=c.w>96&&c.h>70;
+   const logoPx=Math.round(Math.min(36,Math.max(11,side*0.62)));
+   const wantLogo=showLogos&&side>=12&&c.w>=14;
    const logo=wantLogo&&c.domain
-    ? `<img class="hm-logo" style="--lg:${logoPx}px" src="https://logo.clearbit.com/${esc(c.domain)}" alt="" loading="lazy" onerror="this.remove()">`:'';
+    ? `<img class="hm-logo" style="--lg:${logoPx}px" src="https://logo.clearbit.com/${esc(c.domain)}" alt="" loading="lazy" onload="this.classList.add('ready')" onerror="this.remove()">`:'';
    /* Coordinates are relative to the sector box, which is itself positioned:
       adding the sector origin again would push every cell outside and
       overflow:hidden would silently clip it away. */
@@ -1080,7 +1140,7 @@ function hmTip(ev,ticker){
 function hmTipOff(){$('hmTip').classList.remove('on')}
 /* ===================== chart ===================== */
 const PERIODS=[['1d','1D'],['5d','5D'],['1mo','1M'],['3mo','3M'],['6mo','6M'],['1y','1Y'],['2y','2Y'],['5y','5Y']];
-const MA_COLORS={ma20:'#e5b048',ma50:'#3ea6ff',ma200:'#a78bfa'};
+const MA_COLORS={ma50:'#e5b048',ma100:'#22d3ee',ma150:'#3ea6ff',ma200:'#a78bfa'};
 function buildPeriods(){$('chPeriods').innerHTML=PERIODS.map(([v,l])=>
  `<button class="p-btn ${v===S.chart.period?'on':''}" onclick="setPeriod('${v}',this)">${l}</button>`).join('')}
 function setPeriod(p,btn){S.chart.period=p;document.querySelectorAll('.p-btn').forEach(b=>b.classList.remove('on'));
@@ -1207,7 +1267,8 @@ function renderChart(){
   if(!pts.length)return;
   const s=lw.addLineSeries({color,lineWidth:width,priceLineVisible:false,lastValueVisible:false,crosshairMarkerVisible:false});
   s.setData(pts)};
- maLine('ma20',MA_COLORS.ma20,2);maLine('ma50',MA_COLORS.ma50,1.6);maLine('ma200',MA_COLORS.ma200,1.6);
+ maLine('ma50',MA_COLORS.ma50,2);maLine('ma100',MA_COLORS.ma100,1.5);
+ maLine('ma150',MA_COLORS.ma150,1.5);maLine('ma200',MA_COLORS.ma200,1.8);
 
  if(indOn('bb')){
   const bb=bollinger(d.candles.map(c=>c.c));
@@ -1243,7 +1304,7 @@ function renderChart(){
   if(!c){legend.innerHTML='';return}
   const prev=i>0?d.candles[i-1]:null;
   const chg=prev?((c.c-prev.c)/prev.c*100):null;
-  const mas=['ma20','ma50','ma200'].filter(k=>indOn(k)&&d[k]&&d[k][i]!=null)
+  const mas=['ma50','ma100','ma150','ma200'].filter(k=>indOn(k)&&d[k]&&d[k][i]!=null)
    .map(k=>`<span><u style="background:${MA_COLORS[k]}"></u>${k.toUpperCase()} ${fmt(d[k][i])}</span>`).join('');
   legend.innerHTML=
    `<div class="lg"><i>O</i><span class="lg-v">${fmt(c.o)}</span></div>
@@ -1692,6 +1753,72 @@ function renderNews(){
     <div style="flex:1;min-width:0"><div class="ni-title">${esc(n.title)}</div>
      <div class="ni-meta"><span class="n-tag">${esc(n.source||'')}</span>${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}
 
+/* ===================== gap detector ===================== */
+async function loadGaps(scope,btn){
+ scope=scope||'sp100';S.gapScope=scope;S.gapFilter=S.gapFilter||'all';
+ document.querySelectorAll('#gapScopes .btn').forEach(x=>x.className=x.className.replace('btn-gold','btn-ghost'));
+ if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
+ $('gapBox').innerHTML=skelRows(6);$('gapTiles').innerHTML='';$('gapStamp').textContent='';
+ try{
+  let url='/api/gaps?scope='+scope+'&min='+($('gapMin').value||1);
+  if(scope==='mine'&&!S.user){
+   const mine=[...new Set([...S.pf.map(p=>p.ticker),...S.watch])];
+   url+='&tickers='+encodeURIComponent(mine.join(','));}
+  const d=await api(url);
+  S.gaps=d;
+  if(d.error&&!(d.gaps||[]).length){
+   $('gapBox').innerHTML=`<div class="empty"><div class="e-ic">★</div><h4>${esc(d.error)}</h4></div>`;return}
+  renderGaps();
+  $('gapStamp').textContent=`${d.scanned} scanned · ${new Date(d.generated_at*1000).toLocaleTimeString('en-GB')}`;
+ }catch(e){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${esc(e.error||'Gap scan failed')}</h4></div>`}}
+
+function setGapFilter(f,btn){S.gapFilter=f;
+ document.querySelectorAll('#gapScopes .seg button').forEach(b=>b.classList.toggle('on',b===btn));
+ renderGaps()}
+
+function renderGaps(){
+ const d=S.gaps;if(!d)return;
+ const all=d.gaps||[];
+ const unfilled=all.filter(g=>!g.filled).length;
+ const biggest=all.length?Math.max(...all.map(g=>Math.abs(g.gap_pct||0))):null;
+ $('gapTiles').innerHTML=`
+  <div class="glass tile"><div class="t-lab">Gaps found</div><div class="t-val">${all.length}</div><div class="t-sub">of ${d.scanned} scanned</div></div>
+  <div class="glass tile"><div class="t-lab">Gap up</div><div class="t-val up">${d.up}</div><div class="t-sub">opened higher</div></div>
+  <div class="glass tile"><div class="t-lab">Gap down</div><div class="t-val dn">${d.down}</div><div class="t-sub">opened lower</div></div>
+  <div class="glass tile"><div class="t-lab">Still unfilled</div><div class="t-val ${unfilled?'':'up'}">${unfilled}</div><div class="t-sub">${biggest!=null?'largest '+fmt(biggest,1)+'%':'—'}</div></div>`;
+
+ const f=S.gapFilter||'all';
+ const list=all.filter(g=>f==='all'||(f==='open'?!g.filled:g.direction===f));
+ if(!list.length){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">⚡</div><h4>No gaps match this filter</h4><div style="font-size:13px">Nothing opened far enough from yesterday's close${f!=='all'?' in this category':''}</div></div>`;return}
+
+ $('gapBox').innerHTML=list.map(g=>{
+  const up=g.direction==='up';
+  const col=up?'var(--up)':'var(--dn)';
+  const fillPct=g.filled?100:(g.retrace_pct||0);
+  return`<div class="glass gap-row ${g.direction}">
+   <div class="gap-ic">${up?'▲':'▼'}</div>
+   <div>
+    <div class="gap-sym" onclick="openChart('${esc(g.ticker)}')">${esc(g.ticker)}</div>
+    <div class="gap-pct ${up?'up':'dn'}">${sign(g.gap_pct,1)}%</div>
+    <div class="gap-sub">${g.gap_atr!=null?fmt(g.gap_atr,1)+'× ATR':''}</div>
+   </div>
+   <div>
+    <div class="gap-bar" title="${fmt(fillPct,0)}% of the gap retraced"><i style="width:${Math.min(100,fillPct)}%;background:${g.filled?'var(--tx3)':col}"></i></div>
+    <div class="gap-meta">
+     <span>prev close <b>$${fmt(g.prev_close)}</b></span>
+     <span>open <b>$${fmt(g.open)}</b></span>
+     <span>now <b>$${fmt(g.price)}</b></span>
+     <span>fills at <b>$${fmt(g.fill_level)}</b></span>
+     <span>from open <b class="${cls(g.from_open_pct)}">${sign(g.from_open_pct,1)}%</b></span>
+     <span>vol <b>×${fmt(g.vol_ratio,1)}</b></span>
+    </div>
+   </div>
+   <div class="gap-acts">
+    <span class="gap-badge ${g.filled?'filled':'open'}">${g.filled?'Filled':'Unfilled'}</span>
+    <span class="gap-badge ${g.held?'held':'faded'}">${g.held?'Held':'Faded'}</span>
+    <button class="btn btn-ghost btn-sm" onclick="openChart('${esc(g.ticker)}')">Chart</button>
+   </div></div>`}).join('')}
+
 /* ===================== backtest ===================== */
 let btChart=null;
 async function runBacktest(ticker,years){
@@ -1782,6 +1909,10 @@ const GLOSSARY=[
 ['Dividend Yield','תשואת דיבידנד','אחוז החלוקה השנתית מהמחיר. Ex-Date הוא היום הקובע לזכאות.'],
 ['Fear & Greed','מדד פחד ותאווה','מדד הסנטימנט של CNN בין 0 (פחד קיצוני) ל־100 (תאווה קיצונית), המשוקלל משבעה מדדי שוק. קיצוניות היא לרוב איתות מנוגד.'],
 ['Market Cap','שווי שוק','שווי כל מניות החברה יחד: מחיר × מספר מניות. מודד את גודל החברה, וקובע את גודל הריבוע במפת החום.'],
+['Gap','גאפ · פער פתיחה','ההפרש בין מחיר הפתיחה היום למחיר הסגירה אתמול — טווח מחירים שבו לא נסחרה אף מניה. גאפ אפ נפתח מעל, גאפ דאון מתחת.'],
+['Gap Fill','סגירת גאפ','מצב שבו המחיר חוזר במהלך היום לרמת הסגירה של אתמול ו"ממלא" את הפער. גאפ שלא נסגר משאיר אחריו רמת מחיר שלא נבחנה; גאפ שנסגר כבר נדחה על ידי השוק.'],
+['Gap in ATR','גאפ ביחידות ATR','גודל הגאפ ביחס לתנועה היומית הרגילה של המניה. 2% הם שגרה במניה אחת וזעזוע באחרת — ולכן המדידה הזו משמעותית יותר מהאחוז לבדו.'],
+['Trend Template','תבנית מגמה','מבנה שבו ממוצע 50 מעל 150 מעל 200 וכולם עולים. נחשב לסימן המובהק למגמת עלייה בריאה, ומשמש במערכת לסיווג "מגמת עלייה חזקה".'],
 ['Backtest','בדיקה היסטורית','הרצת כללי המסחר על נתוני עבר כדי לראות מה הם היו עושים. חשוב: תוצאות עבר אינן מבטיחות דבר.'],
 ['Lookahead Bias','הטיית הצצה קדימה','טעות נפוצה בבדיקות היסטוריות: שימוש במידע שלא היה זמין באותו רגע. המערכת נמנעת מזה — איתות בסגירה נכנס בפתיחה שלמחרת.'],
 ];
