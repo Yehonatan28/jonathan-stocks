@@ -48,8 +48,13 @@ targets and a share count sized to your risk policy.
 
 ## Heatmap (🗺)
 
-A squarified treemap of the S&P 500 or Nasdaq 100: **block size is market cap,
-colour is today's move, blocks are grouped by sector.**
+A squarified treemap of the **full S&P 500 (507 names) or the Nasdaq 100**:
+block size is market cap, colour is today's move, blocks are grouped by sector.
+
+Quotes come from Yahoo's batch endpoints — 500 names cannot each have their own
+request — with a crumb-authenticated call first, the spark endpoint next, and
+per-ticker only for whatever those miss. Market caps are taken live where the
+feed provides them, falling back to a stored estimate.
 
 Squarified rather than slice-and-dice because slivers cannot be read or
 clicked. What a block draws depends on what fits: large blocks get logo, symbol,
@@ -58,6 +63,21 @@ still identifies the company where no label would fit. A logo that fails to load
 is removed and the symbol shows instead, so a block is never blank.
 
 ---
+
+## Gap detector (⚡)
+
+A gap is the distance between today's open and yesterday's close — price that
+never traded. The scanner reports every gap above a threshold across the
+largest S&P names or your own, and ranks them by size.
+
+What it shows beyond the percentage:
+
+- **Filled or unfilled.** An unfilled gap leaves an untested level behind; a
+  filled one has already been rejected intraday. The bar on each row is how
+  much of the gap price has taken back.
+- **Size in ATR**, because 2% is routine in one stock and a shock in another.
+- **Held or faded** — whether the close stayed on the gap's side of the open.
+- Volume relative to the 20-day average, and the exact price that fills it.
 
 ## Fear & Greed (CNN)
 
@@ -86,8 +106,8 @@ usually the interesting one: that is where stops earn their keep.
 
 ## Charts
 
-Candles, line or area; MA20/50/200; Bollinger bands; volume; RSI and MACD
-panes; log scale; fullscreen. A crosshair legend tracks the cursor with OHLC,
+Candles, line or area; **MA50 / MA100 / MA150 / MA200**; Bollinger bands;
+volume; RSI and MACD panes; log scale; fullscreen. A crosshair legend tracks the cursor with OHLC,
 change, volume and the moving averages under it.
 
 The chart also draws what the system is telling you to do: suggested and
@@ -111,6 +131,10 @@ deployment.
 ---
 
 ## How the stops are calculated
+
+The regime also checks the **trend template** — the 50-day above the 150-day
+above the 200-day — which is a stronger statement about trend health than the
+50/200 golden cross alone.
 
 **Initial stop** — the lower of a structural level (the 10-day swing low less a
 quarter ATR) and a volatility level (price less 2×ATR), capped at 3.5×ATR of
@@ -204,6 +228,7 @@ charting library and assert on what the chart asks to draw.
 - `GET /api/engine/backtest/<ticker>?years=3` — the rules replayed over history
 - `GET /api/chart/<ticker>?period=6mo` — candles plus moving averages, RSI and MACD
 - `GET /api/heatmap/<index>` — constituents with sector, cap and change
+- `GET /api/gaps?scope=sp100|mine&min=1` — opening gaps, largest first
 - `GET /api/feargreed` — CNN's index
 - `GET /api/news?scope=all|us|il|mine` — headlines
 - `GET /api/news/sources` — which feeds are alive from this deployment

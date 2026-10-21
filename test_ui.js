@@ -47,6 +47,7 @@ const OUT='/tmp/claude-0/-home-user-jonathan-stocks/c7fb86cc-eb29-51d7-bc2d-9dbf
  const gl=await p.$eval('#glBody',e=>e.innerText);
  ok('glossary keeps Hebrew explanations',/[֐-׿]/.test(gl));
  ok('glossary terms stay in English',gl.includes('Chandelier Exit')&&gl.includes('R Multiple'),gl.slice(0,80));
+ ok('glossary covers the new concepts',gl.includes('Gap Fill')&&gl.includes('Trend Template'));
  await p.click('#gloss .x-btn');await p.waitForTimeout(300);
 
  // --- Fear & Greed
@@ -68,7 +69,7 @@ const OUT='/tmp/claude-0/-home-user-jonathan-stocks/c7fb86cc-eb29-51d7-bc2d-9dbf
   const sizes=[...document.querySelectorAll('.hm-cell')].map(c=>c.getBoundingClientRect().width*c.getBoundingClientRect().height);
   return{cells:document.querySelectorAll('.hm-cell').length,outside,
    zero:sizes.filter(s=>s<1).length,board:[br.width,br.height]}});
- ok('every company has a block',geo.cells===131,JSON.stringify(geo));
+ ok('the whole S&P 500 is on the map',geo.cells>480,JSON.stringify(geo));
  ok('no block escapes the board',geo.outside===0,'outside='+geo.outside);
  ok('no zero-size blocks',geo.zero===0,'zero='+geo.zero);
  ok('all 11 sectors are grouped',(await p.$$eval('.hm-sector',e=>e.length))===11);
@@ -82,14 +83,41 @@ const OUT='/tmp/claude-0/-home-user-jonathan-stocks/c7fb86cc-eb29-51d7-bc2d-9dbf
  const tip=await p.$eval('#hmTip',e=>e.innerText);
  ok('tooltip carries price, change, cap and sector',/Price/.test(tip)&&/Market cap/.test(tip)&&/Sector/.test(tip),tip);
  await p.click('.hm-bar .btn[data-idx="ndx"]');await p.waitForTimeout(3000);
- ok('switching to Nasdaq 100 reloads a smaller set',(await p.$$eval('.hm-cell',e=>e.length))<131,
-   await p.$$eval('.hm-cell',e=>e.length));
+ const ndxCount=await p.$$eval('.hm-cell',e=>e.length);
+ ok('Nasdaq 100 shows about a hundred names',ndxCount>=95&&ndxCount<=101,'cells='+ndxCount);
+ await p.click('.hm-bar .btn[data-idx="sp500"]');await p.waitForTimeout(3500);
+
+ // --- gap detector
+ await p.click('.nav-item[data-v="gaps"]');
+ await p.waitForSelector('.gap-row',{timeout:30000});await p.waitForTimeout(1200);
+ const gapRows=await p.$$eval('.gap-row',e=>e.length);
+ ok('gap detector lists gaps',gapRows>0,'rows='+gapRows);
+ ok('gap tiles summarise up, down and unfilled',
+   /gap up[\s\S]*gap down[\s\S]*still unfilled/i.test(await p.$eval('#gapTiles',e=>e.innerText)),
+   await p.$eval('#gapTiles',e=>e.innerText.replace(/\n/g,' | ')));
+ const row1=await p.$eval('.gap-row',e=>e.innerText.replace(/\n/g,' '));
+ ok('a gap row shows prev close, open, fill level and ATR size',
+   /prev close/.test(row1)&&/fills at/.test(row1)&&/ATR/.test(row1),row1);
+ ok('each gap is labelled filled or unfilled',
+   (await p.$$eval('.gap-badge.open,.gap-badge.filled',e=>e.length))===gapRows);
+ await p.click('#gapScopes .seg button[data-f="up"]');await p.waitForTimeout(700);
+ const ups=await p.$$eval('.gap-row',e=>e.map(x=>x.className));
+ ok('filtering to gap up hides the down gaps',ups.every(c=>c.includes('up')&&!c.includes('down')),JSON.stringify(ups.slice(0,3)));
+ await p.click('#gapScopes .seg button[data-f="open"]');await p.waitForTimeout(700);
+ ok('filtering to unfilled hides the filled ones',
+   (await p.$$eval('.gap-badge.filled',e=>e.length))===0);
+ await p.click('#gapScopes .seg button[data-f="all"]');await p.waitForTimeout(700);
 
  // --- chart
  await p.evaluate(()=>openChart('NVDA'));await p.waitForTimeout(4500);
  let d=await p.evaluate(()=>window.__draw);
  ok('chart draws candles by default',d.type==='candles'&&d.points>0,JSON.stringify({t:d.type,p:d.points}));
- ok('MA20 and MA50 are on by default',d.lines.includes('#e5b048')&&d.lines.includes('#3ea6ff'),JSON.stringify(d.lines));
+ ok('MA50 and MA200 are on by default',d.lines.includes('#e5b048')&&d.lines.includes('#a78bfa'),JSON.stringify(d.lines));
+ ok('MA100 and MA150 exist as toggles',(await p.$$('.ind[data-ind="ma100"],.ind[data-ind="ma150"]')).length===2);
+ await p.click('.ind[data-ind="ma100"]');await p.waitForTimeout(800);
+ d=await p.evaluate(()=>window.__draw);
+ ok('turning on MA100 draws it',d.lines.includes('#22d3ee'),JSON.stringify(d.lines));
+ ok('MA20 is no longer offered',(await p.$$('.ind[data-ind="ma20"]')).length===0);
  ok('trade levels are drawn',d.priceLines.length>0,JSON.stringify(d.priceLines.map(l=>l.title)));
  const legend=await p.$eval('#chLegend',e=>e.innerText.replace(/\n/g,' '));
  ok('crosshair legend shows OHLC',/O/.test(legend)&&/H/.test(legend)&&/L/.test(legend)&&/C/.test(legend)&&/Vol/.test(legend),legend);

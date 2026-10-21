@@ -123,5 +123,49 @@ def _fake_fg():
 _mkt.fear_greed = _fake_fg
 A.market.fear_greed = _fake_fg
 
+
+
+# --- batch quotes and gaps, stubbed
+import market as _mkt2
+import random as _r2
+
+
+def _fake_batch(tickers, per_ticker_fallback=None):
+    out = {}
+    for t in tickers:
+        r = _r2.Random(t)
+        out[t] = {'price': round(r.uniform(15, 800), 2),
+                  'chg': round(r.gauss(0.2, 2.4), 2),
+                  'cap': None, 'open': None, 'prev_close': None,
+                  'volume': None, 'name': None}
+    return out
+
+
+_mkt2.batch_quotes = _fake_batch
+A.market.batch_quotes = _fake_batch
+
+
+def _fake_gap(ticker):
+    r = _r2.Random('gap' + ticker)
+    if r.random() > 0.45:
+        return None
+    pct = round(r.gauss(0, 3.2), 2)
+    if abs(pct) < 0.75:
+        return None
+    prev = round(r.uniform(40, 500), 2)
+    o = round(prev * (1 + pct / 100), 2)
+    filled = r.random() > 0.6
+    return {'ticker': ticker, 'direction': 'up' if pct > 0 else 'down',
+            'gap_pct': pct, 'gap_atr': round(abs(pct) / 1.6, 2),
+            'prev_close': prev, 'open': o, 'price': round(o * (1 + r.gauss(0, .01)), 2),
+            'high': round(o * 1.01, 2), 'low': round(o * 0.99, 2),
+            'fill_level': prev, 'filled': filled,
+            'retrace_pct': 100.0 if filled else round(r.uniform(0, 80), 1),
+            'held': r.random() > 0.4, 'from_open_pct': round(r.gauss(0, 1.2), 2),
+            'vol_ratio': round(r.uniform(0.8, 4.0), 2), 'date': '2026-10-21'}
+
+
+engine.detect_gap = _fake_gap
+
 if __name__ == '__main__':
     A.app.run(host='127.0.0.1', port=5055, debug=False, use_reloader=False)

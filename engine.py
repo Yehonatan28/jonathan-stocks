@@ -160,8 +160,12 @@ def _indicators(df):
     return {
         'close': close, 'high': high, 'low': low, 'volume': vol,
         'open': df['Open'],
+        # 50/100/150/200 is the trend-template family; the 20 stays only
+        # because Bollinger bands and the short-term pullback check use it.
         'sma20': close.rolling(20).mean(),
         'sma50': close.rolling(50).mean(),
+        'sma100': close.rolling(100 if n >= 100 else n).mean(),
+        'sma150': close.rolling(150 if n >= 150 else n).mean(),
         'sma200': close.rolling(200 if n >= 200 else n).mean(),
         'ema21': close.ewm(span=21, adjust=False).mean(),
         'rsi': rsi(close),
@@ -201,6 +205,8 @@ def _snapshot(ticker, ind, i):
 
     v_sma20 = at('sma20', price)
     v_sma50 = at('sma50', price)
+    v_sma100 = at('sma100', price)
+    v_sma150 = at('sma150', price)
     v_sma200 = at('sma200', price)
     v_rsi = at('rsi', 50.0)
     v_adx = at('adx', 0.0)
@@ -219,7 +225,8 @@ def _snapshot(ticker, ind, i):
     # and price is above the 200, a dip of up to 4% under the 50 still counts
     # as an uptrend - that dip is exactly where the best entries live.
     pullback_ok = price >= v_sma50 * 0.96
-    if above20 and above50 and golden and (slope200 or 0) > 0 and v_adx >= 20:
+    stacked = v_sma50 > v_sma150 > v_sma200      # the classic trend template
+    if above50 and stacked and (slope200 or 0) > 0 and v_adx >= 20:
         regime = 'strong_up'
     elif golden and above200 and pullback_ok:
         regime = 'up'
@@ -236,7 +243,8 @@ def _snapshot(ticker, ind, i):
     score += 20 if above200 else 0
     score += 15 if above50 else 0
     score += 10 if above20 else 0
-    score += 15 if golden else 0
+    score += 10 if golden else 0
+    score += 5 if v_sma50 > v_sma150 > v_sma200 else 0
     score += 10 if (slope200 or 0) > 0 else 0
     score += 10 if macd_up else 0
     score += 10 if (v_adx >= 20 and at('plus_di', 0.0) > at('minus_di', 0.0)) else 0
@@ -253,12 +261,16 @@ def _snapshot(ticker, ind, i):
         'chg_pct': _f((price - prev) / prev * 100) if prev else None,
         'regime': regime, 'regime_he': REGIMES[regime],
         'trend_score': min(100, score),
-        'ma': {'sma20': _f(v_sma20), 'sma50': _f(v_sma50), 'sma200': _f(v_sma200),
-               'ema21': _f(at('ema21', price)),
+        'ma': {'sma20': _f(v_sma20), 'sma50': _f(v_sma50),
+               'sma100': _f(v_sma100), 'sma150': _f(v_sma150),
+               'sma200': _f(v_sma200), 'ema21': _f(at('ema21', price)),
                'slope50': slope50, 'slope200': slope200,
                'dist20': _f((price / v_sma20 - 1) * 100) if v_sma20 else None,
                'dist50': _f((price / v_sma50 - 1) * 100) if v_sma50 else None,
+               'dist100': _f((price / v_sma100 - 1) * 100) if v_sma100 else None,
+               'dist150': _f((price / v_sma150 - 1) * 100) if v_sma150 else None,
                'dist200': _f((price / v_sma200 - 1) * 100) if v_sma200 else None},
+        'stacked': bool(v_sma50 > v_sma150 > v_sma200),
         'rsi': _f(v_rsi, 1), 'adx': _f(v_adx, 1),
         'macd_up': macd_up, 'macd_hist': _f(at('macd_hist', 0.0), 3),
         'atr': _f(atr_v), 'atr_pct': _f(atr_v / price * 100) if price else None,
@@ -814,3 +826,89 @@ def backtest(ticker, years=3, settings=None):
         'hold_curve': bh_curve,
         'dates': dates[first:last + 1],
     }
+
+
+# ------------------------------------------------------------- 7. gaps ---
+
+# Below this a gap is just the normal overnight drift of a liquid stock.
+MIN_GAP_PCT = 0.75
+
+
+def _gap_from_frame(ticker, df, ind=None):
+    """Classify the most recent session's opening gap.
+
+    A gap is the distance between today's open and yesterday's close. What
+    matters for trading it is less the size than whether it has been filled:
+    an unfilled gap leaves an untested price level above or below, while a
+    filled one has already been rejected intraday.
+    """
+    if df is None or len(df) < 25:
+        return None
+    o = float(df['Open'].iloc[-1])
+    h = float(df['High'].iloc[-1])
+    low = float(df['Low'].iloc[-1])
+    c = float(df['Close'].iloc[-1])
+    prev_close = float(df['Close'].iloc[-2])
+    if not prev_close or not o:
+        return None
+
+    gap_pct = (o - prev_close) / prev_close * 100
+    if abs(gap_pct) < MIN_GAP_PCT:
+        return None
+
+    direction = 'up' if gap_pct > 0 else 'down'
+    # The gap is filled once price trades back through yesterday's close.
+    filled = low <= prev_close if direction == 'up' else h >= prev_close
+    # How much of the gap has been retraced so far, 0 to 1.
+    span = abs(o - prev_close)
+    travelled = (o - low) if direction == 'up' else (h - o)
+    retrace = max(0.0, min(1.0, travelled / span)) if span else 0.0
+
+    vol = float(df['Volume'].iloc[-1])
+    vol_avg = float(df['Volume'].iloc[-21:-1].mean()) or 1.0
+    atr_v = float(atr(df).iloc[-1])
+
+    return {
+        'ticker': ticker,
+        'direction': direction,
+        'gap_pct': _f(gap_pct),
+        # A gap worth noting is large relative to the stock's own daily range,
+        # not merely large in percent: 2% is routine in one name and a shock
+        # in another.
+        'gap_atr': _f(span / atr_v, 2) if atr_v else None,
+        'prev_close': _f(prev_close),
+        'open': _f(o),
+        'price': _f(c),
+        'high': _f(h), 'low': _f(low),
+        'fill_level': _f(prev_close),
+        'filled': bool(filled),
+        'retrace_pct': _f(retrace * 100, 1),
+        # Held means price stayed on the gap's side of the open all session.
+        'held': bool(c >= o) if direction == 'up' else bool(c <= o),
+        'from_open_pct': _f((c - o) / o * 100),
+        'vol_ratio': _f(vol / vol_avg),
+        'date': df.index[-1].strftime('%Y-%m-%d'),
+    }
+
+
+def detect_gap(ticker):
+    """The latest opening gap for one symbol, or None when there isn't one."""
+    df = fetch_daily(ticker, range_='3mo')
+    if df is None:
+        return None
+    try:
+        return _gap_from_frame(ticker.strip().upper(), df)
+    except Exception:
+        return None
+
+
+def scan_gaps(tickers, min_pct=MIN_GAP_PCT):
+    """Gaps across a universe, biggest first."""
+    tickers = list(dict.fromkeys(t.strip().upper() for t in tickers if t.strip()))[:120]
+    if not tickers:
+        return []
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        found = list(ex.map(detect_gap, tickers))
+    gaps = [g for g in found if g and abs(g['gap_pct'] or 0) >= min_pct]
+    gaps.sort(key=lambda g: -abs(g['gap_pct'] or 0))
+    return gaps

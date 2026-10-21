@@ -399,6 +399,104 @@ def t_drawdown():
     assert engine._max_drawdown([]) == 0.0
 
 
+
+
+@check('averages: the 50/100/150/200 family is computed and ordered in an uptrend')
+def t_ma_family():
+    install('MAF', series_to_df(uptrend(n=420)))
+    a = engine.analyze('MAF')
+    ma = a['ma']
+    for k in ('sma50', 'sma100', 'sma150', 'sma200'):
+        assert ma[k] is not None, f'{k} missing'
+    assert ma['sma50'] > ma['sma100'] > ma['sma150'] > ma['sma200'], ma
+    assert a['stacked'] is True, 'a steady uptrend should satisfy the trend template'
+    for k in ('dist50', 'dist100', 'dist150', 'dist200'):
+        assert ma[k] is not None, f'{k} missing'
+
+
+@check('averages: a downtrend fails the 50>150>200 trend template')
+def t_ma_template_down():
+    install('MAD', series_to_df(downtrend(n=420)))
+    a = engine.analyze('MAD')
+    assert a['stacked'] is False, a['ma']
+    assert a['regime'] != 'strong_up', a['regime']
+
+
+@check('averages: short history still returns usable averages instead of None')
+def t_ma_short():
+    install('MAS', series_to_df(uptrend(n=120)))
+    a = engine.analyze('MAS')
+    assert a['ok'], a.get('error')
+    # the 150 and 200 fall back to the full window rather than going null
+    assert a['ma']['sma150'] is not None and a['ma']['sma200'] is not None, a['ma']
+
+
+
+
+def _with_gap(closes, pct, low_mult=None, high_mult=None):
+    """Force an opening gap of `pct` on the final bar of a series."""
+    df = series_to_df(closes)
+    prev = float(df['Close'].iloc[-2])
+    o = prev * (1 + pct / 100)
+    df.iloc[-1, df.columns.get_loc('Open')] = o
+    df.iloc[-1, df.columns.get_loc('Low')] = prev * (low_mult if low_mult else (1 + pct / 100 - 0.005))
+    df.iloc[-1, df.columns.get_loc('High')] = prev * (high_mult if high_mult else (1 + pct / 100 + 0.01))
+    df.iloc[-1, df.columns.get_loc('Close')] = o * 1.004
+    return df
+
+
+@check('gaps: an unfilled gap up is measured and classified')
+def t_gap_up():
+    g = engine._gap_from_frame('UP', _with_gap(uptrend(n=70), 4.0))
+    assert g and g['direction'] == 'up', g
+    assert abs(g['gap_pct'] - 4.0) < 0.05, g['gap_pct']
+    assert g['filled'] is False, 'price never traded back to the prior close'
+    assert g['gap_atr'] > 0 and g['fill_level'] == g['prev_close']
+    assert g['held'] is True, 'close above the open means the gap held'
+
+
+@check('gaps: a gap down is detected with the right sign')
+def t_gap_down():
+    g = engine._gap_from_frame('DN', _with_gap(uptrend(n=70), -3.5))
+    assert g and g['direction'] == 'down', g
+    assert g['gap_pct'] < 0, g['gap_pct']
+
+
+@check('gaps: a gap that trades back through the prior close reads as filled')
+def t_gap_filled():
+    # opens 3% up but the low pierces yesterday's close
+    g = engine._gap_from_frame('FILL', _with_gap(uptrend(n=70), 3.0, low_mult=0.99))
+    assert g['filled'] is True, g
+    assert g['retrace_pct'] == 100.0, g['retrace_pct']
+
+
+@check('gaps: ordinary overnight drift is not reported as a gap')
+def t_gap_noise():
+    assert engine._gap_from_frame('NOISE', _with_gap(uptrend(n=70), 0.2)) is None
+    assert engine._gap_from_frame('NOISE', _with_gap(uptrend(n=70), -0.3)) is None
+
+
+@check('gaps: too little history returns nothing instead of raising')
+def t_gap_short():
+    assert engine._gap_from_frame('TINY', series_to_df(uptrend(n=10))) is None
+    assert engine._gap_from_frame('NONE', None) is None
+
+
+@check('gaps: a scan sorts by absolute size and skips quiet names')
+def t_gap_scan():
+    frames = {'BIG': _with_gap(uptrend(n=70, seed=1), 6.0),
+              'MID': _with_gap(uptrend(n=70, seed=2), -3.0),
+              'FLAT': _with_gap(uptrend(n=70, seed=3), 0.1)}
+    orig = engine.fetch_daily
+    try:
+        engine.fetch_daily = lambda t, range_='2y': frames.get(t)
+        out = engine.scan_gaps(['BIG', 'MID', 'FLAT', 'MISSING'])
+        assert [g['ticker'] for g in out] == ['BIG', 'MID'], [g['ticker'] for g in out]
+        assert abs(out[0]['gap_pct']) > abs(out[1]['gap_pct'])
+    finally:
+        engine.fetch_daily = orig
+
+
 def main():
     failed = 0
     for name, fn in CHECKS:
