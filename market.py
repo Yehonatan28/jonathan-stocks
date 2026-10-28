@@ -673,6 +673,10 @@ def _quotes_v7(tickers):
                 price = q.get('regularMarketPrice')
                 if not sym or price is None:
                     continue
+                def _r(key, digits=2):
+                    v = q.get(key)
+                    return round(float(v), digits) if v is not None else None
+
                 out[sym] = {
                     'price': round(float(price), 2),
                     'chg': round(float(q.get('regularMarketChangePercent') or 0), 2),
@@ -681,6 +685,13 @@ def _quotes_v7(tickers):
                     'prev_close': q.get('regularMarketPreviousClose'),
                     'volume': q.get('regularMarketVolume'),
                     'name': q.get('shortName') or q.get('longName'),
+                    # Outside regular hours the extended-session print is the
+                    # live one; marketState says which of the two applies.
+                    'state': q.get('marketState'),
+                    'pre_price': _r('preMarketPrice'),
+                    'pre_chg': _r('preMarketChangePercent'),
+                    'post_price': _r('postMarketPrice'),
+                    'post_chg': _r('postMarketChangePercent'),
                 }
         except Exception:
             continue

@@ -98,8 +98,11 @@ def _fake_feed(feed, timeout=9):
     if heads is None:
         return [], 'HTTP 403'
     now = int(engine.time.time())
+    # Every other story carries art, as a real mix of feeds does, so both the
+    # photo path and the drawn-art path are exercised.
     return ([{'title': t, 'link': 'https://example.com/' + str(i),
               'summary': 'An example summary for this story.',
+              'image': ('https://img.example.com/%s.jpg' % i) if i % 2 == 0 else None,
               'time': now - (i + 1) * 5400, 'source': source, 'lang': lang, 'scope': scope}
              for i, t in enumerate(heads)], None)
 
@@ -134,10 +137,20 @@ def _fake_batch(tickers, per_ticker_fallback=None):
     out = {}
     for t in tickers:
         r = _r2.Random(t)
-        out[t] = {'price': round(r.uniform(15, 800), 2),
+        px = round(r.uniform(15, 800), 2)
+        # Extended-hours prints exist for most but not all names, which is what
+        # the tooltip has to cope with.
+        has_ext = r.random() > 0.2
+        pre = r.random() > 0.45
+        out[t] = {'price': px,
                   'chg': round(r.gauss(0.2, 2.4), 2),
                   'cap': None, 'open': None, 'prev_close': None,
-                  'volume': None, 'name': None}
+                  'volume': None, 'name': None,
+                  'state': 'PRE' if pre else 'POST',
+                  'pre_price': round(px * (1 + r.gauss(0, .009)), 2) if has_ext and pre else None,
+                  'pre_chg': round(r.gauss(0, .9), 2) if has_ext and pre else None,
+                  'post_price': round(px * (1 + r.gauss(0, .009)), 2) if has_ext and not pre else None,
+                  'post_chg': round(r.gauss(0, .9), 2) if has_ext and not pre else None}
     return out
 
 

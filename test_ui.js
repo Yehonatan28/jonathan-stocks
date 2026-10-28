@@ -82,6 +82,27 @@ const OUT='/tmp/claude-0/-home-user-jonathan-stocks/c7fb86cc-eb29-51d7-bc2d-9dbf
  ok('hovering a block shows a tooltip',await p.$eval('#hmTip',e=>e.classList.contains('on')));
  const tip=await p.$eval('#hmTip',e=>e.innerText);
  ok('tooltip carries price, change, cap and sector',/Price/.test(tip)&&/Market cap/.test(tip)&&/Sector/.test(tip),tip);
+ // extended hours: a name with a pre-market or after-hours print must say so,
+ // and a name without one must not invent a row
+ const ext=await p.evaluate(()=>{
+  const cells=[...document.querySelectorAll('.hm-cell')];
+  const find=want=>cells.find(c=>{const s=S.hm.stocks.find(x=>x.ticker===c.dataset.t);
+   return s&&(want?(s.pre_price!=null||s.post_price!=null):(s.pre_price==null&&s.post_price==null))});
+  const read=c=>{if(!c)return null;
+   const s=S.hm.stocks.find(x=>x.ticker===c.dataset.t);
+   hmTip({clientX:400,clientY:400},s.ticker);
+   const row=document.querySelector('#hmTip .row.ext');
+   return{ticker:s.ticker,pre:s.pre_price,pct:s.pre_chg!=null?s.pre_chg:s.post_chg,
+    text:row?row.innerText:null}};
+  return{withExt:read(find(true)),without:read(find(false))}});
+ const we=ext.withExt;
+ ok('tooltip shows the extended-hours session',
+   !we||(we.text&&/Pre-market|After hours/.test(we.text)),JSON.stringify(we));
+ ok('tooltip shows the extended-hours price and percentage',
+   !we||(we.text&&we.text.includes(String(we.pre!=null?we.pre:'').split('.')[0])&&/%/.test(we.text)),
+   JSON.stringify(we));
+ ok('no extended-hours row when the feed gave no print',
+   !ext.without||ext.without.text===null,JSON.stringify(ext.without));
  await p.click('.hm-bar .btn[data-idx="ndx"]');await p.waitForTimeout(3000);
  const ndxCount=await p.$$eval('.hm-cell',e=>e.length);
  ok('Nasdaq 100 shows about a hundred names',ndxCount>=95&&ndxCount<=101,'cells='+ndxCount);
