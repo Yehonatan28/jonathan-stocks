@@ -68,6 +68,50 @@ const EXE=process.env.CHROME_PATH||'/opt/pw-browsers/chromium-1194/chrome-linux/
  await p.click('.nav-item[data-v="news"]');await p.waitForSelector('.news-item',{timeout:25000});
  ok('news renders',(await p.$$eval('.news-item',e=>e.length))>0);
  ok('quiet sources are disclosed',(await p.$eval('#newsFailed',e=>e.innerText)).includes('not responding'));
+ // artwork: every headline gets a picture, drawn from what the story is about
+ const art=await p.evaluate(()=>{
+  const rows=[...document.querySelectorAll('.news-item')];
+  const hero=document.querySelector('.news-hero');
+  const svgOf=el=>el&&el.querySelector('.na-svg');
+  return{rows:rows.length,
+   withArt:rows.filter(r=>svgOf(r)).length,
+   heroArt:!!svgOf(hero),
+   /* the drawn art must be sized art, not an empty box */
+   sized:rows.filter(r=>{const s=svgOf(r);if(!s)return false;
+    const b=s.getBoundingClientRect();return b.width>20&&b.height>20}).length,
+   /* a caption and some drawn geometry inside each */
+   labelled:rows.filter(r=>{const s=svgOf(r);
+    return s&&r.querySelector('.na-cap')&&s.querySelectorAll('rect,path,circle,line').length>2}).length,
+   /* nothing in a caption may spill out of its picture */
+   spill:rows.filter(r=>{const c=r.querySelector('.na-cap'),n=r.querySelector('.na');
+    if(!c||!n)return false;const a=c.getBoundingClientRect(),b=n.getBoundingClientRect();
+    return a.right>b.right+1||a.left<b.left-1||c.scrollWidth>c.clientWidth+1}).length,
+   /* the photo layer only appears where the feed carried one */
+   photos:rows.filter(r=>r.querySelector('.na-img')).length,
+   titles:rows.map(r=>r.querySelector('.ni-title').innerText)}});
+ ok('every headline has artwork',art.withArt===art.rows&&art.heroArt,JSON.stringify(art));
+ ok('artwork is drawn at a visible size',art.sized===art.rows,JSON.stringify(art));
+ ok('artwork carries a topic label and drawn motif',art.labelled===art.rows,JSON.stringify(art));
+ ok('no caption overflows its picture',art.spill===0,JSON.stringify(art));
+ ok('a real photo is layered in where the feed supplied one',art.photos>0,JSON.stringify(art));
+ // the art must agree with the story: a rate headline and a chip headline
+ // cannot come out looking the same
+ const distinct=await p.evaluate(()=>{
+  const a=newsVisual({title:'Fed signals patience on rates',art:{topic:'rates',direction:'flat'}},96,70,'thumb');
+  const b=newsVisual({title:'Chipmakers lead the tape higher',art:{topic:'chips',direction:'up',ticker:'NVDA'}},96,70,'thumb');
+  const same=newsVisual({title:'Fed signals patience on rates',art:{topic:'rates',direction:'flat'}},96,70,'thumb');
+  return{differ:a!==b,stable:a===same,hasSymbol:b.includes('NVDA'),rateLabel:/Rates/i.test(a)}});
+ ok('different stories draw different art',distinct.differ);
+ ok('the same story always draws the same art',distinct.stable);
+ ok('art names the company when the headline does',distinct.hasSymbol);
+ ok('art names the topic',distinct.rateLabel);
+ // a photo that never loads must leave the art showing, not a broken image
+ const fallback=await p.evaluate(async()=>{
+  const img=document.querySelector('.na-img');if(!img)return 'no photo rows';
+  const holder=img.closest('.na');img.dispatchEvent(new Event('error'));
+  return{imgGone:!holder.querySelector('.na-img'),artLeft:!!holder.querySelector('.na-svg')}});
+ ok('a photo that fails to load leaves the drawn art',
+   fallback==='no photo rows'||(fallback.imgGone&&fallback.artLeft),JSON.stringify(fallback));
 
  // reload persistence
  await p.reload({waitUntil:'networkidle'});await p.waitForTimeout(3000);

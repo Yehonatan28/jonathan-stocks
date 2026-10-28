@@ -152,13 +152,147 @@ def parse_feed(data):
         if not title or not link:
             continue
         ts = _parse_date(_first(n, ('pubDate', 'published', 'updated', 'date')))
+        raw_summary = _first(n, ('description', 'summary', 'content')) or ''
         items.append({
             'title': title,
             'link': link,
-            'summary': _clean(_first(n, ('description', 'summary', 'content'))),
+            'summary': _clean(raw_summary),
             'time': ts,
+            'image': _image_of(n, raw_summary),
         })
     return items
+
+
+
+# ------------------------------------------------------------ 2b. imagery ---
+
+_IMG_IN_HTML = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.I)
+# 1x1 beacons and sub-thumbnail junk are worse than no picture at all
+_BAD_IMG = re.compile(r'(doubleclick|pixel|beacon|1x1|spacer|blank\.gif|/ads?/)', re.I)
+
+
+def _image_of(node, summary_html):
+    """The article's own picture, if the feed carries one.
+
+    Outlets attach art in at least four different ways and none of them is
+    guaranteed, so all of them are tried before falling back to drawn art.
+    """
+    best = None
+    for child in node.iter():
+        tag = _strip_ns(child.tag)
+        attrib = child.attrib
+        url = None
+        if tag in ('thumbnail', 'content') and attrib.get('url'):
+            mime = attrib.get('type', '')
+            medium = attrib.get('medium', '')
+            if tag == 'thumbnail' or medium == 'image' or mime.startswith('image'):
+                url = attrib['url']
+        elif tag == 'enclosure' and attrib.get('url'):
+            if attrib.get('type', '').startswith('image'):
+                url = attrib['url']
+        elif tag == 'image':
+            inner = _first(child, ('url',))
+            if inner:
+                url = inner
+        if not url:
+            continue
+        if _BAD_IMG.search(url):
+            continue
+        # prefer the widest version a feed offers
+        try:
+            width = int(attrib.get('width') or 0)
+        except ValueError:
+            width = 0
+        if width and width < 120:
+            continue
+        if best is None or width > best[1]:
+            best = (url, width)
+    if best:
+        return best[0]
+
+    m = _IMG_IN_HTML.search(summary_html or '')
+    if m and not _BAD_IMG.search(m.group(1)):
+        return m.group(1)
+    return None
+
+
+# --- Topic classification, for the stories that arrive without art.
+#
+# A finance site does not put a random stock photo next to a wire story; it
+# puts a piece of branded topic art. These keywords pick which one, so the
+# drawing relates to what the headline actually says.
+TOPICS = [
+    ('rates',    ('fed', 'federal reserve', 'rate', 'rates', 'interest', 'central bank',
+                  'powell', 'ecb', 'boe', 'monetary', 'basis point', 'bank of israel')),
+    ('inflation',('inflation', 'cpi', 'ppi', 'price index', 'deflation', 'cost of living')),
+    ('jobs',     ('jobs', 'payroll', 'unemployment', 'hiring', 'labor', 'labour', 'layoff')),
+    ('energy',   ('oil', 'crude', 'brent', 'wti', 'opec', 'gas', 'energy', 'barrel',
+                  'refinery', 'pipeline')),
+    ('crypto',   ('bitcoin', 'crypto', 'ethereum', 'btc', 'blockchain', 'token', 'coinbase')),
+    ('chips',    ('chip', 'chips', 'semiconductor', 'nvidia', 'wafer', 'foundry', 'gpu',
+                  'silicon', 'fab')),
+    ('ai',       ('artificial intelligence', ' ai ', 'ai-', 'openai', 'model', 'datacenter',
+                  'data center', 'llm')),
+    ('deal',     ('merger', 'acquisition', 'acquire', 'takeover', 'buyout', 'stake',
+                  'ipo', 'spin-off', 'deal')),
+    ('earnings', ('earnings', 'profit', 'revenue', 'guidance', 'quarter', 'results',
+                  'beats', 'misses', 'forecast', 'eps')),
+    ('policy',   ('tariff', 'sanction', 'trade war', 'regulat', 'antitrust', 'lawsuit',
+                  'probe', 'election', 'government', 'shutdown')),
+    ('housing',  ('housing', 'mortgage', 'home sales', 'real estate', 'construction')),
+    ('health',   ('fda', 'drug', 'trial', 'pharma', 'vaccine', 'therapy', 'biotech')),
+]
+
+_UP_WORDS = ('jump', 'surge', 'soar', 'rally', 'gain', 'rise', 'rises', 'climb', 'beat',
+             'beats', 'up ', 'higher', 'record high', 'top', 'tops', 'boost', 'advance')
+_DOWN_WORDS = ('fall', 'falls', 'drop', 'slump', 'slide', 'plunge', 'tumble', 'sink',
+               'loss', 'losses', 'miss', 'misses', 'down ', 'lower', 'cut', 'cuts',
+               'warn', 'warns', 'selloff', 'sell-off', 'crash')
+
+_TICKER_RE = re.compile(r'\b([A-Z]{2,5})\b')
+_STOPWORDS = {'CEO', 'CFO', 'IPO', 'ETF', 'GDP', 'CPI', 'PPI', 'FDA', 'SEC', 'EPS',
+              'USA', 'US', 'UK', 'EU', 'AI', 'API', 'OPEC', 'NYSE', 'FED', 'ECB',
+              'THE', 'AND', 'FOR', 'NEW', 'TOP', 'BIG', 'ALL', 'WHY', 'HOW'}
+
+
+def classify(title, summary='', known_tickers=None, company_names=None):
+    """What a headline is about: topic, direction and company.
+
+    Returned as data rather than a picture so the drawing lives in the UI and
+    this stays testable without a browser.
+    """
+    text = f'{title} {summary}'.lower()
+    topic = 'markets'
+    for name, words in TOPICS:
+        if any(w in text for w in words):
+            topic = name
+            break
+
+    ups = sum(1 for w in _UP_WORDS if w in text)
+    downs = sum(1 for w in _DOWN_WORDS if w in text)
+    direction = 'up' if ups > downs else 'down' if downs > ups else 'flat'
+
+    ticker = None
+    if known_tickers:
+        for cand in _TICKER_RE.findall(title):
+            if cand in _STOPWORDS:
+                continue
+            if cand in known_tickers:
+                ticker = cand
+                break
+    # Headlines name companies far more often than symbols: "Nvidia beats"
+    # never contains NVDA, so match the name too.
+    if ticker is None and company_names:
+        lowered = title.lower()
+        hit = None
+        for name, sym in company_names.items():
+            if len(name) < 4:
+                continue
+            if name in lowered and (hit is None or len(name) > len(hit[0])):
+                hit = (name, sym)
+        if hit:
+            ticker = hit[1]
+    return {'topic': topic, 'direction': direction, 'ticker': ticker}
 
 
 # ------------------------------------------------------------------ fetch ---
@@ -235,7 +369,30 @@ def get_news(ticker=None, scope='all', limit=40, extra_tickers=None):
     items = _dedupe(items)
     # undated items sink rather than floating to the top on a 0 timestamp
     items.sort(key=lambda i: i['time'] or 0, reverse=True)
-    return {'items': items[:limit], 'failed': failed}
+    items = items[:limit]
+    # Classify only what will actually be shown.
+    tickers, names = _symbol_index()
+    for it in items:
+        it['art'] = classify(it['title'], it.get('summary', ''), tickers, names)
+    return {'items': items, 'failed': failed}
+
+
+_SYMBOLS = {'built': False, 'tickers': set(), 'names': {}}
+
+
+def _symbol_index():
+    """Symbols and lowercase company names, for spotting the subject of a
+    headline. Imported lazily so this module stays independent of market."""
+    if not _SYMBOLS['built']:
+        try:
+            import market
+            rows = market.constituents('sp500')
+            _SYMBOLS['tickers'] = {c['ticker'] for c in rows}
+            _SYMBOLS['names'] = {c['name'].lower(): c['ticker'] for c in rows}
+        except Exception:
+            pass
+        _SYMBOLS['built'] = True
+    return _SYMBOLS['tickers'], _SYMBOLS['names']
 
 
 def source_health(ticker='AAPL'):

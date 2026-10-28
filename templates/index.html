@@ -197,7 +197,30 @@ option{background:var(--s2);color:var(--tx)}
 .news-list{display:flex;flex-direction:column;gap:9px}
 .news-hero{grid-column:1;padding:0;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;transition:border-color .15s;text-decoration:none;color:inherit}
 .news-hero:hover{border-color:var(--line3)}
-.nh-visual{flex:1;min-height:150px;background:linear-gradient(135deg,var(--s3),var(--s2));display:grid;place-items:center;font-size:38px;opacity:.45;border-bottom:1px solid var(--line)}
+.nh-visual{flex:1;min-height:190px;display:flex;border-bottom:1px solid var(--line)}
+/* news artwork: drawn illustration under an optional real photo */
+.na{position:relative;display:block;overflow:hidden;background:#0b1119;line-height:0}
+.na-svg{display:block;width:100%;height:100%}
+.na-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s}
+.na-img.ready{opacity:1}
+.na-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:baseline;gap:8px;
+ padding:5px 9px;background:linear-gradient(transparent,rgba(5,8,14,.86) 55%);line-height:1.2}
+.na-cap b{font-size:9px;letter-spacing:1.4px;font-weight:800;color:var(--ac);text-transform:uppercase;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.na-cap i{font-style:normal;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--tx);
+ margin-left:auto;white-space:nowrap}
+.na-cap i.up{color:var(--up)}.na-cap i.dn{color:var(--dn)}
+/* A thumbnail has room for one label: the company if the story names one,
+   otherwise the topic. */
+.na.thumb .na-cap{padding:4px 7px}
+.na.thumb .na-cap i{font-size:10px}
+.na.thumb .na-cap.has-sym b{display:none}
+.na.hero .na-cap{padding:8px 13px}
+.na.hero .na-cap b{font-size:10px;letter-spacing:1.7px}
+.na.hero .na-cap i{font-size:12px}
+.na.hero{flex:1;min-height:190px}
+.na.thumb{width:96px;height:70px;border-radius:7px;flex:none;border:1px solid var(--line)}
+@media(max-width:700px){.na.thumb{width:72px;height:56px}}
 .nh-body{padding:16px;margin-top:auto}
 .nh-kicker{font-size:9px;letter-spacing:1.6px;color:var(--gold-deep);font-weight:700;margin-bottom:7px;display:block;text-transform:uppercase}
 .nh-title{font-size:16px;font-weight:700;line-height:1.4;margin-bottom:8px}
@@ -206,7 +229,7 @@ option{background:var(--s2);color:var(--tx)}
 .news-item{display:flex;gap:13px;padding:13px 15px;cursor:pointer;align-items:flex-start;transition:border-color .15s,background .15s;text-decoration:none;color:inherit}
 .news-item:hover{border-color:var(--line3);background:var(--s2)}
 .news-hero:focus-visible,.news-item:focus-visible{border-color:var(--gold)}
-.ni-num{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--tx3);flex:none;width:22px}
+.ni-num{font-family:var(--mono);font-weight:700;color:var(--tx4,var(--tx3));opacity:.75}
 .ni-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:5px}
 .ni-meta{font-size:10.5px;color:var(--tx3);font-family:var(--mono);display:flex;align-items:center;gap:8px}
 .n-tag{display:inline-block;font-size:9px;letter-spacing:1.1px;padding:2px 7px;border-radius:4px;background:var(--s3);color:var(--tx3);font-weight:700;font-family:var(--ui)}
@@ -344,6 +367,9 @@ option{background:var(--s2);color:var(--tx)}
 .hm-tip .nm{color:var(--tx2);font-size:11px;margin-bottom:8px}
 .hm-tip .row{display:flex;justify-content:space-between;gap:16px;font-family:var(--mono);font-size:11.5px;padding:2px 0}
 .hm-tip .row i{font-style:normal;color:var(--tx3);font-family:var(--ui)}
+.hm-tip .row.ext{border-top:1px dashed var(--line2);margin-top:4px;padding-top:5px}
+.hm-tip .row.ext i{color:var(--gold-deep)}
+.hm-tip .row.ext b{font-weight:700;margin-left:5px}
 .hm-legend{display:flex;align-items:center;gap:3px;justify-content:center;margin-top:12px;flex-wrap:wrap;font-size:10px;color:var(--tx3);font-family:var(--mono)}
 .hm-legend u{display:inline-block;width:30px;height:11px;text-decoration:none}
 .hm-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px;margin-bottom:14px}
@@ -1125,12 +1151,28 @@ function renderHeatmap(){
    .map(c=>`<u style="background:var(--${c})"></u>`).join('')+`<span>+${scale}%</span>`;
 }
 
+/* Pre-market and after-hours move on the last regular close, so they are
+   stated as their own session rather than folded into today's change. */
+function extTip(s){
+ const pre=s.pre_price!=null,post=s.post_price!=null;
+ const st=s.state||'';
+ /* Before the open the pre-market print is the live one; afterwards the
+    post-market print is, and yesterday's pre-market is history. */
+ const usePre=pre&&(!post||st==='PRE'||st==='PREPRE');
+ if(!usePre&&!post)return '';
+ const lab=usePre?'Pre-market':'After hours';
+ const px=usePre?s.pre_price:s.post_price;
+ const ch=usePre?s.pre_chg:s.post_chg;
+ return `<div class="row ext"><i>${lab}</i><span>$${fmt(px)}
+   <b class="${cls(ch)}">${ch==null?'—':sign(ch)+'%'}</b></span></div>`}
+
 function hmTip(ev,ticker){
  const d=S.hm;if(!d)return;const s=d.stocks.find(x=>x.ticker===ticker);if(!s)return;
  const tip=$('hmTip');
  tip.innerHTML=`<h5>${esc(s.ticker)}</h5><div class="nm">${esc(s.name)}</div>
   <div class="row"><i>Price</i><span>$${fmt(s.price)}</span></div>
   <div class="row"><i>Change</i><span class="${cls(s.chg)}">${sign(s.chg)}%</span></div>
+  ${extTip(s)}
   <div class="row"><i>Market cap</i><span>${fmtCap(s.cap*1e9)}</span></div>
   <div class="row"><i>Sector</i><span style="font-family:var(--ui)">${esc(s.sector)}</span></div>`;
  tip.classList.add('on');
@@ -1711,6 +1753,124 @@ function checkAlerts(quotes){
   const hit=a.condition==='above'?q.price>=a.price:q.price<=a.price;
   if(hit){const el=$('al-'+a.id);if(el)el.classList.add('hit');
    if(!a._notified){a._notified=true;toast(`🔔 ${a.ticker} crossed $${fmt(a.price)} — now $${fmt(q.price)}`,'ok')}}})}
+/* ===================== news artwork =====================
+   Most wire stories arrive without a picture. Rather than a decorative stock
+   photo, each gets drawn art built from what the headline is about: the
+   topic sets the motif and palette, the direction tints it, and the company
+   logo is overlaid when one was identified. Deterministic, so the same story
+   always looks the same. */
+const ART_TOPICS={
+ markets:{label:'Markets',a:'#3ea6ff',b:'#1b3a63'},
+ rates:{label:'Rates',a:'#a78bfa',b:'#2d2550'},
+ inflation:{label:'Inflation',a:'#ffa726',b:'#4a3012'},
+ jobs:{label:'Labour',a:'#22d3ee',b:'#143c45'},
+ energy:{label:'Energy',a:'#ffb547',b:'#4a3110'},
+ crypto:{label:'Crypto',a:'#f7931a',b:'#43280a'},
+ chips:{label:'Semis',a:'#26d07c',b:'#10402a'},
+ ai:{label:'AI',a:'#60a5fa',b:'#1c2f55'},
+ deal:{label:'M&A',a:'#e5b048',b:'#423010'},
+ earnings:{label:'Earnings',a:'#38bdf8',b:'#123047'},
+ policy:{label:'Policy',a:'#94a3b8',b:'#26303f'},
+ housing:{label:'Housing',a:'#f472b6',b:'#45162c'},
+ health:{label:'Health',a:'#34d399',b:'#10392b'},
+};
+/* A small deterministic hash, so a headline always draws the same shape. */
+function artSeed(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return Math.abs(h)}
+
+function artMotif(topic,col,seed,W,H){
+ const rnd=(n=>()=>((n=Math.imul(n^n>>>15,2246822507))>>>0)/4294967296)(seed);
+ const mid=H*0.6;
+ /* Line weight and detail follow the size of the picture, so a 96px thumbnail
+    and a hero panel both read as drawn for that box rather than scaled up. */
+ const k=Math.max(.8,Math.min(2.6,H/150)),big=W>300;
+ if(topic==='earnings'||topic==='jobs'||topic==='housing'){
+  /* bars */
+  let out='';const n=big?12:7,bw=W/(n*1.9);
+  for(let i=0;i<n;i++){const h=H*(0.18+rnd()*0.46);
+   out+=`<rect x="${(W*0.12+i*bw*1.75).toFixed(1)}" y="${(mid-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${col}" opacity="${(0.35+i/n*0.6).toFixed(2)}"/>`}
+  return out}
+ if(topic==='rates'||topic==='inflation'||topic==='policy'){
+  /* stepped curve: policy moves in steps, not smooth lines */
+  let d=`M 0 ${mid}`,x=0,y=mid;const steps=big?9:6;
+  for(let i=0;i<steps;i++){const nx=x+W/steps,ny=y-(rnd()-0.35)*H*0.26;
+   d+=` L ${nx.toFixed(1)} ${y.toFixed(1)} L ${nx.toFixed(1)} ${ny.toFixed(1)}`;x=nx;y=Math.max(H*0.16,Math.min(H*0.82,ny))}
+  d+=` L ${W} ${y.toFixed(1)}`;
+  const fid='f'+seed.toString(36);
+  return `<defs><linearGradient id="${fid}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="${col}" stop-opacity=".30"/>
+    <stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+   <path d="${d} L ${W} ${H} L 0 ${H} Z" fill="url(#${fid})" stroke="none"/>
+   <path d="${d}" fill="none" stroke="${col}" stroke-width="${(2.4*k).toFixed(1)}" stroke-linejoin="round" opacity=".95"/>`}
+ if(topic==='chips'||topic==='ai'){
+  /* circuit traces */
+  let out='';const rows=big?7:5,step=(big?0.10:0.14);
+  for(let i=0;i<rows;i++){const y=H*(0.18+i*step),x1=W*(0.08+rnd()*0.2),x2=W*(0.55+rnd()*0.35);
+   out+=`<path d="M ${x1.toFixed(0)} ${y.toFixed(0)} H ${(x2*0.7).toFixed(0)} L ${x2.toFixed(0)} ${(y-10*k).toFixed(0)}" fill="none" stroke="${col}" stroke-width="${(1.5*k).toFixed(1)}" opacity=".55"/>`+
+        `<circle cx="${x2.toFixed(0)}" cy="${(y-10*k).toFixed(0)}" r="${(2.4*k).toFixed(1)}" fill="${col}" opacity=".9"/>`}
+  out+=`<rect x="${(W*0.36).toFixed(0)}" y="${(H*0.3).toFixed(0)}" width="${(W*0.28).toFixed(0)}" height="${(H*0.36).toFixed(0)}" rx="${(4*k).toFixed(0)}" fill="none" stroke="${col}" stroke-width="${(1.9*k).toFixed(1)}" opacity=".7"/>`;
+  return out}
+ if(topic==='energy'){
+  /* stacked flow bands */
+  let out='';const bands=big?6:4;
+  for(let i=0;i<bands;i++){const y=H*(0.26+i*(big?0.10:0.13));
+   out+=`<path d="M 0 ${y.toFixed(0)} Q ${(W*0.3).toFixed(0)} ${(y-(18+rnd()*12)*k).toFixed(0)} ${(W*0.55).toFixed(0)} ${y.toFixed(0)} T ${W} ${(y-8*k).toFixed(0)}" fill="none" stroke="${col}" stroke-width="${(1.9*k).toFixed(1)}" opacity="${(0.25+i*0.12).toFixed(2)}"/>`}
+  return out}
+ if(topic==='deal'){
+  /* two paths converging */
+  const sw=(2.5*k).toFixed(1);
+  return `<path d="M 0 ${(H*0.28).toFixed(0)} Q ${(W*0.42).toFixed(0)} ${(H*0.3).toFixed(0)} ${(W*0.52).toFixed(0)} ${mid.toFixed(0)}" fill="none" stroke="${col}" stroke-width="${sw}" opacity=".8"/>
+   <path d="M 0 ${(H*0.82).toFixed(0)} Q ${(W*0.42).toFixed(0)} ${(H*0.8).toFixed(0)} ${(W*0.52).toFixed(0)} ${mid.toFixed(0)}" fill="none" stroke="${col}" stroke-width="${sw}" opacity=".5"/>
+   <path d="M ${(W*0.52).toFixed(0)} ${mid.toFixed(0)} H ${(W*0.9).toFixed(0)}" fill="none" stroke="${col}" stroke-width="${sw}" opacity=".9"/>
+   <circle cx="${(W*0.52).toFixed(0)}" cy="${mid.toFixed(0)}" r="${(4.6*k).toFixed(1)}" fill="${col}"/>`}
+ if(topic==='crypto'){
+  let out=`<circle cx="${(W*0.5).toFixed(0)}" cy="${(H*0.5).toFixed(0)}" r="${(H*0.22).toFixed(0)}" fill="none" stroke="${col}" stroke-width="${(2.3*k).toFixed(1)}" opacity=".75"/>`;
+  for(let i=0;i<6;i++){const a=i*Math.PI/3,r1=H*0.24,r2=H*0.34;
+   out+=`<line x1="${(W*0.5+Math.cos(a)*r1).toFixed(0)}" y1="${(H*0.5+Math.sin(a)*r1).toFixed(0)}" x2="${(W*0.5+Math.cos(a)*r2).toFixed(0)}" y2="${(H*0.5+Math.sin(a)*r2).toFixed(0)}" stroke="${col}" stroke-width="${(1.7*k).toFixed(1)}" opacity=".5"/>`}
+  return out}
+ /* default: candlesticks, the universal symbol of a market story */
+ let out='';const n=big?16:9,cw=W/(n*1.8);
+ for(let i=0;i<n;i++){const cx=W*0.1+i*cw*1.7,bh=H*(0.08+rnd()*0.26),cy=mid-H*0.12+(rnd()-0.5)*H*0.3;
+  out+=`<line x1="${(cx+cw/2).toFixed(1)}" y1="${(cy-8).toFixed(1)}" x2="${(cx+cw/2).toFixed(1)}" y2="${(cy+bh+8).toFixed(1)}" stroke="${col}" stroke-width="${(1.1*k).toFixed(1)}" opacity=".5"/>`+
+       `<rect x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" width="${cw.toFixed(1)}" height="${bh.toFixed(1)}" rx="1.5" fill="${col}" opacity="${(0.4+i/n*0.5).toFixed(2)}"/>`}
+ return out}
+
+function artMeta(item){
+ const art=item.art||{};
+ const t=ART_TOPICS[art.topic]||ART_TOPICS.markets;
+ const dir=art.direction;
+ /* Direction tints the accent: the art should agree with the story. */
+ return{label:t.label,base:t.b,dir,ticker:art.ticker||'',topic:art.topic||'markets',
+  col:dir==='up'?'#26d07c':dir==='down'?'#ff4d6a':t.a}}
+
+function newsArt(item,W,H){
+ const art=item.art||{};
+ const t=ART_TOPICS[art.topic]||ART_TOPICS.markets;
+ const col=artMeta(item).col;
+ const seed=artSeed(item.title||'');
+ const gid='g'+seed.toString(36);
+ return `<svg class="na-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+   <stop offset="0" stop-color="${t.b}"/><stop offset="1" stop-color="#0b1119"/></linearGradient></defs>
+  <rect width="${W}" height="${H}" fill="url(#${gid})"/>
+  <g opacity=".09">${Array.from({length:Math.ceil(W/24)},(_,i)=>`<line x1="${i*24}" y1="0" x2="${i*24}" y2="${H}" stroke="#fff" stroke-width=".5"/>`).join('')}</g>
+  ${artMotif(art.topic||'markets',col,seed,W,H)}
+ </svg>`}
+
+/* A real photo when the feed carried one, drawn over the art; if it never
+   loads it is removed and the art is what shows. The caption sits above both
+   as HTML, so it is never cropped and can shorten itself when space is tight. */
+function newsVisual(item,W,H,cls){
+ const m=artMeta(item);
+ const arrow=m.dir==='up'?'▲':m.dir==='down'?'▼':'';
+ return `<span class="na ${cls}">${newsArt(item,W,H)}${item.image?
+  `<img class="na-img" src="${esc(item.image)}" alt="" loading="lazy"
+    onload="this.classList.add('ready')" onerror="this.remove()">`:''}
+  <span class="na-cap${m.ticker?' has-sym':''}" style="--ac:${m.col}">
+   <b>${esc(m.label)}</b>
+   ${m.ticker?`<i class="${m.dir==='up'?'up':m.dir==='down'?'dn':''}">${arrow} ${esc(m.ticker)}</i>`
+             :(arrow?`<i class="${m.dir==='up'?'up':'dn'}">${arrow}</i>`:'')}
+  </span></span>`}
+
 /* ===================== news ===================== */
 let newsCache=[];
 async function loadNews(scope,btn){
@@ -1742,16 +1902,16 @@ function renderNews(){
  const[hero,...rest]=list;
  $('newsBox').innerHTML=`<div class="news-grid">
   <a class="glass news-hero" href="${esc(hero.link)}" target="_blank" rel="noopener noreferrer">
-   <div class="nh-visual">📈</div>
+   <div class="nh-visual">${newsVisual(hero,560,360,'hero')}</div>
    <div class="nh-body"><span class="nh-kicker">${esc(hero.source||'')} · Top story</span>
     <div class="nh-title">${esc(hero.title)}</div>
     ${hero.summary?`<div class="nh-sum">${esc(hero.summary)}</div>`:''}
     <div class="nh-meta">${timeAgo(hero.time)}</div></div></a>
   <div class="news-list">${rest.slice(0,14).map((n,i)=>`
    <a class="glass news-item" href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">
-    <span class="ni-num">${String(i+2).padStart(2,'0')}</span>
+    ${newsVisual(n,96,70,'thumb')}
     <div style="flex:1;min-width:0"><div class="ni-title">${esc(n.title)}</div>
-     <div class="ni-meta"><span class="n-tag">${esc(n.source||'')}</span>${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}
+     <div class="ni-meta"><span class="ni-num">${String(i+2).padStart(2,'0')}</span><span class="n-tag">${esc(n.source||'')}</span>${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}
 
 /* ===================== gap detector ===================== */
 async function loadGaps(scope,btn){

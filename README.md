@@ -50,6 +50,11 @@ targets and a share count sized to your risk policy.
 
 A squarified treemap of the **full S&P 500 (507 names) or the Nasdaq 100**:
 block size is market cap, colour is today's move, blocks are grouped by sector.
+Hovering a block gives price, today's change, market cap, sector — and the
+**pre-market or after-hours print with its own percentage**, kept as a separate
+row because an extended-hours move is measured against the last regular close,
+not folded into the day's change. A name with no extended-hours print simply
+has no row; nothing is invented to fill it.
 
 Quotes come from Yahoo's batch endpoints — 500 names cannot each have their own
 request — with a crumb-authenticated call first, the spark endpoint next, and
@@ -127,6 +132,28 @@ Every feed is fetched independently and a failure is returned rather than
 raised, so one dead outlet cannot empty the page; the UI names the quiet ones.
 `GET /api/news/sources` reports which feeds actually answer from your
 deployment.
+
+### Every headline gets a picture
+
+Where a feed carries real article art it is used: Media RSS thumbnails (widest
+wins), `media:content`, enclosures, channel images, and the first usable `<img>`
+in the description — tracking pixels and sub-120px images rejected.
+
+Most wire stories carry none, so the rest are **drawn from what the story is
+about** rather than filled with a decorative stock photo. `classify()` reads the
+headline for three things — topic (rates, inflation, jobs, energy, crypto,
+semis, AI, M&A, earnings, policy, housing, health, or markets), direction from
+the verb, and the company, matched by symbol or by name since "Nvidia beats"
+never contains NVDA — and the browser draws from that: policy stories get a
+stepped rate curve, earnings get bars, semis get circuit traces, energy gets
+flow bands, and anything else gets candles. Direction tints the accent green or
+red, the caption names the topic and the company, and the motif's weight and
+detail follow the size of the box, so a 96px thumbnail and the hero panel are
+each drawn for their own shape.
+
+The classification is returned as data and tested without a browser; the drawing
+lives in the UI. A real photo is layered over the art, so a photo that never
+loads leaves the drawing rather than a broken image.
 
 ---
 

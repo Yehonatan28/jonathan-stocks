@@ -209,6 +209,106 @@ def t_scope():
         news.fetch_feed = orig
 
 
+IMAGES = b'''<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+  <item>
+    <title>Media RSS thumbnail, widest wins</title>
+    <link>https://example.com/i1</link>
+    <media:thumbnail url="https://img.example.com/small.jpg" width="80"/>
+    <media:thumbnail url="https://img.example.com/wide.jpg" width="900"/>
+    <media:thumbnail url="https://img.example.com/mid.jpg" width="400"/>
+  </item>
+  <item>
+    <title>Enclosure image</title>
+    <link>https://example.com/i2</link>
+    <enclosure url="https://img.example.com/enc.jpg" type="image/jpeg" length="21"/>
+  </item>
+  <item>
+    <title>Image inside the description</title>
+    <link>https://example.com/i3</link>
+    <description>&lt;p&gt;&lt;img src="https://img.example.com/inline.jpg"/&gt;Story text.&lt;/p&gt;</description>
+  </item>
+  <item>
+    <title>Tracking pixel only</title>
+    <link>https://example.com/i4</link>
+    <description>&lt;img src="https://stats.example.com/beacon.gif?1x1"/&gt;Text.</description>
+  </item>
+</channel></rss>'''
+
+
+@check('imagery: thumbnails, enclosures and inline images are found')
+def t_images():
+    items = news.parse_feed(IMAGES)
+    by = {i['title']: i.get('image') for i in items}
+    assert by['Media RSS thumbnail, widest wins'] == 'https://img.example.com/wide.jpg', by
+    assert by['Enclosure image'] == 'https://img.example.com/enc.jpg', by
+    assert by['Image inside the description'] == 'https://img.example.com/inline.jpg', by
+
+
+@check('imagery: tracking pixels are not treated as article art')
+def t_no_pixels():
+    items = news.parse_feed(IMAGES)
+    px = [i for i in items if i['title'] == 'Tracking pixel only'][0]
+    assert px.get('image') is None, px.get('image')
+
+
+@check('imagery: a story with no picture reports none rather than guessing')
+def t_no_image():
+    items = news.parse_feed(RSS)
+    assert all(i.get('image') is None for i in items), items
+
+
+@check('classify: topic comes from the headline')
+def t_topic():
+    cases = [('Fed holds rates steady', 'rates'),
+             ('CPI inflation cools to 2.4%', 'inflation'),
+             ('Payrolls beat as unemployment falls', 'jobs'),
+             ('Oil slips as OPEC lifts output', 'energy'),
+             ('Bitcoin tops $90,000', 'crypto'),
+             ('Chip demand lifts semiconductor names', 'chips'),
+             ('Apple reports fourth-quarter earnings', 'earnings')]
+    for title, want in cases:
+        got = news.classify(title)['topic']
+        assert got == want, f'{title!r} -> {got}, wanted {want}'
+
+
+@check('classify: direction is read from the verb, not assumed')
+def t_direction():
+    assert news.classify('Nvidia surges on strong guidance')['direction'] == 'up'
+    assert news.classify('Tesla plunges after a profit warning')['direction'] == 'down'
+    # Nothing directional in the wording, and nothing invented either
+    assert news.classify('Fed to meet next week')['direction'] == 'flat'
+
+
+SYMS = {'NVDA', 'TSLA', 'AAPL'}
+NAMES = {'nvidia': 'NVDA', 'tesla': 'TSLA', 'apple inc.': 'AAPL'}
+
+
+@check('classify: a company in the headline resolves to its symbol')
+def t_ticker():
+    assert news.classify('Nvidia beats on earnings', '', SYMS, NAMES)['ticker'] == 'NVDA'
+    assert news.classify('NVDA upgraded at Morgan Stanley', '', SYMS, NAMES)['ticker'] == 'NVDA'
+    # Common uppercase words must not be mistaken for symbols
+    for title in ('CEO steps down at a major bank', 'US stocks open higher',
+                  'The FED and the ECB diverge'):
+        assert news.classify(title, '', SYMS, NAMES)['ticker'] is None, title
+
+
+@check('classify: the longest company-name match wins')
+def t_longest_name():
+    names = dict(NAMES, **{'apple': 'APLE', 'apple inc.': 'AAPL'})
+    got = news.classify('Apple Inc. lifts its dividend', '', SYMS, names)['ticker']
+    assert got == 'AAPL', got
+
+
+@check('classify: every story gets artwork metadata, never a blank')
+def t_art_always():
+    for title in ('', 'Something entirely unclassifiable happened', 'x' * 300):
+        art = news.classify(title)
+        assert set(art) == {'topic', 'direction', 'ticker'}, art
+        assert art['topic'], 'topic must always fall back to a usable default'
+
+
 def main():
     failed = 0
     for name, fn in CHECKS:

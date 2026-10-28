@@ -715,7 +715,10 @@ def heatmap(index):
                     'price': q['price'],
                     'chg': q.get('chg'),
                     # live cap when the feed gave one, the static estimate otherwise
-                    'cap': q.get('cap') or r['cap']})
+                    'cap': q.get('cap') or r['cap'],
+                    'state': q.get('state'),
+                    'pre_price': q.get('pre_price'), 'pre_chg': q.get('pre_chg'),
+                    'post_price': q.get('post_price'), 'post_chg': q.get('post_chg')})
     if not out:
         return jsonify({'index': index.upper(), 'stocks': [], 'sectors': [],
                         'total_cap': 0, 'generated_at': int(time.time()),
