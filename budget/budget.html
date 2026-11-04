@@ -383,18 +383,19 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
   <div class="dlghead"><h3 id="helpTitle">איך משתמשים, בכמה דקות בחודש</h3><button class="ib sm" data-act="closeHelp" aria-label="סגירה">✕</button></div>
   <div class="help">
    <h4>החוק אחד: מה שייך לאיזה חודש</h4>
-   <p>כל חודש כולל את <b>הקניות שנעשו בו</b> (לפי תאריך העסקה בפירוט) ואת <b>ההכנסות של אותו חודש</b>. המשכורת שנכנסת ב-10 בנובמבר היא המשכורת של אוקטובר, ולכן היא נרשמת באוקטובר. באותו יום יורד גם חיוב האשראי על הקניות של אוקטובר, כך שכל חודש נסגר עם הכסף שמימן אותו.</p>
-   <h4>פעם בחודש, אחרי ה-10</h4>
+   <p><b>כל חודש = המשכורות שנכנסו בו (ב-10 לחודש) + כל הקניות שנעשו בו</b> (לפי תאריך העסקה בפירוט). לדוגמה, אוקטובר = המשכורת שנכנסה ב-10 באוקטובר + הקניות של אוקטובר. החיוב על הקניות האלה יורד ב-2 בנובמבר, עוד לפני המשכורת הבאה, ולכן הוא משולם מהמשכורת של אוקטובר. ככה כל חודש נסגר עם הכסף שבאמת שילם עליו.</p>
+   <h4>פעם בחודש, ב-1 עד 4 לחודש</h4>
    <ol>
-    <li>עוברים לחודש שנגמר (החצים למעלה). בראש הטאב "החודש" יש 3 צעדים, וכל צעד מקבל ✓ כשהוא מוכן.</li>
-    <li><b>פירוטי אשראי:</b> מורידים מאתר כל חברת אשראי את הפירוט של החודש (PDF, או צילום מסך) וגוררים לתיבה. עד 5 קבצים בבת אחת, או אחד אחרי השני. המערכת מזהה את הכרטיס ואת מי הוא שייך, ומסווגת כל קנייה לבד.</li>
+    <li>פותחים את המערכת. בשבוע הראשון של החודש היא נפתחת לבד על החודש שנגמר. בראש הטאב "החודש" יש 3 צעדים, וכל צעד מקבל ✓ כשהוא מוכן.</li>
+    <li><b>פירוטי אשראי:</b> מורידים מאתר כל חברת אשראי את הפירוט של החודש שנגמר (PDF, או צילום מסך) וגוררים לתיבה. עד 5 קבצים בבת אחת, או אחד אחרי השני. המערכת מזהה את הכרטיס ואת מי הוא שייך, ומסווגת כל קנייה לבד.</li>
     <li>בטבלת "בדיקה לפני הוספה" עוברים במבט, מתקנים קטגוריה אם צריך ולוחצים "הוסף". תיקון נלמד לפעם הבאה. קובץ שכבר הועלה מזוהה, ושום תנועה לא נספרת פעמיים.</li>
-    <li><b>הכנסות:</b> בצעד 2 לוחצים על השם (יהונתן / רוני) ומקלידים את המשכורת. החודש כבר נבחר נכון. מלגה, מילואים, מענק או החזר מוסיפים ב"הכנסה אחרת".</li>
+    <li><b>הכנסות:</b> בצעד 2 לוחצים על השם (יהונתן / רוני) ומקלידים את המשכורת שנכנסה ב-10 של אותו חודש. החודש כבר נבחר נכון. מלגה, מילואים, מענק או החזר מוסיפים ב"הכנסה אחרת". אפשר גם להזין משכורת ביום שהיא נכנסת.</li>
     <li><b>סיווג:</b> אם נשאר כסף ב"שונות", לוחצים על הצעד והטבלה מציגה רק אותן. לוחצים על שם הקטגוריה בשורה ובוחרים. אפשר לעדכן בבת אחת את כל התנועות מאותו בית עסק.</li>
    </ol>
    <h4>מה רואים</h4>
    <ul>
     <li><b>השורה העליונה:</b> הכנסות, הוצאות, מאזן, כמה נשאר בתקציב, והשוואה לחודש הקודם. מעבר עם העכבר על כל מספר מסביר איך הוא מחושב.</li>
+    <li><b>מאזן בפלוס</b> = המשכורות של החודש כיסו את כל הקניות שלו, ונשאר כסף. במינוס = הוצאתם יותר ממה שנכנס.</li>
     <li><b>החודש:</b> לאן הלך הכסף לפי קטגוריה, כולל פס אפור דק של החודש הקודם וחץ ▲ אדום (יותר) או ▼ ירוק (פחות). מתחת: הוצאות לפי יום וכל התנועות.</li>
     <li><b>תקציב:</b> קובעים סכום לחודש לכל קטגוריה, או לוחצים "מלא תקציב לפי מה שהוצאנו בפועל". למטה מגדירים <b>קבועות כל חודש</b> (שכירות, ועד, ארנונה) והן נכנסות לבד לכל חודש.</li>
     <li><b>השוואה:</b> חודש מול החודש שלפניו: סך הכל, כל קטגוריה, מה עלה ומה ירד, לפי מי ולפי כרטיס.</li>
@@ -406,6 +407,7 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
     <li>הוצאה ידנית (מזומן, העברה בנקאית) מוסיפים בכפתור "＋ הכנסה / הוצאה". סימון "קבוע, חוזר כל חודש" מוסיף אותה לקבועות.</li>
     <li>טעות בקובץ? ברשימת הקבצים לוחצים ✕ ליד הקובץ, וכל התנועות שלו נמחקות. אפשר להעלות שוב.</li>
     <li>כפתור האיפוס (החץ העגול האדום) מוחק את החודש הנוכחי או את הכל.</li>
+    <li>יום המשכורת (10) ויום חיוב האשראי (2) נמצאים בהגדרות, בגלגל השיניים.</li>
    </ul>
   </div>
 </div></div>
@@ -477,7 +479,7 @@ const ccol=id=>`var(--k-${CATS.some(c=>c.id===id)?id:'other'})`;
 /* ---------- 3. state, storage, migration ---------- */
 const KEY='budgetHH.v2';
 let state=null,storageOK=true;
-const defSettings=()=>({names:{a:'יהונתן',b:'רוני'},startMonth:'2026-09',payday:10,fixed:[],cardOwner:{},catsV:2});
+const defSettings=()=>({names:{a:'יהונתן',b:'רוני'},startMonth:'2026-09',payday:10,chargeDay:2,fixed:[],cardOwner:{},catsV:2});
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){storageOK=false;}cloudPush();}
 function loadSaved(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s);}catch(e){storageOK=false;}return null;}
 const isTransfer=d=>/\bbit\b|ביט|paybox|פייבוקס|pepper pay/i.test(d||'');
@@ -522,6 +524,7 @@ function trackStart(){
 const monthsWithData=()=>{const st=trackStart();return Object.keys(state.data).filter(k=>k>=st&&rowsOf(k).length).sort();};
 function openMonth(){
   const cm=curMonth(),ms=monthsWithData(),st=trackStart();
+  if(dayOf(todayISO())<=7&&addM(cm,-1)>=st)return addM(cm,-1);
   if(rowsOf(cm).length>=5||!ms.length)return cm<st?st:cm;
   const full=ms.filter(k=>k<=cm&&rowsOf(k).length>=5);
   return full.length?full[full.length-1]:ms[ms.length-1];
@@ -756,7 +759,7 @@ function renderHead(){
   const st=trackStart(),s=monthSums(ui.month),pm=prevMonth(ui.month),p=pm?monthSums(pm):null;
   $('#brand').textContent='ניהול תקציב · '+whoName('a')+' ו'+whoName('b');
   $('#mLabel').textContent=mLabel(ui.month);
-  $('#period').textContent='כל הקניות שנעשו ב'+mName(ui.month)+' (לפי תאריך העסקה) וההכנסות של '+mName(ui.month)+', כולל המשכורת שנכנסת ב-'+payday()+' ב'+mName(addM(ui.month,1))+'.';
+  $('#period').textContent=mName(ui.month)+' = המשכורות שנכנסו ב-'+payday()+' ב'+mName(ui.month)+' + כל הקניות של '+mName(ui.month)+', שהחיוב עליהן יורד ב-'+chargeDay()+' ב'+mName(addM(ui.month,1))+'.';
   $('[data-act="mPrev"]').disabled=ui.month<=st;$('#mPick').min=st;$('#mPick').value=ui.month;
   const k=(cls,l,v,d,tone,tip)=>`<div class="k ${cls}" data-tone="${tone||''}"${tip?` data-tip="${esc(tip)}"`:''}><div class="kl">${l}${tip?'<i>ⓘ</i>':''}</div><div class="kv">${v}</div><div class="kd">${d}</div></div>`;
   const left=s.budgetTotal-s.expense,mn=mName(ui.month);
@@ -770,9 +773,9 @@ function renderHead(){
       'ההוצאות של '+mn+' מול ההוצאות של '+mName(pm)+(s.isCur?', באותם ימים בחודש (1–'+s.elapsed+'), כי '+mn+' עוד לא נגמר':'')+'.');
   }
   $('#kpis').innerHTML=[
-    k('inc','הכנסות',esc(money(s.income)),'<button class="pill good" data-act="openIncome">＋ הוספת הכנסה</button>'+(s.income?`<span>${tn(s.rows.filter(isInc).length)}</span>`:''),s.income?'good':'','כל ההכנסות ששויכו ל'+mn+': משכורות (גם אם נכנסו ב-'+payday()+' בחודש שאחרי), מלגות, תגמולים והחזרים.'),
+    k('inc','הכנסות',esc(money(s.income)),'<button class="pill good" data-act="openIncome">＋ הוספת הכנסה</button>'+(s.income?`<span>${tn(s.rows.filter(isInc).length)}</span>`:''),s.income?'good':'','כל ההכנסות שנכנסו ב'+mn+': המשכורות של ה-'+payday()+' ב'+mn+', מלגות, תגמולים והחזרים.'),
     k('','הוצאות',esc(money(s.expense)),s.fixed?'מהן קבועות '+M(s.fixed):(s.expCount?tn(s.expCount):'עוד אין'),'bad','כל הקניות שתאריך העסקה שלהן ב'+mn+', מכל הכרטיסים, ועוד ההוצאות הקבועות וכל מה שהוספתם ידנית.'),
-    k('','מאזן',esc(money(s.balance)),s.income?pill(s.balance>=0?'good':'bad',s.balance>=0?'בפלוס':'במינוס'):'אין הכנסות עדיין',s.income?(s.balance>=0?'good':'bad'):'','הכנסות פחות הוצאות של '+mn+'. בפלוס = נשאר כסף מהחודש.'),
+    k('','מאזן',esc(money(s.balance)),s.income?pill(s.balance>=0?'good':'bad',s.balance>=0?'בפלוס':'במינוס'):'אין הכנסות עדיין',s.income?(s.balance>=0?'good':'bad'):'','הכנסות פחות הוצאות של '+mn+'. בפלוס = המשכורות של '+mn+' כיסו את כל הקניות שלו, ונשאר כסף.'),
     k('','נשאר בתקציב',s.budgetTotal?esc(money(left)):'—',s.budgetTotal?(left>=0?'מתוך '+M(s.budgetTotal):pill('bad','חריגה')):'<button class="pill acc" data-tabgo="budget">הגדרת תקציב</button>',s.budgetTotal?(left>=0?'good':'bad'):'','סכום התקציבים שקבעתם בטאב תקציב, פחות ההוצאות של '+mn+'.'),
     cmp
   ].join('');
@@ -898,8 +901,10 @@ function setKind(k,keepSel){
 }
 function defaultDate(){const cm=curMonth();return ui.month===cm?todayISO():ui.month+'-'+pad(Math.min(dayOf(todayISO()),dimOf(ui.month)));}
 const payday=()=>Math.min(28,Math.max(1,+state.settings.payday||10));
-/* income belongs to the month it pays for: money that arrives up to a few days after payday is last month's */
-function incomeMonth(){const cm=curMonth(),pm=addM(cm,-1);if(ui.month===cm&&dayOf(todayISO())<=payday()+5&&pm>=trackStart())return pm;return ui.month;}
+const chargeDay=()=>Math.min(28,Math.max(1,+state.settings.chargeDay||2));
+const closing=()=>dayOf(todayISO())<=7;
+/* income counts in the month it arrives; in the first week of a month you are closing the month that just ended */
+function incomeMonth(){const cm=curMonth(),pm=addM(cm,-1);if(ui.month===cm&&closing()&&pm>=trackStart())return pm;return ui.month;}
 function fillIncomeMonths(sel){
   const st=trackStart(),end=[curMonth(),ui.month,sel].sort().pop(),opts=[];
   for(let m=end;m>=st;m=addM(m,-1))opts.push(m);
@@ -908,7 +913,7 @@ function fillIncomeMonths(sel){
 function incomeHint(){
   if(ui.kind!=='income'){$('#fHint').textContent='';return;}
   const m=$('#fMonth').value;if(!m)return;
-  $('#fHint').textContent='ההכנסה תיספר ב'+mLabel(m)+'. משכורת שנכנסת ב-'+payday()+' ב'+mName(addM(m,1))+' היא המשכורת של '+mName(m)+'.';
+  $('#fHint').textContent='ההכנסה תיספר ב'+mLabel(m)+'. המשכורת שנכנסה ב-'+payday()+' ב'+mName(m)+' משלמת את הקניות של '+mName(m)+', שהחיוב עליהן יורד ב-'+chargeDay()+' ב'+mName(addM(m,1))+'.';
 }
 function showKindFields(){const inc=ui.kind==='income';$('#fDateWrap').hidden=inc;$('#fMonthWrap').hidden=!inc;if(inc){fillIncomeMonths($('#fMonth').value||incomeMonth());incomeHint();}}
 function openAdd(kind,who){
@@ -930,7 +935,7 @@ function removeRow(id){for(const k in state.data){const i=state.data[k].rows.fin
 function findRow(id){for(const k in state.data){const r=state.data[k].rows.find(x=>x.id===id);if(r)return r;}return null;}
 function submitRow(e){
   e.preventDefault();
-  const im=$('#fMonth').value,date=ui.kind==='income'&&/^\d{4}-\d{2}$/.test(im)?im+'-'+pad(dimOf(im)):($('#fDate').value||todayISO()),cat=$('#fCat').value,amt=Math.round((parseFloat($('#fAmount').value)||0)*100)/100;
+  const im=$('#fMonth').value,date=ui.kind==='income'&&/^\d{4}-\d{2}$/.test(im)?(ui.editId&&findRow(ui.editId)&&findRow(ui.editId).date.slice(0,7)===im?findRow(ui.editId).date:im+'-'+pad(Math.min(payday(),dimOf(im)))):($('#fDate').value||todayISO()),cat=$('#fCat').value,amt=Math.round((parseFloat($('#fAmount').value)||0)*100)/100;
   if(!cat||!(amt>0)){toast('צריך סכום גדול מאפס');$('#fAmount').focus();return;}
   const mk=date.slice(0,7);state.data[mk]=state.data[mk]||{rows:[],fx:[],files:[]};
   const rec={id:ui.editId||uid(),date,desc:$('#fDesc').value.trim()||catById(cat).name,cat,who:$('#fWho').value,amount:amt,fixed:$('#fFixed').checked,note:$('#fNote').value.trim()};
@@ -1318,6 +1323,7 @@ function renderSettings(){
     <div class="f"><label for="sNameB">שם שני</label><input id="sNameB" data-set="nameB" value="${esc(s.names.b)}"></div></div>
    <div class="g2" style="gap:10px"><div class="f"><label for="sStart">החודש הראשון במעקב</label><input id="sStart" type="month" data-set="startMonth" value="${trackStart()}"></div>
     <div class="f"><label for="sPay">יום המשכורת בחודש</label><input id="sPay" type="number" min="1" max="28" data-set="payday" value="${payday()}"></div></div>
+   <div class="f"><label for="sCharge">יום חיוב האשראי בחודש</label><input id="sCharge" type="number" min="1" max="28" data-set="chargeDay" value="${chargeDay()}" style="max-width:160px"></div>
    ${before?`<p class="small" style="margin:0">${before} תנועות מלפני ${esc(mLabel(trackStart()))} שמורות אבל לא נספרות.</p>`:''}
    <div class="note"><span>${DB?'<b>הכל נשמר בענן</b> של חשבון Claude שלכם, אוטומטית. אין צורך לגבות.':'<b>הנתונים כרגע לא בענן.</b> פתחו את הקישור כשאתם מחוברים ל-Claude.'}</span></div>
    <div class="row" style="justify-content:space-between;border:1px solid color-mix(in srgb,var(--bad) 30%,var(--line));border-radius:12px;padding:10px 12px"><span class="small">מחיקת נתונים של החודש או של הכל</span><button class="btn sm danger" data-act="resetAsk">איפוס…</button></div>
@@ -1417,6 +1423,7 @@ function bind(){
     else if(dd.set==='nameB')s.names.b=t.value.trim()||'רוני';
     else if(dd.set==='startMonth'){if(/^\d{4}-\d{2}$/.test(t.value))s.startMonth=t.value;}
     else if(dd.set==='payday')s.payday=Math.min(28,Math.max(1,parseInt(t.value)||10));
+    else if(dd.set==='chargeDay')s.chargeDay=Math.min(28,Math.max(1,parseInt(t.value)||2));
     else return;
     commit();fillForm();renderSettings();
   });
