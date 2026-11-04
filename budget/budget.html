@@ -294,6 +294,12 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
 .sumgrid .sb b{display:block;font-family:var(--f-num);font-size:24px}
 .sumgrid .sb.ok{background:var(--good-soft)}
 @media(max-width:560px){.sumgrid{grid-template-columns:minmax(0,1fr)}}
+.spark{border:none;cursor:pointer;font:inherit;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px;color:#fff;
+  background:linear-gradient(90deg,#7c3aed,#db2777,#f59e0b,#7c3aed);background-size:300% 100%;animation:shine 3s linear infinite;box-shadow:0 0 0 0 rgba(219,39,119,.5);animation:shine 3s linear infinite,pulse 2s ease-out infinite;white-space:nowrap}
+.spark:hover{filter:brightness(1.1)}
+@keyframes shine{to{background-position:300% 0}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(219,39,119,.45)}70%{box-shadow:0 0 0 7px rgba(219,39,119,0)}100%{box-shadow:0 0 0 0 rgba(219,39,119,0)}}
+tr.rvrow td{background:color-mix(in srgb,#db2777 6%,transparent)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -402,6 +408,7 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
     <li><b>פירוטי אשראי:</b> מורידים מאתר כל חברת אשראי את הפירוט של החודש שנגמר (PDF, או צילום מסך) וגוררים לתיבה, עד 5 קבצים. הם מחכים ברשימה. לוחצים <b>"חשב"</b>, והמערכת קוראת את כולם, מזהה את הכרטיס ואת מי הוא שייך, מסווגת כל קנייה ושומרת. בסוף מופיע סיכום: כמה נוספו וכמה כפולות דולגו.</li>
     <li>קובץ שכבר הועלה מזוהה ולא נספר שוב, וגם תנועה שכבר קיימת (אותו סכום, אותו בית עסק, עד יומיים הבדל) מדולגת. אם כרטיס שויך לאדם הלא נכון, משנים "של" ברשימת הקבצים. קטגוריה לא נכונה מתקנים בלחיצה עליה בטבלה, והמערכת זוכרת.</li>
     <li><b>הכנסות:</b> בצעד 2 לוחצים על השם (יהונתן / רוני) ומקלידים את המשכורת שנכנסה ב-10 של אותו חודש. החודש כבר נבחר נכון. מלגה, מילואים, מענק או החזר מוסיפים ב"הכנסה אחרת". אפשר גם להזין משכורת ביום שהיא נכנסת.</li>
+    <li><b>✨ לסווג:</b> תנועה שהמערכת לא בטוחה בה מקבלת סימן זוהר במקום ניחוש. בצעד 3 לוחצים "X תנועות מחכות לך ✨", בוחרים קטגוריה לכל אחת, והסימן נעלם. המערכת זוכרת את הבחירה לפעם הבאה.</li>
     <li><b>סיווג:</b> אם נשאר כסף ב"שונות", לוחצים על הצעד והטבלה מציגה רק אותן. לוחצים על שם הקטגוריה בשורה ובוחרים. אפשר לעדכן בבת אחת את כל התנועות מאותו בית עסק.</li>
    </ol>
    <h4>מה רואים</h4>
@@ -517,8 +524,9 @@ function normalize(o){
     const m=st.data[k]||{},rows=Array.isArray(m.rows)?m.rows:[];
     data[k]={rows:rows.filter(r=>r&&r.date&&r.cat).map(r=>{const cat=mapCat(r.cat,r.desc);if(cat!==r.cat)migrated=true;
         return {id:String(r.id||uid()),date:String(r.date).slice(0,10),desc:r.desc||'',cat,who:['a','b','s'].includes(r.who)?r.who:'s',
-          amount:Math.round((+r.amount||0)*100)/100,fixed:!!r.fixed,note:r.note||'',...(r.tpl?{tpl:String(r.tpl)}:{}),...(r.src?{src:String(r.src)}:{})};}),
+          amount:Math.round((+r.amount||0)*100)/100,fixed:!!r.fixed,note:r.note||'',...(r.tpl?{tpl:String(r.tpl)}:{}),...(r.src?{src:String(r.src)}:{}),...(r.rv?{rv:true}:{})};}),
       fx:Array.isArray(m.fx)?m.fx.filter(x=>typeof x==='string'):[],
+      skip:Array.isArray(m.skip)?m.skip.filter(x=>typeof x==='string'):[],
       files:Array.isArray(m.files)?m.files.filter(f=>f&&f.id&&f.name).map(f=>({id:String(f.id),name:String(f.name),card:f.card||'',who:f.who||'a',n:+f.n||0,total:+f.total||0,at:f.at||'',hash:f.hash||''})):[]};
   });
   return {v:2,settings:s,cats,data,cloud:!!st.cloud};
@@ -605,7 +613,8 @@ function avgPrev(mk,n){
 function sortRows(rows,mode){const c=[...rows];
   if(mode==='amount')c.sort((a,b)=>b.amount-a.amount);else c.sort((a,b)=>b.date.localeCompare(a.date));return c;}
 const normDesc=d=>String(d||'').trim().toLowerCase().replace(/\s+/g,' ');
-function merchantIndex(){const idx=new Map();sortRows(allRows(),'date').reverse().forEach(r=>{if(r.desc)idx.set(normDesc(r.desc),r);});return idx;}
+function merchantIndex(){const idx=new Map();sortRows(allRows(),'date').reverse().forEach(r=>{if(r.desc&&!r.rv)idx.set(normDesc(r.desc),r);});return idx;}
+const needsReview=mk=>rowsOf(mk).filter(r=>r.rv&&!isInc(r));
 const knownNotes=()=>[...new Set(allRows().map(r=>r.note).filter(Boolean))].sort();
 
 /* ---------- 4. cloud save: one doc per month + one config doc ---------- */
@@ -614,7 +623,7 @@ const synced={months:{},config:null};
 const writeChain=new Map();
 function setSave(kind,text){const el=$('#saveState');if(!el)return;el.className='save '+kind;el.lastChild.textContent=text;}
 const cfgOf=()=>JSON.stringify({settings:state.settings,cats:state.cats.map(c=>({id:c.id,budget:+c.budget||0}))});
-const monthDoc=mk=>({rows:rowsOf(mk).map(r=>({...r})),fx:((state.data[mk]&&state.data[mk].fx)||[]).slice(),files:((state.data[mk]&&state.data[mk].files)||[]).map(f=>({...f}))});
+const monthDoc=mk=>({rows:rowsOf(mk).map(r=>({...r})),fx:((state.data[mk]&&state.data[mk].fx)||[]).slice(),skip:((state.data[mk]&&state.data[mk].skip)||[]).slice(),files:((state.data[mk]&&state.data[mk].files)||[]).map(f=>({...f}))});
 function queueWrite(path,fn){const prev=writeChain.get(path)||Promise.resolve();const next=prev.catch(()=>{}).then(fn);writeChain.set(path,next);return next;}
 let pending=0;
 function cloudPush(){
@@ -638,7 +647,7 @@ function applyCloudMonth(id,data){
   if(!/^\d{4}-\d{2}$/.test(id))return false;
   migrated=false;
   const n=normalize({settings:state.settings,data:{[id]:data||{}}}).data[id]||{rows:[],fx:[],files:[]};
-  const str=JSON.stringify({rows:n.rows,fx:n.fx,files:n.files});
+  const str=JSON.stringify({rows:n.rows,fx:n.fx,skip:n.skip,files:n.files});
   if(synced.months[id]===str)return false;
   state.data[id]=n;synced.months[id]=migrated?null:str;return true;
 }
@@ -825,7 +834,7 @@ function fillForm(){
   setKind(ui.kind,true);
   const wo=WHO.map(w=>`<option value="${w}">${esc(whoName(w))}</option>`).join('');
   const kw=$('#fWho').value;$('#fWho').innerHTML=wo;if(kw)$('#fWho').value=kw;
-  $('#fFilterCat').innerHTML=catOptions(ui.fCat,'',true);
+  $('#fFilterCat').innerHTML=`<option value="all"${ui.fCat==='all'?' selected':''}>כל הקטגוריות</option><option value="rv"${ui.fCat==='rv'?' selected':''}>✨ מחכות לסיווג</option>`+catOptions(ui.fCat,'');
   $('#fFilterWho').innerHTML='<option value="all">כולם</option>'+WHO.map(w=>`<option value="${w}"${ui.fWho===w?' selected':''}>${esc(whoName(w))}</option>`).join('');
   const notes=knownNotes();
   $('#fFilterNote').innerHTML='<option value="all">כל הכרטיסים</option>'+notes.map(x=>`<option${ui.fNote===x?' selected':''}>${esc(x)}</option>`).join('');
@@ -839,17 +848,19 @@ function renderSteps(){
   const seen=new Set(monthsWithData().flatMap(rowsOf).filter(r=>!isInc(r)&&r.src).map(issuer).filter(Boolean));
   const have=new Set(rowsOf(mk).filter(r=>!isInc(r)&&!r.tpl).map(issuer).filter(Boolean));
   ((state.data[mk]&&state.data[mk].files)||[]).forEach(f=>{const c=cardFromName(f.card);if(c){have.add(c);seen.add(c);}});
-  const cards=[...seen];const cardsDone=cards.length?cards.every(c=>have.has(c)):rowsOf(mk).some(r=>!isInc(r)&&!r.tpl);
-  const incWho=['a','b'].map(w=>({w,ok:rowsOf(mk).some(r=>isInc(r)&&r.who===w)}));
-  const incDone=incWho.every(x=>x.ok);
-  const other=s.byCat.other||0,ovN=fixedOverlaps().filter(o=>o.hits.some(h=>h.m===mk)).length,sortDone=s.rows.some(r=>!isInc(r)&&!r.tpl)&&other<=s.expense*.05&&!ovN;
+  /* "none this month" marks a card or a person as not expected in this month */
+  const skip=new Set((state.data[mk]&&state.data[mk].skip)||[]);
+  const cards=[...seen];const cardsDone=cards.length?cards.every(c=>have.has(c)||skip.has('card:'+c)):rowsOf(mk).some(r=>!isInc(r)&&!r.tpl);
+  const incWho=['a','b'].map(w=>({w,ok:rowsOf(mk).some(r=>isInc(r)&&r.who===w),none:skip.has('who:'+w)}));
+  const incDone=incWho.every(x=>x.ok||x.none);
+  const rvN=needsReview(mk).length,other=s.byCat.other||0,ovN=fixedOverlaps().filter(o=>o.hits.some(h=>h.m===mk)).length,sortDone=s.rows.some(r=>!isInc(r)&&!r.tpl)&&!rvN&&other<=s.expense*.05&&!ovN;
   const done=[cardsDone,incDone,sortDone].filter(Boolean).length;
   $('#uplSub').textContent=done===3?'הכל מוכן ל'+mLabel(mk)+' ✓':done+' מתוך 3 הושלמו';
   const step=(n,ok,title,body)=>`<div class="step${ok?' done':''}"><div class="sh"><span class="no">${ok?'✓':n}</span>${title}</div><div class="chips">${body}</div></div>`;
   $('#steps').innerHTML=
-    step(1,cardsDone,'העלאת פירוטי האשראי',cards.length?cards.map(c=>`<span class="tick${have.has(c)?' ok':''}">${have.has(c)?'✓':'○'} ${esc(c)}</span>`).join(''):'<span class="small">גררו את הפירוטים לתיבה ולחצו "חשב"</span>')+
-    step(2,incDone,'הכנסות של '+mName(mk),incWho.map(x=>x.ok?`<span class="tick ok">✓ ${esc(whoName(x.w))}</span>`:`<button class="tick" data-act="openIncome" data-who="${x.w}">＋ ${esc(whoName(x.w))}</button>`).join('')+'<button class="tick" data-act="openIncome">＋ הכנסה אחרת</button>')+
-    step(3,sortDone,'בדיקת סיווג',s.expCount?(sortDone?'<span class="tick ok">✓ הכל מסווג</span>':(other>s.expense*.05?`<button class="tick" data-act="showOther">${N(other)} ₪ ב"שונות" · לסווג</button>`:'')+(ovN?`<button class="tick" data-tabgo="budget" style="color:var(--bad)">${ovN===1?'קבועה אחת נספרת':ovN+' קבועות נספרות'} פעמיים · לתקן</button>`:'')):'<span class="small">אחרי ההעלאה</span>');
+    step(1,cardsDone,'העלאת פירוטי האשראי',cards.length?cards.map(c=>have.has(c)?`<span class="tick ok">✓ ${esc(c)}</span>`:skip.has('card:'+c)?`<button class="tick" data-act="skip" data-k="card:${esc(c)}" title="לחצו כדי לבטל">— ${esc(c)} · אין החודש</button>`:`<span class="tick">○ ${esc(c)}</span><button class="tick" data-act="skip" data-k="card:${esc(c)}" title="אין פירוט לכרטיס הזה החודש" style="font-size:11px">אין</button>`).join(''):'<span class="small">גררו את הפירוטים לתיבה ולחצו "חשב"</span>')+
+    step(2,incDone,'הכנסות של '+mName(mk),incWho.map(x=>x.ok?`<span class="tick ok">✓ ${esc(whoName(x.w))}</span>`:x.none?`<button class="tick" data-act="skip" data-k="who:${x.w}" title="לחצו כדי לבטל">— ${esc(whoName(x.w))} · אין החודש</button>`:`<button class="tick" data-act="openIncome" data-who="${x.w}">＋ ${esc(whoName(x.w))}</button><button class="tick" data-act="skip" data-k="who:${x.w}" title="אין הכנסה החודש" style="font-size:11px">אין</button>`).join('')+'<button class="tick" data-act="openIncome">＋ הכנסה אחרת</button>')+
+    step(3,sortDone,'בדיקת סיווג',s.expCount?(sortDone?'<span class="tick ok">✓ הכל מסווג</span>':(rvN?`<button class="spark" data-act="showReview">${rvN===1?'תנועה אחת מחכה':rvN+' תנועות מחכות'} לך ✨</button>`:'')+(other>s.expense*.05&&!rvN?`<button class="tick" data-act="showOther">${N(other)} ₪ ב"שונות" · לסווג</button>`:'')+(ovN?`<button class="tick" data-tabgo="budget" style="color:var(--bad)">${ovN===1?'קבועה אחת נספרת':ovN+' קבועות נספרות'} פעמיים · לתקן</button>`:'')):'<span class="small">אחרי ההעלאה</span>');
 }
 function renderMonth(){
   const s=monthSums(ui.month);renderSteps();
@@ -896,7 +907,7 @@ function highlights(s,p,pm){
 function filteredRows(){
   const q=ui.search.trim().toLowerCase();
   return sortRows(rowsOf(ui.month).filter(r=>{
-    if(ui.fCat!=='all'&&r.cat!==ui.fCat)return false;
+    if(ui.fCat==='rv'){if(!r.rv)return false;}else if(ui.fCat!=='all'&&r.cat!==ui.fCat)return false;
     if(ui.fWho!=='all'&&r.who!==ui.fWho)return false;
     if(ui.fNote!=='all'&&(r.note||'')!==ui.fNote)return false;
     if(q&&!((r.desc||'')+' '+catById(r.cat).name+' '+(r.note||'')).toLowerCase().includes(q))return false;
@@ -909,9 +920,9 @@ function renderRows(){
   const body=rows.map(r=>{const c=catById(r.cat),inc=c.type==='income';
     const catCell=ui.recat===r.id?`<select id="recat" data-id="${esc(r.id)}" aria-label="קטגוריה">${catOptions(r.cat,c.type)}</select>`
       :`<button class="catbtn" data-act="recat" data-id="${esc(r.id)}" title="שינוי קטגוריה"><span class="sw" style="background:${ccol(c.id)}"></span>${esc(c.name)}</button>`;
-    return `<tr>
+    return `<tr${r.rv?' class="rvrow"':''}>
       <td class="num" style="text-align:right">${r.date.slice(8,10)}/${r.date.slice(5,7)}</td>
-      <td style="min-width:150px">${esc(r.desc||c.name)}${r.fixed?' <span class="tag fix">קבוע</span>':''}</td>
+      <td style="min-width:150px">${esc(r.desc||c.name)}${r.fixed?' <span class="tag fix">קבוע</span>':''}${r.rv?' <button class="spark" data-act="recat" data-id="'+esc(r.id)+'" title="המערכת לא בטוחה. לחצו ובחרו קטגוריה">✨ לסווג</button>':''}</td>
       <td>${catCell}</td>
       <td>${esc(whoName(r.who))}</td>
       <td>${r.note?`<span class="tag">${esc(r.note)}</span>`:''}</td>
@@ -972,7 +983,7 @@ function submitRow(e){
   const mk=date.slice(0,7);state.data[mk]=state.data[mk]||{rows:[],fx:[],files:[]};
   const rec={id:ui.editId||uid(),date,desc:$('#fDesc').value.trim()||catById(cat).name,cat,who:$('#fWho').value,amount:amt,fixed:$('#fFixed').checked,note:$('#fNote').value.trim()};
   const wasEdit=!!ui.editId;
-  if(wasEdit){const old=findRow(ui.editId);if(old&&old.tpl)rec.tpl=old.tpl;removeRow(ui.editId);}
+  if(wasEdit){const old=findRow(ui.editId);if(old&&old.tpl)rec.tpl=old.tpl;if(old&&old.src)rec.src=old.src;removeRow(ui.editId);}
   state.data[mk].rows.push(rec);
   if(!wasEdit&&rec.fixed){const it={id:uid(),desc:rec.desc,cat:rec.cat,amount:rec.amount,who:rec.who,day:dayOf(rec.date),note:rec.note,from:mk};
     state.settings.fixed.push(it);rec.tpl=it.id;state.data[mk].fx.push(it.id);}
@@ -990,10 +1001,10 @@ function onDescInput(){
 }
 function recategorize(id,cat){
   const r=findRow(id);ui.recat=null;if(!r||r.cat===cat){renderRows();return;}
-  const old=r.cat;r.cat=cat;commit();
-  const same=allRows().filter(x=>x.id!==id&&normDesc(x.desc)===normDesc(r.desc)&&x.cat!==cat);
-  if(same.length)toast(`עודכן ל${catById(cat).name}. יש עוד ${same.length} תנועות מ"${r.desc}".`,{label:'עדכן את כולן',fn:()=>{same.forEach(x=>x.cat=cat);commit();toast(same.length+' תנועות עודכנו');}});
-  else toast('הקטגוריה עודכנה',{label:'בטל',fn:()=>{r.cat=old;commit();}});
+  const old=r.cat,oldRv=r.rv;r.cat=cat;delete r.rv;commit();
+  const same=allRows().filter(x=>x.id!==id&&normDesc(x.desc)===normDesc(r.desc)&&(x.cat!==cat||x.rv));
+  if(same.length)toast(`עודכן ל${catById(cat).name}. יש עוד ${same.length} תנועות מ"${r.desc}".`,{label:'עדכן את כולן',fn:()=>{same.forEach(x=>{x.cat=cat;delete x.rv;});commit();toast(same.length+' תנועות עודכנו');}});
+  else toast('הקטגוריה עודכנה',{label:'בטל',fn:()=>{r.cat=old;if(oldRv)r.rv=true;commit();}});
 }
 
 /* ---------- 10. statement upload: up to 5 files, read and sorted automatically ---------- */
@@ -1004,10 +1015,10 @@ const KW=[
  [/\bbit\b|ביט|paybox|פייבוקס|pepper pay/i,'transfers'],
  [/ביטוח|הראל|מגדל|הפניקס|מנורה|איילון|כלל |ליברה|ישיר|הכשרה|עמלה|דמי כרטיס|ריבית|קנס|גביי|הלוואה|המוסד לביטוח/i,'finance'],
  [/פז |^פז|yellow|דלק|סונול|דור אלון|אלונית|תחנת|פנגו|pango|סלופארק|חניון|חניה|כביש 6|נתיב|gett|יאנגו|מונית|רב.?קו|רכבת|אגד|מוביט|moovit|מוסך|צמיגים|טסט|רישוי/i,'car'],
- [/ירכא|merkaza|wolt|וולט|תן ביס|10bis|מסעד|פיצ|בורגר|שווארמה|פלאפל|סושי|מקדונלד|ארומה|קפה|ארקפה|קופי|גרג|רולדין|מאפי|בייקרי|גלידה|cafe|coffee|סביח|חומוס|grill|גריל/i,'eatout'],
- [/שופרסל|רמי לוי|ויקטורי|יוחננוף|מגה|טיב טעם|am:?pm|סופר|אושר עד|חצי חינם|קרפור|יינות ביתן|מחסני השוק|מכולת|מינימרקט|קצב|מעדני|ירקות|פירות|ירקן|שוק|משקאות/i,'super'],
+ [/wolt|וולט|תן ביס|10bis|מסעד|פיצ|בורגר|שווארמה|פלאפל|סושי|מקדונלד|ארומה|קפה|ארקפה|קופי|גרג|רולדין|מאפי|בייקרי|גלידה|cafe|coffee|סביח|חומוס|grill|גריל/i,'eatout'],
+ [/מרקט ?2 ?גו|market ?2 ?go|שופרסל|רמי לוי|ויקטורי|יוחננוף|מגה|טיב טעם|am:?pm|סופר|אושר עד|חצי חינם|קרפור|יינות ביתן|מחסני השוק|מכולת|מינימרקט|קצב|מעדני|ירקות|פירות|ירקן|שוק|משקאות/i,'super'],
  [/צעצוע|טויס|תינוקות|שילב|בייבי|גן ילדים|צהרון|מעון|חוג/i,'kids'],
- [/וואן אייטם|one item|בוטיק|זארה|zara|h&m|קסטרו|פוקס|\bfox\b|נייקי|nike|אדידס|adidas|terminal|asos|shein|aliexpress|amazon|ביגוד|הנעלה|גולף|רנואר|yesstyle|דרס|איקאה|ikea|ace|הום סנטר|כלי בית/i,'shopping'],
+ [/מרכזא|merkaza|מקס סטוק|max stock|מיקס סטוק|mix stock|בהצדעה|וואן אייטם|one item|בוטיק|זארה|zara|h&m|קסטרו|פוקס|\bfox\b|נייקי|nike|אדידס|adidas|terminal|asos|shein|aliexpress|amazon|ביגוד|הנעלה|גולף|רנואר|yesstyle|דרס|איקאה|ikea|ace|הום סנטר|כלי בית/i,'shopping'],
  [/סינמה|קולנוע|יס פלאנט|הופעה|כרטיסים|לונה|פארק|תיאטרון|מלון|hotel|booking|airbnb|אל על|elal|טיסה|ryanair|wizz/i,'fun'],
  [/תכשיט|מתנ|פרחים|שוברי/i,'gifts'],
  [/ארנונה|עיריית|ועד בית|שכירות|שכ"ד|מכבסה|ריהוט|טמבור/i,'home']
@@ -1075,10 +1086,12 @@ Extract EVERY purchase line.
 ${cats}
 - Use the household's past choices for a merchant when one exists:
 ${hints||'(none yet)'}
+- Use what you know about Israeli businesses and chains. Common traps: מרכזא / מקס סטוק / מיקס סטוק / וואן אייטם / ACE / הום סנטר are household-goods stores (shopping), not restaurants. Market 2 Go, AM:PM, Super Yuda, סופר אלונית, מינימרקט are grocery (super). דור אלון / סונול / פז / דלק / מנטה / Yellow / Ten stations are fuel (car). Wolt, תן ביס and restaurants are eatout. ביט / פייבוקס are transfers. משיכת מזומנים (cash withdrawal) is other.
+- unsure: true when you are not at least 80% sure which category a merchant belongs to (unknown shop name, a person's name, a generic name). Still give your best guess in cat. Never invent a confident answer.
 - Skip totals, previous balance, interest tables and bank debit lines.
 - card: the issuer only, one of: כאל, מקס, ישראכרד, אמריקן אקספרס, דיינרס.
 - statementTotal: total to be charged (סה"כ לחיוב) if printed, else null.
-Return ONLY JSON: {"card":"...","statementTotal":number|null,"transactions":[{"date":"YYYY-MM-DD","desc":"...","amount":0,"cat":"<id>","fixed":false,"credit":false,"installment":null}]}
+Return ONLY JSON: {"card":"...","statementTotal":number|null,"transactions":[{"date":"YYYY-MM-DD","desc":"...","amount":0,"cat":"<id>","fixed":false,"credit":false,"installment":null,"unsure":false}]}
 ${text?'\nStatement text (columns separated by |, right-to-left):\n'+text.slice(0,200000):'\nThe statement pages are attached as images.'}`;
 }
 function parseLocally(text){
@@ -1178,9 +1191,11 @@ async function calcAll(){
         if(isDup({...t,desc},amt,card,pool)){dups++;return;}
         let cat=state.cats.some(c=>c.id===t.cat&&c.type==='expense')?t.cat:null;
         const g=guessCat(desc);if(g&&(g.src==='history'||!cat||cat==='other'))cat=g.cat;
+        const hist=g&&g.src==='history';
+        const rv=!t.credit&&!hist&&(!!t.unsure||!cat||cat==='other');
         if(t.credit)cat='extra';if(!cat)cat='other';
         const mk=t.date.slice(0,7);(state.data[mk]=state.data[mk]||{rows:[],fx:[],files:[]});
-        state.data[mk].rows.push({id:uid(),date:t.date,desc,cat,who,amount:amt,fixed:!!t.fixed,note:card,src:fid});
+        state.data[mk].rows.push({id:uid(),date:t.date,desc,cat,who,amount:amt,fixed:!!t.fixed,note:card,src:fid,...(rv?{rv:true}:{})});
         months[mk]=(months[mk]||0)+1;added++;sumAdded+=(t.credit?-1:1)*amt;
       });
       const main=Object.entries(months).sort((a,b)=>b[1]-a[1])[0];
@@ -1227,6 +1242,7 @@ function renderImport(){
     <div class="sb"><span class="small">כפולות שדולגו</span><b>${NF.format(t.dups)}</b><span class="small">כבר היו במערכת</span></div>
     <div class="sb"><span class="small">קבצים</span><b>${t.files}</b><span class="small">${t.already?t.already+' כבר הועלו בעבר ודולגו':'נקראו'}${t.errors?' · '+t.errors+' לא נקראו':''}</span></div></div>
    ${t.lines.map(l=>`<div class="mover"><span>${esc(l.name)} · ${esc(l.card||'')} · ${esc(whoName(l.who))}</span><span class="small">${tn(l.added)}${l.month?' ל'+esc(mLabel(l.month)):''}${l.dups?' · '+l.dups+' כפולות':''}</span></div>`).join('')}
+   ${needsReview(ui.month).length?`<div class="row" style="margin-top:10px"><button class="spark" data-act="showReview">${needsReview(ui.month).length} תנועות מחכות לסיווג שלך ✨</button><span class="small">המערכת לא הייתה בטוחה בהן, אז היא לא ניחשה.</span></div>`:''}
    <p class="small" style="margin:10px 0 0">הכרטיס שויך לא נכון? משנים "של" ברשימת הקבצים. קטגוריה לא נכונה? לוחצים עליה בטבלה למטה.</p></div>`;
 }
 
@@ -1431,6 +1447,9 @@ const ACT={
   edit:b=>startEdit(b.dataset.id),
   del:b=>{const x=removeRow(b.dataset.id);if(!x)return;commit();toast('נמחק: '+x.row.desc+' · '+money(x.row.amount),{label:'בטל',fn:()=>{state.data[x.k].rows.splice(x.i,0,x.row);commit();}});},
   recat:b=>{ui.recat=b.dataset.id;renderRows();},
+  skip:b=>{const mk=ui.month,d=state.data[mk]||(state.data[mk]={rows:[],fx:[],files:[],skip:[]});d.skip=d.skip||[];const k=b.dataset.k,i=d.skip.indexOf(k);
+    if(i>=0)d.skip.splice(i,1);else d.skip.push(k);commit();},
+  showReview:()=>{ui.fCat='rv';ui.search='';$('#fSearch').value='';fillForm();renderRows();$('#rowsTable').scrollIntoView({behavior:'smooth',block:'start'});},
   showOther:()=>{ui.fCat='other';ui.search='';$('#fSearch').value='';fillForm();renderRows();$('#rowsTable').scrollIntoView({behavior:'smooth',block:'start'});},
   qDel:b=>{ui.queue=ui.queue.filter(q=>q.id!==b.dataset.id);renderFiles();},
   calc:()=>calcAll(),
