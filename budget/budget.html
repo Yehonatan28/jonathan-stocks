@@ -186,7 +186,7 @@ td.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-weight:50
 .cb .tr b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55;border-radius:1px}
 .cb .v{font-family:var(--f-num);font-size:13px;font-weight:600;white-space:nowrap;text-align:left;min-width:92px}
 .cb .v span{color:var(--muted);font-weight:500;font-size:12px}
-@media(max-width:560px){.cb{grid-template-columns:minmax(0,1fr) auto}.cb .tr{grid-column:1/-1;order:3}}
+@media(max-width:560px){.cb{grid-template-columns:minmax(0,1fr) auto}.cb .bars2{grid-column:1/-1;order:3}}
 .hl{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--grid);align-items:start}
 .hl:last-child{border-bottom:none}
 .hl .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:14px}
@@ -585,7 +585,7 @@ function monthSums(mk){
     const amt=+r.amount||0;byCat[r.cat]=(byCat[r.cat]||0)+amt;
     if(isInc(r)){income+=amt;return;}
     expense+=amt;byWho[r.who]=(byWho[r.who]||0)+amt;
-    const nk=r.note||'ללא';byNote[nk]=(byNote[nk]||0)+amt;
+    const nk=cardFromName(r.note)||r.note||'בלי כרטיס (קבועות וידני)';byNote[nk]=(byNote[nk]||0)+amt;
     byDay[dayOf(r.date)]=(byDay[dayOf(r.date)]||0)+amt;
     if(r.fixed)fixed+=amt;
   });
@@ -797,11 +797,12 @@ function renderHead(){
   let cmp;
   if(!p)cmp=k('','השוואה',esc(mName(ui.month)),pill('acc','חודש פתיחה'),'','זה החודש הראשון במעקב, אין לו חודש קודם להשוואה.');
   else{
-    /* a month in progress is compared with the same days of the previous month */
-    const base=s.isCur?sum(p.rows.filter(r=>!isInc(r)&&dayOf(r.date)<=s.elapsed),r=>r.amount):p.expense,d=s.expense-base;
-    if(!p.expCount||base<=0)cmp=k('','מול '+mName(pm),'—','אין נתונים','','אין הוצאות ב'+mName(pm)+' להשוואה.');
+    /* a month in progress is compared with the same days of the previous month, without the fixed items (they land on fixed dates) */
+    const varOf=(rows,upTo)=>sum(rows.filter(r=>!isInc(r)&&!r.tpl&&!r.fixed&&dayOf(r.date)<=upTo),r=>r.amount);
+    const cur=s.isCur?varOf(s.rows,s.elapsed):s.expense,base=s.isCur?varOf(p.rows,s.elapsed):p.expense,d=cur-base;
+    if(!p.expCount||base<=0||(s.isCur&&cur===0))cmp=k('','מול '+mName(pm),'—',s.isCur?'עוד מוקדם להשוות':'אין נתונים','','אין הוצאות ב'+mName(pm)+' להשוואה.');
     else cmp=k('','מול '+mName(pm)+(s.isCur?' (1–'+s.elapsed+')':''),(d<=0?'▼ ':'▲ ')+esc(money(Math.abs(d))),pill(d<=0?'good':'bad',(d<=0?'פחות':'יותר')+' הוצאות · '+Math.round(Math.abs(d)/base*100)+'%'),d>0?'bad':'good',
-      'ההוצאות של '+mn+' מול ההוצאות של '+mName(pm)+(s.isCur?', באותם ימים בחודש (1–'+s.elapsed+'), כי '+mn+' עוד לא נגמר':'')+'.');
+      'ההוצאות של '+mn+' מול ההוצאות של '+mName(pm)+(s.isCur?', באותם ימים בחודש (1–'+s.elapsed+') ובלי הקבועות, כי '+mn+' עוד לא נגמר':'')+'.');
   }
   $('#kpis').innerHTML=[
     k('inc','הכנסות',esc(money(s.income)),'<button class="pill good" data-act="openIncome">＋ הוספת הכנסה</button>'+(s.income?`<span>${tn(s.rows.filter(isInc).length)}</span>`:''),s.income?'good':'','כל ההכנסות שנכנסו ב'+mn+': המשכורות של ה-'+payday()+' ב'+mn+', מלגות, תגמולים והחזרים.'),
@@ -833,15 +834,15 @@ function fillForm(){
 }
 function renderSteps(){
   const mk=ui.month,s=monthSums(mk),pm=prevMonth(mk);
-  /* cards we expect: every issuer seen this month or last month */
+  /* cards we expect: every issuer that came from a statement in any tracked month */
   const issuer=r=>cardFromName(r.note)||'';
-  const seen=new Set([...rowsOf(mk),...(pm?rowsOf(pm):[])].filter(r=>!isInc(r)&&!r.tpl).map(issuer).filter(Boolean));
+  const seen=new Set(monthsWithData().flatMap(rowsOf).filter(r=>!isInc(r)&&r.src).map(issuer).filter(Boolean));
   const have=new Set(rowsOf(mk).filter(r=>!isInc(r)&&!r.tpl).map(issuer).filter(Boolean));
   ((state.data[mk]&&state.data[mk].files)||[]).forEach(f=>{const c=cardFromName(f.card);if(c){have.add(c);seen.add(c);}});
   const cards=[...seen];const cardsDone=cards.length?cards.every(c=>have.has(c)):rowsOf(mk).some(r=>!isInc(r)&&!r.tpl);
   const incWho=['a','b'].map(w=>({w,ok:rowsOf(mk).some(r=>isInc(r)&&r.who===w)}));
   const incDone=incWho.every(x=>x.ok);
-  const other=s.byCat.other||0,ovN=fixedOverlaps().filter(o=>o.hits.some(h=>h.m===mk)).length,sortDone=s.expCount>0&&other<=s.expense*.05&&!ovN;
+  const other=s.byCat.other||0,ovN=fixedOverlaps().filter(o=>o.hits.some(h=>h.m===mk)).length,sortDone=s.rows.some(r=>!isInc(r)&&!r.tpl)&&other<=s.expense*.05&&!ovN;
   const done=[cardsDone,incDone,sortDone].filter(Boolean).length;
   $('#uplSub').textContent=done===3?'הכל מוכן ל'+mLabel(mk)+' ✓':done+' מתוך 3 הושלמו';
   const step=(n,ok,title,body)=>`<div class="step${ok?' done':''}"><div class="sh"><span class="no">${ok?'✓':n}</span>${title}</div><div class="chips">${body}</div></div>`;
@@ -1003,10 +1004,10 @@ const KW=[
  [/\bbit\b|ביט|paybox|פייבוקס|pepper pay/i,'transfers'],
  [/ביטוח|הראל|מגדל|הפניקס|מנורה|איילון|כלל |ליברה|ישיר|הכשרה|עמלה|דמי כרטיס|ריבית|קנס|גביי|הלוואה|המוסד לביטוח/i,'finance'],
  [/פז |^פז|yellow|דלק|סונול|דור אלון|אלונית|תחנת|פנגו|pango|סלופארק|חניון|חניה|כביש 6|נתיב|gett|יאנגו|מונית|רב.?קו|רכבת|אגד|מוביט|moovit|מוסך|צמיגים|טסט|רישוי/i,'car'],
- [/wolt|וולט|תן ביס|10bis|מסעד|פיצ|בורגר|שווארמה|פלאפל|סושי|מקדונלד|ארומה|קפה|ארקפה|קופי|גרג|רולדין|מאפי|בייקרי|גלידה|cafe|coffee|סביח|חומוס|grill|גריל/i,'eatout'],
+ [/ירכא|merkaza|wolt|וולט|תן ביס|10bis|מסעד|פיצ|בורגר|שווארמה|פלאפל|סושי|מקדונלד|ארומה|קפה|ארקפה|קופי|גרג|רולדין|מאפי|בייקרי|גלידה|cafe|coffee|סביח|חומוס|grill|גריל/i,'eatout'],
  [/שופרסל|רמי לוי|ויקטורי|יוחננוף|מגה|טיב טעם|am:?pm|סופר|אושר עד|חצי חינם|קרפור|יינות ביתן|מחסני השוק|מכולת|מינימרקט|קצב|מעדני|ירקות|פירות|ירקן|שוק|משקאות/i,'super'],
  [/צעצוע|טויס|תינוקות|שילב|בייבי|גן ילדים|צהרון|מעון|חוג/i,'kids'],
- [/זארה|zara|h&m|קסטרו|פוקס|\bfox\b|נייקי|nike|אדידס|adidas|terminal|asos|shein|aliexpress|amazon|ביגוד|הנעלה|גולף|רנואר|yesstyle|דרס|איקאה|ikea|ace|הום סנטר|כלי בית/i,'shopping'],
+ [/וואן אייטם|one item|בוטיק|זארה|zara|h&m|קסטרו|פוקס|\bfox\b|נייקי|nike|אדידס|adidas|terminal|asos|shein|aliexpress|amazon|ביגוד|הנעלה|גולף|רנואר|yesstyle|דרס|איקאה|ikea|ace|הום סנטר|כלי בית/i,'shopping'],
  [/סינמה|קולנוע|יס פלאנט|הופעה|כרטיסים|לונה|פארק|תיאטרון|מלון|hotel|booking|airbnb|אל על|elal|טיסה|ryanair|wizz/i,'fun'],
  [/תכשיט|מתנ|פרחים|שוברי/i,'gifts'],
  [/ארנונה|עיריית|ועד בית|שכירות|שכ"ד|מכבסה|ריהוט|טמבור/i,'home']
@@ -1167,6 +1168,11 @@ async function calcAll(){
       const tx=(Array.isArray(res.transactions)?res.transactions:[]).filter(t=>t&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&+t.amount>0);
       if(!tx.length)throw {code:'empty'};
       let added=0,dups=0,sumAdded=0;
+      /* the statement's month is where most of its purchases fall; installments and old postings are charged in it too */
+      const mc={};tx.forEach(t=>{const m=t.date.slice(0,7);mc[m]=(mc[m]||0)+1;});
+      const stMonth=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0][0];
+      tx.forEach(t=>{const m=t.date.slice(0,7);
+        if(m<stMonth&&(t.installment||m<addM(stMonth,-1))){t.date=stMonth+'-'+pad(Math.min(dayOf(t.date),dimOf(stMonth)));if(t.installment&&!/תשלום/.test(t.desc||''))t.desc=(t.desc||'')+' (תשלום '+t.installment+')';}});
       tx.forEach(t=>{
         const desc=String(t.desc||'').trim()||'ללא תיאור',amt=Math.round(+t.amount*100)/100;
         if(isDup({...t,desc},amt,card,pool)){dups++;return;}
