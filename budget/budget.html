@@ -409,7 +409,8 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
     <li><b>השורה העליונה:</b> הכנסות, הוצאות, מאזן, כמה נשאר בתקציב, והשוואה לחודש הקודם. מעבר עם העכבר על כל מספר מסביר איך הוא מחושב.</li>
     <li><b>מאזן בפלוס</b> = המשכורות של החודש כיסו את כל הקניות שלו, ונשאר כסף. במינוס = הוצאתם יותר ממה שנכנס.</li>
     <li><b>החודש:</b> לאן הלך הכסף לפי קטגוריה, כולל פס אפור דק של החודש הקודם וחץ ▲ אדום (יותר) או ▼ ירוק (פחות). מתחת: הוצאות לפי יום וכל התנועות.</li>
-    <li><b>תקציב:</b> קובעים סכום לחודש לכל קטגוריה, או לוחצים "מלא תקציב לפי מה שהוצאנו בפועל". למטה מגדירים <b>קבועות כל חודש</b> (שכירות, ועד, ארנונה) והן נכנסות לבד לכל חודש.</li>
+    <li><b>תקציב:</b> קובעים סכום לחודש לכל קטגוריה, או לוחצים "מלא תקציב לפי מה שהוצאנו בפועל". למטה מגדירים <b>קבועות כל חודש</b>, רק מה שלא מגיע בפירוט האשראי (שכירות, ועד, ארנונה, הוראות קבע מהבנק). לכל קבועה יש "מחודש" ו"עד". שינוי סכום שואל מאיזה חודש הוא חל, וחודשים קודמים נשארים עם הסכום שבאמת שולם.</li>
+    <li><b>חודש חריג</b> (מעבר דירה, חצי חודש שכירות): רושמים את מה שבאמת יצא באותו חודש כהוצאה רגילה בכפתור "＋ הכנסה / הוצאה", בלי לסמן "קבוע", ומתחילים את הקבועה מהחודש המלא הראשון.</li>
     <li><b>השוואה:</b> חודש מול החודש שלפניו: סך הכל, כל קטגוריה, מה עלה ומה ירד, לפי מי ולפי כרטיס.</li>
     <li><b>מגמה:</b> כל החודשים ברצף: הכנסות מול הוצאות, כמה נשאר מצטבר, וגרף קטן לכל קטגוריה.</li>
    </ul>
@@ -549,7 +550,7 @@ function applyFixed(){
   const st=trackStart(),end=[curMonth(),ui.month].sort().pop();let ch=false;
   for(let m=st;m<=end;m=addM(m,1)){
     items.forEach(it=>{
-      if((it.from||st)>m)return;const d=state.data[m];if(d&&(d.fx||[]).includes(it.id))return;
+      if((it.from||st)>m||(it.to&&m>it.to))return;const d=state.data[m];if(d&&(d.fx||[]).includes(it.id))return;
       const dm=state.data[m]=d||{rows:[],fx:[],files:[]};dm.fx=dm.fx||[];
       dm.rows.push({id:uid(),date:m+'-'+pad(Math.min(+it.day||1,dimOf(m))),desc:it.desc,cat:it.cat,who:it.who||'s',amount:+it.amount||0,fixed:true,note:it.note||'',tpl:it.id});
       dm.fx.push(it.id);ch=true;});
@@ -557,6 +558,24 @@ function applyFixed(){
   return ch;
 }
 
+/* remove the automatic rows of one recurring item from the months that match */
+function removeTplRows(id,pred){
+  Object.keys(state.data).forEach(m=>{if(!pred(m))return;const d=state.data[m];
+    d.rows=d.rows.filter(r=>r.tpl!==id);d.fx=(d.fx||[]).filter(x=>x!==id);});
+}
+/* a recurring item that the card statement already brings in the same month */
+function fixedOverlaps(){
+  const out=[];
+  (state.settings.fixed||[]).forEach(it=>{
+    const hits=[];
+    Object.keys(state.data).sort().forEach(m=>{
+      const t=rowsOf(m).find(r=>r.tpl===it.id);if(!t)return;
+      const s=rowsOf(m).find(r=>r.src&&!isInc(r)&&(sameMerchant(r.desc,t.desc)||(r.cat===t.cat&&Math.abs(r.amount-t.amount)<=Math.max(3,t.amount*.15))));
+      if(s)hits.push({m,s});});
+    if(hits.length)out.push({it,hits});
+  });
+  return out;
+}
 const memo=new Map();
 function monthSums(mk){
   if(memo.has(mk))return memo.get(mk);
@@ -822,14 +841,14 @@ function renderSteps(){
   const cards=[...seen];const cardsDone=cards.length?cards.every(c=>have.has(c)):rowsOf(mk).some(r=>!isInc(r)&&!r.tpl);
   const incWho=['a','b'].map(w=>({w,ok:rowsOf(mk).some(r=>isInc(r)&&r.who===w)}));
   const incDone=incWho.every(x=>x.ok);
-  const other=s.byCat.other||0,sortDone=s.expCount>0&&other<=s.expense*.05;
+  const other=s.byCat.other||0,ovN=fixedOverlaps().filter(o=>o.hits.some(h=>h.m===mk)).length,sortDone=s.expCount>0&&other<=s.expense*.05&&!ovN;
   const done=[cardsDone,incDone,sortDone].filter(Boolean).length;
   $('#uplSub').textContent=done===3?'הכל מוכן ל'+mLabel(mk)+' ✓':done+' מתוך 3 הושלמו';
   const step=(n,ok,title,body)=>`<div class="step${ok?' done':''}"><div class="sh"><span class="no">${ok?'✓':n}</span>${title}</div><div class="chips">${body}</div></div>`;
   $('#steps').innerHTML=
     step(1,cardsDone,'העלאת פירוטי האשראי',cards.length?cards.map(c=>`<span class="tick${have.has(c)?' ok':''}">${have.has(c)?'✓':'○'} ${esc(c)}</span>`).join(''):'<span class="small">גררו את הפירוטים לתיבה ולחצו "חשב"</span>')+
     step(2,incDone,'הכנסות של '+mName(mk),incWho.map(x=>x.ok?`<span class="tick ok">✓ ${esc(whoName(x.w))}</span>`:`<button class="tick" data-act="openIncome" data-who="${x.w}">＋ ${esc(whoName(x.w))}</button>`).join('')+'<button class="tick" data-act="openIncome">＋ הכנסה אחרת</button>')+
-    step(3,sortDone,'בדיקת סיווג',s.expCount?(sortDone?'<span class="tick ok">✓ הכל מסווג</span>':`<button class="tick" data-act="showOther">${N(other)} ₪ ב"שונות" · לסווג</button>`):'<span class="small">אחרי ההעלאה</span>');
+    step(3,sortDone,'בדיקת סיווג',s.expCount?(sortDone?'<span class="tick ok">✓ הכל מסווג</span>':(other>s.expense*.05?`<button class="tick" data-act="showOther">${N(other)} ₪ ב"שונות" · לסווג</button>`:'')+(ovN?`<button class="tick" data-tabgo="budget" style="color:var(--bad)">${ovN===1?'קבועה אחת נספרת':ovN+' קבועות נספרות'} פעמיים · לתקן</button>`:'')):'<span class="small">אחרי ההעלאה</span>');
 }
 function renderMonth(){
   const s=monthSums(ui.month);renderSteps();
@@ -1082,8 +1101,9 @@ const sameMerchant=(a,b)=>{const x=descKey(a),y=descKey(b);if(!x||!y)return fals
 function isDup(t,amt,card,pool){
   const td=Date.parse(t.date+'T12:00:00');
   return pool.some(r=>{
+    if(r.tpl&&r.date.slice(0,7)===t.date.slice(0,7)&&sameMerchant(r.desc,t.desc))return true;
     if(Math.abs(r.amount-amt)>=0.01)return false;
-    if(r.tpl)return r.date.slice(0,7)===t.date.slice(0,7);
+    if(r.tpl)return r.date.slice(0,7)===t.date.slice(0,7)&&(Math.abs(r.amount-amt)<0.01);
     const dd=Math.abs(Date.parse(r.date+'T12:00:00')-td)/864e5;
     if(dd>2.5)return false;
     return sameMerchant(r.desc,t.desc)||(dd<0.5&&card&&cardFromName(r.note)===cardFromName(card));
@@ -1225,36 +1245,73 @@ function renderBudget(){
    ${fixedSheet()}`;
 }
 function fixedSheet(){
-  const items=state.settings.fixed||[],tot=sum(items.filter(i=>catById(i.cat).type!=='income'),i=>+i.amount||0);
+  const items=state.settings.fixed||[],mk=ui.month;
+  const active=it=>(it.from||trackStart())<=mk&&(!it.to||it.to>=mk);
+  const tot=sum(items.filter(i=>active(i)&&catById(i.cat).type!=='income'),i=>+i.amount||0);
   const wo=sel=>WHO.map(w=>`<option value="${w}"${w===sel?' selected':''}>${esc(whoName(w))}</option>`).join('');
-  const rows=items.map(it=>`<tr>
-    <td><input data-fx="desc" data-id="${esc(it.id)}" value="${esc(it.desc)}" aria-label="תיאור" style="min-width:120px"></td>
+  const ov=fixedOverlaps();
+  const rows=items.map(it=>{const on=active(it),ended=it.to&&it.to<mk;
+    return `<tr style="${on?'':'opacity:.5'}">
+    <td><input data-fx="desc" data-id="${esc(it.id)}" value="${esc(it.desc)}" aria-label="תיאור" style="min-width:110px"></td>
     <td><select data-fx="cat" data-id="${esc(it.id)}" aria-label="קטגוריה">${catOptions(it.cat)}</select></td>
-    <td style="width:110px"><input type="number" min="0" data-fx="amount" data-id="${esc(it.id)}" value="${+it.amount||''}" aria-label="סכום"></td>
+    <td style="width:100px"><input type="number" min="0" data-fx="amount" data-id="${esc(it.id)}" value="${+it.amount||''}" aria-label="סכום"></td>
     <td><select data-fx="who" data-id="${esc(it.id)}" aria-label="של מי">${wo(it.who)}</select></td>
-    <td style="width:76px"><input type="number" min="1" max="31" data-fx="day" data-id="${esc(it.id)}" value="${+it.day||1}" aria-label="יום בחודש"></td>
-    <td><button class="ib sm" data-act="fxDel" data-id="${esc(it.id)}" aria-label="הסרה" title="הסרה מהקבועות">✕</button></td></tr>`).join('');
+    <td style="width:64px"><input type="number" min="1" max="31" data-fx="day" data-id="${esc(it.id)}" value="${+it.day||1}" aria-label="יום בחודש"></td>
+    <td style="width:150px"><input type="month" data-fx="from" data-id="${esc(it.id)}" value="${esc(it.from||trackStart())}" min="${trackStart()}" aria-label="מחודש"></td>
+    <td style="width:150px"><input type="month" data-fx="to" data-id="${esc(it.id)}" value="${esc(it.to||'')}" aria-label="עד חודש" title="ריק = בלי סוף"></td>
+    <td style="white-space:nowrap">${ended?'<span class="tag">הסתיים</span>':''}<button class="ib sm" data-act="fxDel" data-id="${esc(it.id)}" aria-label="הסרה" title="הפסקה או מחיקה">✕</button></td></tr>`;}).join('');
   const have=new Set(items.map(i=>i.desc));
-  return `<div class="sheet"><h2>קבועות כל חודש <span class="sub">${items.length?items.length+' פריטים · '+M(tot)+' בחודש':'עוד ריק'}</span></h2>
-   <p class="small" style="margin:-4px 0 10px">מה שרשום כאן נכנס לבד לכל חודש (שכירות, ועד, משכורת קבועה…). שינוי סכום חל מהחודש הנוכחי והלאה.</p>
-   ${items.length?`<div class="tw free" style="margin-bottom:10px"><table><thead><tr><th>תיאור</th><th>קטגוריה</th><th>סכום</th><th>של מי</th><th>יום</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:''}
+  return `<div class="sheet" id="fixedSheet"><h2>קבועות כל חודש <span class="sub">${items.length?'ב'+esc(mLabel(mk))+': '+M(tot):'עוד ריק'}</span></h2>
+   <p class="small" style="margin:-4px 0 10px">כאן רושמים רק מה ש<b>לא</b> מגיע בפירוט האשראי: שכירות, ועד בית, ארנונה, הוראות קבע מהבנק (כמו לימודים). מנויים שמחויבים באשראי (נטפליקס, אפל, Claude) כבר מגיעים מהפירוטים, ואין לרשום אותם גם כאן.
+   כל קבועה נרשמת בכל חודש מ<b>"מחודש"</b> ועד <b>"עד"</b> (ריק = בלי סוף). שינוי סכום שואל מאיזה חודש הוא חל, כך שחודשים קודמים נשארים עם הסכום שבאמת שולם.</p>
+   ${ov.length?`<div class="note bad" style="margin-bottom:10px;display:block"><b>נמצאו ${ov.length===1?'קבועה אחת שמופיעה':ov.length+' קבועות שמופיעות'} גם בפירוט האשראי, כלומר נספרות פעמיים:</b>
+     ${ov.map(o=>`<div class="mover"><span>${esc(o.it.desc)} (${M(o.it.amount)}) · בפירוט: ${o.hits.map(h=>esc(h.s.desc)+' '+N(h.s.amount)+' ב'+esc(mName(h.m))).join(', ')}</span><button class="btn sm danger" data-act="fxRemoveDup" data-id="${esc(o.it.id)}">הסר את הקבועה</button></div>`).join('')}
+     <span class="small">הסרה מוחקת את הקבועה מכל החודשים. החיובים מהפירוט נשארים.</span></div>`:''}
+   ${items.length?`<div class="tw free" style="margin-bottom:10px"><table><thead><tr><th>תיאור</th><th>קטגוריה</th><th>סכום</th><th>של מי</th><th>יום</th><th>מחודש</th><th>עד</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:''}
    <div class="chips">${FX_SUGG.filter(([n])=>!have.has(n)).map(([n,c])=>`<button type="button" class="chip" data-act="fxSugg" data-n="${esc(n)}" data-c="${c}">＋ ${esc(n)}</button>`).join('')}</div>
    <div class="row" style="margin-top:10px;align-items:end">
-    <div class="f" style="flex:1 1 150px"><label for="fxDesc">תיאור</label><input id="fxDesc" placeholder="למשל: שכירות"></div>
-    <div class="f" style="flex:1 1 150px"><label for="fxCat">קטגוריה</label><select id="fxCat">${catOptions('home')}</select></div>
-    <div class="f" style="width:110px"><label for="fxAmount">סכום</label><input id="fxAmount" type="number" min="0" inputmode="decimal"></div>
-    <div class="f" style="width:110px"><label for="fxWho">של מי</label><select id="fxWho">${wo('s')}</select></div>
-    <div class="f" style="width:76px"><label for="fxDay">יום</label><input id="fxDay" type="number" min="1" max="31" value="1"></div>
+    <div class="f" style="flex:1 1 140px"><label for="fxDesc">תיאור</label><input id="fxDesc" placeholder="למשל: שכירות"></div>
+    <div class="f" style="flex:1 1 140px"><label for="fxCat">קטגוריה</label><select id="fxCat">${catOptions('home')}</select></div>
+    <div class="f" style="width:100px"><label for="fxAmount">סכום</label><input id="fxAmount" type="number" min="0" inputmode="decimal"></div>
+    <div class="f" style="width:100px"><label for="fxWho">של מי</label><select id="fxWho">${wo('s')}</select></div>
+    <div class="f" style="width:64px"><label for="fxDay">יום</label><input id="fxDay" type="number" min="1" max="31" value="1"></div>
+    <div class="f" style="width:150px"><label for="fxFromNew">מחודש</label><input id="fxFromNew" type="month" value="${mk}" min="${trackStart()}"></div>
     <button class="btn pri" data-act="fxAdd">הוסף</button></div></div>`;
 }
-function fxEdit(t){
-  const it=(state.settings.fixed||[]).find(x=>x.id===t.dataset.id);if(!it)return;const f=t.dataset.fx;
-  if(f==='amount')it.amount=Math.max(0,Math.round((+t.value||0)*100)/100);
-  else if(f==='day')it.day=Math.min(31,Math.max(1,parseInt(t.value)||1));
+async function fxEdit(t){
+  const L=state.settings.fixed||[],idx=L.findIndex(x=>x.id===t.dataset.id),it=L[idx];if(!it)return;const f=t.dataset.fx;
+  if(f==='amount'){
+    const val=Math.max(0,Math.round((+t.value||0)*100)/100);if(val===+it.amount)return;
+    const from=it.from||trackStart(),end=[curMonth(),ui.month].sort().pop(),opts=[];
+    for(let m=from;m<=end&&(!it.to||m<=it.to);m=addM(m,1))opts.push(m);
+    let pick=from;
+    if(opts.length>1){
+      const def=opts.includes(ui.month)&&ui.month!==from?ui.month:opts[opts.length-1];
+      const v=await modal({title:'מאיזה חודש הסכום החדש?',body:`<p style="margin:0 0 8px"><b>${esc(it.desc)}</b>: ${esc(money(it.amount))} ← ${esc(money(val))}</p>
+        <select id="fxPick">${opts.map(m=>`<option value="${m}"${m===def?' selected':''}>מ${esc(mLabel(m))}${m===from?' (תיקון: גם כל החודשים הקודמים)':''}</option>`).join('')}</select>
+        <p class="small" style="margin:8px 0 0">החודשים שלפני החודש שבוחרים יישארו עם ${esc(money(it.amount))}.</p>`,
+        buttons:[{label:'עדכן',value:'ok',cls:'pri'},{label:'ביטול',value:null,cls:'ghost'}]});
+      if(v!=='ok'){render();return;}
+      pick=($('#fxPick')||{}).value||from;
+    }
+    if(pick<=from){it.amount=val;Object.keys(state.data).forEach(m=>rowsOf(m).forEach(r=>{if(r.tpl===it.id)r.amount=val;}));}
+    else{const nu={...it,id:uid(),amount:val,from:pick};it.to=addM(pick,-1);removeTplRows(it.id,m=>m>=pick);L.splice(idx+1,0,nu);}
+    commit();toast(it.desc+': '+money(val)+' מ'+mLabel(pick>from?pick:from));return;
+  }
+  if(f==='from'){
+    if(!/^\d{4}-\d{2}$/.test(t.value)){render();return;}
+    const v=t.value<trackStart()?trackStart():t.value;if(it.to&&v>it.to){toast('"מחודש" לא יכול להיות אחרי "עד"');render();return;}
+    it.from=v;removeTplRows(it.id,m=>m<v);commit();toast(it.desc+' נרשמת מ'+mLabel(v));return;
+  }
+  if(f==='to'){
+    if(!t.value){delete it.to;commit();toast(it.desc+' בלי תאריך סיום');return;}
+    if(t.value<(it.from||trackStart())){toast('"עד" לא יכול להיות לפני "מחודש"');render();return;}
+    it.to=t.value;removeTplRows(it.id,m=>m>t.value);commit();toast(it.desc+' עד '+mLabel(t.value));return;
+  }
+  if(f==='day')it.day=Math.min(31,Math.max(1,parseInt(t.value)||1));
   else if(f==='desc')it.desc=t.value.trim()||it.desc;else it[f]=t.value;
-  const cm=curMonth();
-  Object.keys(state.data).filter(m=>m>=cm).forEach(m=>rowsOf(m).forEach(r=>{if(r.tpl!==it.id)return;
-    r.desc=it.desc;r.cat=it.cat;r.who=it.who;r.amount=+it.amount||0;r.date=m+'-'+pad(Math.min(+it.day||1,dimOf(m)));}));
+  Object.keys(state.data).forEach(m=>rowsOf(m).forEach(r=>{if(r.tpl!==it.id)return;
+    r.desc=it.desc;r.cat=it.cat;r.who=it.who;r.date=m+'-'+pad(Math.min(+it.day||1,dimOf(m)));}));
   commit();
 }
 
@@ -1381,10 +1438,17 @@ const ACT={
   fxSugg:b=>{$('#fxDesc').value=b.dataset.n;$('#fxCat').value=b.dataset.c;$('#fxAmount').focus();},
   fxAdd:()=>{const desc=$('#fxDesc').value.trim(),amount=Math.round((+$('#fxAmount').value||0)*100)/100;
     if(!desc||!(amount>0)){toast('צריך תיאור וסכום');(desc?$('#fxAmount'):$('#fxDesc')).focus();return;}
-    state.settings.fixed.push({id:uid(),desc,cat:$('#fxCat').value,amount,who:$('#fxWho').value,day:Math.min(31,Math.max(1,parseInt($('#fxDay').value)||1)),note:'',from:trackStart()});
-    commit();fillForm();toast(desc+' נוסף לקבועות ונרשם בכל חודש');},
-  fxDel:b=>{const L=state.settings.fixed,i=L.findIndex(x=>x.id===b.dataset.id);if(i<0)return;const it=L.splice(i,1)[0];
-    commit();toast('"'+it.desc+'" הוסר מהקבועות. מה שכבר נרשם נשאר.',{label:'בטל',fn:()=>{L.splice(i,0,it);commit();}});},
+    const from=/^\d{4}-\d{2}$/.test($('#fxFromNew').value)&&$('#fxFromNew').value>=trackStart()?$('#fxFromNew').value:ui.month;
+    state.settings.fixed.push({id:uid(),desc,cat:$('#fxCat').value,amount,who:$('#fxWho').value,day:Math.min(31,Math.max(1,parseInt($('#fxDay').value)||1)),note:'',from});
+    commit();fillForm();toast(desc+' נוסף לקבועות, מ'+mLabel(from));},
+  fxRemoveDup:b=>{const L=state.settings.fixed,i=L.findIndex(x=>x.id===b.dataset.id);if(i<0)return;const it=L.splice(i,1)[0];
+    removeTplRows(it.id,()=>true);commit();toast('"'+it.desc+'" הוסר מהקבועות. החיובים מהפירוט נשארו.');},
+  fxDel:async b=>{const L=state.settings.fixed,i=L.findIndex(x=>x.id===b.dataset.id);if(i<0)return;const it=L[i],from=it.from||trackStart();
+    const canStop=ui.month>from;
+    const v=await modal({title:esc(it.desc),body:`<ul style="margin:0;padding-inline-start:18px;font-size:13.5px;line-height:1.8">${canStop?`<li><b>הפסקה מ${esc(mLabel(ui.month))}</b>: לא תירשם מ${esc(mName(ui.month))} והלאה. החודשים הקודמים נשארים.</li>`:''}<li><b>מחיקה מכל החודשים</b>: למשל אם היא נספרה פעמיים או נרשמה בטעות.</li></ul>`,
+      buttons:[...(canStop?[{label:'הפסקה מ'+mLabel(ui.month),value:'stop',cls:'pri'}]:[]),{label:'מחיקה מכל החודשים',value:'all',cls:'danger'},{label:'ביטול',value:null,cls:'ghost'}]});
+    if(v==='stop'){it.to=addM(ui.month,-1);removeTplRows(it.id,m=>m>=ui.month);commit();toast(it.desc+' הופסק מ'+mLabel(ui.month));}
+    else if(v==='all'){L.splice(i,1);removeTplRows(it.id,()=>true);commit();toast(it.desc+' נמחק מכל החודשים');}},
   resetAsk:async()=>{
     const v=await modal({title:'איפוס',body:`<p style="margin:0 0 8px">מה לאפס?</p><ul style="margin:0;padding-inline-start:18px;font-size:13.5px;line-height:1.7"><li><b>איפוס ${esc(mLabel(ui.month))}</b>: מוחק את כל התנועות והקבצים של החודש הזה. הקבועות נכנסות מחדש.</li><li><b>איפוס הכל</b>: מוחק את כל התנועות, הקבצים, הקבועות והתקציבים בכל החודשים. נשארים רק השמות והחודש הראשון.</li></ul>`,
       buttons:[{label:'איפוס '+mLabel(ui.month),value:'month',cls:'danger'},{label:'איפוס הכל',value:'all',cls:'danger'},{label:'ביטול',value:null,cls:'ghost'}]});
