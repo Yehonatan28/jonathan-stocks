@@ -285,6 +285,15 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
 .help h4:first-child{margin-top:0}
 .help p,.help li{font-size:14px;line-height:1.7;color:var(--ink)}
 .help ol,.help ul{margin:0;padding-inline-start:20px;display:grid;gap:4px}
+.upcol{display:grid;gap:10px;align-content:start}
+.calc{font-size:17px;padding:13px;border-radius:12px;display:flex;justify-content:center;align-items:center;gap:8px}
+.btn.pri.calc:disabled,.btn.pri.calc:disabled:hover{background:var(--sunk);border-color:var(--line);color:var(--muted);opacity:1;transform:none}
+.file .who{width:auto;padding:2px 6px;font-size:12px;border-radius:7px}
+.sumgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.sumgrid .sb{border-radius:12px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line)}
+.sumgrid .sb b{display:block;font-family:var(--f-num);font-size:24px}
+.sumgrid .sb.ok{background:var(--good-soft)}
+@media(max-width:560px){.sumgrid{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -326,12 +335,15 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
         <h2>מה עושים החודש <span class="sub" id="uplSub"></span></h2>
         <div class="steps" id="steps"></div>
         <div class="uplgrid">
+          <div class="upcol">
           <label class="drop" id="drop" for="impFile">
             <span class="ic">⇪</span>
             <b>גררו לכאן עד 5 קבצים</b>
-            <span>או לחצו לבחירה · PDF, JPG או PNG · אפשר גם אחד אחרי השני</span>
+            <span>או לחצו לבחירה · PDF, JPG או PNG · ואז לוחצים "חשב"</span>
             <input type="file" id="impFile" multiple accept="application/pdf,.pdf,image/png,image/jpeg,image/webp" hidden>
           </label>
+          <button class="btn pri calc" id="calcBtn" data-act="calc" disabled>חשב</button>
+          </div>
           <div class="files" id="files"></div>
         </div>
       </div>
@@ -387,8 +399,8 @@ button.tick{cursor:pointer}button.tick:hover{border-color:var(--accent);color:va
    <h4>פעם בחודש, ב-1 עד 4 לחודש</h4>
    <ol>
     <li>פותחים את המערכת. בשבוע הראשון של החודש היא נפתחת לבד על החודש שנגמר. בראש הטאב "החודש" יש 3 צעדים, וכל צעד מקבל ✓ כשהוא מוכן.</li>
-    <li><b>פירוטי אשראי:</b> מורידים מאתר כל חברת אשראי את הפירוט של החודש שנגמר (PDF, או צילום מסך) וגוררים לתיבה. עד 5 קבצים בבת אחת, או אחד אחרי השני. המערכת מזהה את הכרטיס ואת מי הוא שייך, ומסווגת כל קנייה לבד.</li>
-    <li>בטבלת "בדיקה לפני הוספה" עוברים במבט, מתקנים קטגוריה אם צריך ולוחצים "הוסף". תיקון נלמד לפעם הבאה. קובץ שכבר הועלה מזוהה, ושום תנועה לא נספרת פעמיים.</li>
+    <li><b>פירוטי אשראי:</b> מורידים מאתר כל חברת אשראי את הפירוט של החודש שנגמר (PDF, או צילום מסך) וגוררים לתיבה, עד 5 קבצים. הם מחכים ברשימה. לוחצים <b>"חשב"</b>, והמערכת קוראת את כולם, מזהה את הכרטיס ואת מי הוא שייך, מסווגת כל קנייה ושומרת. בסוף מופיע סיכום: כמה נוספו וכמה כפולות דולגו.</li>
+    <li>קובץ שכבר הועלה מזוהה ולא נספר שוב, וגם תנועה שכבר קיימת (אותו סכום, אותו בית עסק, עד יומיים הבדל) מדולגת. אם כרטיס שויך לאדם הלא נכון, משנים "של" ברשימת הקבצים. קטגוריה לא נכונה מתקנים בלחיצה עליה בטבלה, והמערכת זוכרת.</li>
     <li><b>הכנסות:</b> בצעד 2 לוחצים על השם (יהונתן / רוני) ומקלידים את המשכורת שנכנסה ב-10 של אותו חודש. החודש כבר נבחר נכון. מלגה, מילואים, מענק או החזר מוסיפים ב"הכנסה אחרת". אפשר גם להזין משכורת ביום שהיא נכנסת.</li>
     <li><b>סיווג:</b> אם נשאר כסף ב"שונות", לוחצים על הצעד והטבלה מציגה רק אותן. לוחצים על שם הקטגוריה בשורה ובוחרים. אפשר לעדכן בבת אחת את כל התנועות מאותו בית עסק.</li>
    </ol>
@@ -506,7 +518,7 @@ function normalize(o){
         return {id:String(r.id||uid()),date:String(r.date).slice(0,10),desc:r.desc||'',cat,who:['a','b','s'].includes(r.who)?r.who:'s',
           amount:Math.round((+r.amount||0)*100)/100,fixed:!!r.fixed,note:r.note||'',...(r.tpl?{tpl:String(r.tpl)}:{}),...(r.src?{src:String(r.src)}:{})};}),
       fx:Array.isArray(m.fx)?m.fx.filter(x=>typeof x==='string'):[],
-      files:Array.isArray(m.files)?m.files.filter(f=>f&&f.id&&f.name).map(f=>({id:String(f.id),name:String(f.name),card:f.card||'',who:f.who||'a',n:+f.n||0,total:+f.total||0,at:f.at||''})):[]};
+      files:Array.isArray(m.files)?m.files.filter(f=>f&&f.id&&f.name).map(f=>({id:String(f.id),name:String(f.name),card:f.card||'',who:f.who||'a',n:+f.n||0,total:+f.total||0,at:f.at||'',hash:f.hash||''})):[]};
   });
   return {v:2,settings:s,cats,data,cloud:!!st.cloud};
 }
@@ -815,7 +827,7 @@ function renderSteps(){
   $('#uplSub').textContent=done===3?'הכל מוכן ל'+mLabel(mk)+' ✓':done+' מתוך 3 הושלמו';
   const step=(n,ok,title,body)=>`<div class="step${ok?' done':''}"><div class="sh"><span class="no">${ok?'✓':n}</span>${title}</div><div class="chips">${body}</div></div>`;
   $('#steps').innerHTML=
-    step(1,cardsDone,'העלאת פירוטי האשראי',cards.length?cards.map(c=>`<span class="tick${have.has(c)?' ok':''}">${have.has(c)?'✓':'○'} ${esc(c)}</span>`).join(''):'<span class="small">גררו את הפירוטים לתיבה למטה</span>')+
+    step(1,cardsDone,'העלאת פירוטי האשראי',cards.length?cards.map(c=>`<span class="tick${have.has(c)?' ok':''}">${have.has(c)?'✓':'○'} ${esc(c)}</span>`).join(''):'<span class="small">גררו את הפירוטים לתיבה ולחצו "חשב"</span>')+
     step(2,incDone,'הכנסות של '+mName(mk),incWho.map(x=>x.ok?`<span class="tick ok">✓ ${esc(whoName(x.w))}</span>`:`<button class="tick" data-act="openIncome" data-who="${x.w}">＋ ${esc(whoName(x.w))}</button>`).join('')+'<button class="tick" data-act="openIncome">＋ הכנסה אחרת</button>')+
     step(3,sortDone,'בדיקת סיווג',s.expCount?(sortDone?'<span class="tick ok">✓ הכל מסווג</span>':`<button class="tick" data-act="showOther">${N(other)} ₪ ב"שונות" · לסווג</button>`):'<span class="small">אחרי ההעלאה</span>');
 }
@@ -1063,135 +1075,133 @@ function parseLocally(text){
   });
   return {transactions:out,statementTotal:null,card:cardFromName(text.slice(0,3000))};
 }
-function buildRows(res){
-  const tx=(res&&Array.isArray(res.transactions)?res.transactions:[]).filter(t=>t&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&+t.amount>0);
-  const existing=allRows(),pendingRows=ui.queue.flatMap(q=>q.rows||[]);
-  return tx.map(t=>{
-    const desc=String(t.desc||'').trim()||'ללא תיאור',amt=Math.round(+t.amount*100)/100;
-    let cat=state.cats.some(c=>c.id===t.cat&&c.type==='expense')?t.cat:null;
-    const g=guessCat(desc);if(g&&(g.src==='history'||!cat||cat==='other'))cat=g.cat;
-    if(t.credit)cat='extra';if(!cat)cat='other';
-    const same=r=>r.date===t.date&&Math.abs(r.amount-amt)<0.01;
-    const dup=existing.some(r=>same(r)||(r.tpl&&r.date.slice(0,7)===t.date.slice(0,7)&&Math.abs(r.amount-amt)<0.01))||pendingRows.some(same);
-    return {on:!dup,dup,date:t.date,desc,cat,amount:amt,fixed:!!t.fixed,credit:!!t.credit,inst:t.installment||null};
+/* duplicates: same amount, within two days, and the same merchant (or the same card on the same day) */
+const descKey=d=>normDesc(d).replace(/בע"?מ|ltd|inc/gi,'').replace(/[^א-תa-z0-9]/gi,'');
+/* same merchant: one name starts like the other (Claude may add or drop a suffix) */
+const sameMerchant=(a,b)=>{const x=descKey(a),y=descKey(b);if(!x||!y)return false;const n=Math.min(x.length,y.length,6);return n>=3&&x.slice(0,n)===y.slice(0,n);};
+function isDup(t,amt,card,pool){
+  const td=Date.parse(t.date+'T12:00:00');
+  return pool.some(r=>{
+    if(Math.abs(r.amount-amt)>=0.01)return false;
+    if(r.tpl)return r.date.slice(0,7)===t.date.slice(0,7);
+    const dd=Math.abs(Date.parse(r.date+'T12:00:00')-td)/864e5;
+    if(dd>2.5)return false;
+    return sameMerchant(r.desc,t.desc)||(dd<0.5&&card&&cardFromName(r.note)===cardFromName(card));
   });
 }
-function addFiles(list){
+async function fileHash(f){
+  try{const h=await crypto.subtle.digest('SHA-256',await f.arrayBuffer());return [...new Uint8Array(h)].slice(0,12).map(x=>x.toString(16).padStart(2,'0')).join('');}
+  catch(e){return 'n:'+f.name+':'+f.size;}
+}
+function uploadedBefore(hash){
+  for(const k of Object.keys(state.data)){const f=(state.data[k].files||[]).find(x=>x.hash&&x.hash===hash);if(f)return {...f,mk:k};}
+  return null;
+}
+async function addFiles(list){
   const files=[...list].filter(f=>/pdf|image\//.test(f.type)||/\.pdf$/i.test(f.name));
-  const room=5-ui.queue.length;
   if(!files.length){toast('אפשר להעלות PDF או תמונה (JPG, PNG)');return;}
-  if(room<=0){toast('אפשר עד 5 קבצים בכל פעם. אשרו את הקבצים שכבר נקראו ואז העלו עוד.');return;}
-  if(files.length>room)toast('נלקחו '+room+' קבצים. אפשר עד 5 בכל פעם.');
-  files.slice(0,room).forEach(f=>ui.queue.push({id:uid(),file:f,name:f.name,type:/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)?'PDF':(f.name.split('.').pop()||'IMG').toUpperCase(),status:'waiting',rows:null,card:cardFromName(f.name),who:null,msg:''}));
-  renderFiles();processQueue();
+  const room=5-ui.queue.filter(q=>q.status==='pending').length;
+  if(room<=0){toast('אפשר עד 5 קבצים בכל חישוב. לחצו "חשב" ואז העלו עוד.');return;}
+  if(files.length>room)toast('נלקחו '+room+' קבצים. אפשר עד 5 בכל חישוב.');
+  ui.lastCalc=null;
+  for(const f of files.slice(0,room)){
+    const hash=await fileHash(f);
+    if(ui.queue.some(q=>q.hash===hash&&q.status==='pending'))continue;
+    const before=uploadedBefore(hash);
+    ui.queue.push({id:uid(),file:f,name:f.name,hash,type:/pdf/i.test(f.type)||/\.pdf$/i.test(f.name)?'PDF':(f.name.split('.').pop()||'IMG').toUpperCase(),
+      status:before?'already':'pending',msg:before?'הקובץ הזה כבר הועלה ל'+mLabel(before.mk)+'. הוא לא ייספר שוב.':''});
+  }
+  ui.queue=ui.queue.filter(q=>q.status!=='done');
+  renderFiles();renderImport();
 }
 let qBusy=false;
-async function processQueue(){
-  if(qBusy)return;qBusy=true;
-  try{
-    for(const q of ui.queue){
-      if(q.status!=='waiting')continue;
-      q.status='reading';renderFiles();
-      try{
-        let text='',images=null;
-        if(q.type!=='PDF')images=[q.file];
-        else{
-          await loadPdfJs();
-          const pdf=await openPdf(await q.file.arrayBuffer(),q.name);
-          text=await pdfToText(pdf);
-          /* no dates at all means the pages are pictures, not text */
-          if(!/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text)){
-            const lim=SAMPLE?await SAMPLE.limits().catch(()=>null):null;
-            if(!lim||!lim.images)throw {code:'scanned'};
-            images=await pdfToImages(pdf,lim.images.maxCount);text='';
-          }
-        }
-        let res;
-        if(SAMPLE){q.msg='Claude קורא ומסווג…';renderFiles();
-          try{res=await SAMPLE.json(claudePrompt(text,q.name),{modelTier:'default',images:images||undefined});}
-          catch(e){if(text&&e&&!['cancelled','not_granted'].includes(e.code))res=parseLocally(text);else throw e;}}
-        else if(text)res=parseLocally(text);
-        else throw {code:'needs_claude'};
-        q.card=q.card||cardFromName(res.card)||String(res.card||'').trim().split(/\s+\d/)[0]||cardFromName(text.slice(0,3000))||'';
-        q.who=ownerOf(q.card);
-        q.total=+res.statementTotal||null;
-        q.rows=buildRows(res);
-        if(!q.rows.length)throw {code:'empty'};
-        q.status='ready';q.msg='';
-      }catch(e){
-        q.status='error';
-        q.msg={cancelled:'דולג',scanned:'קובץ סרוק. כדי לקרוא אותו צריך לפתוח את המערכת מהקישור ב-claude.ai',needs_claude:'קריאת תמונה דורשת את הקישור ב-claude.ai',
-          empty:'לא נמצאו תנועות בקובץ',not_granted:'צריך לאשר ל-Claude לקרוא את הפירוט',rate_limited:'יותר מדי בקשות, נסו שוב בעוד דקה',prompt_too_large:'הקובץ ארוך מדי'}[e&&e.code]||'לא הצלחתי לקרוא את הקובץ';
-      }
-      renderFiles();renderImport();
+async function readFile(q){
+  let text='',images=null;
+  if(q.type!=='PDF')images=[q.file];
+  else{
+    await loadPdfJs();
+    const pdf=await openPdf(await q.file.arrayBuffer(),q.name);
+    text=await pdfToText(pdf);
+    /* no dates at all means the pages are pictures, not text */
+    if(!/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(text)){
+      const lim=SAMPLE?await SAMPLE.limits().catch(()=>null):null;
+      if(!lim||!lim.images)throw {code:'scanned'};
+      images=await pdfToImages(pdf,lim.images.maxCount);text='';
     }
-  }finally{qBusy=false;}
+  }
+  if(SAMPLE){q.msg='Claude קורא ומסווג…';renderFiles();
+    try{return {res:await SAMPLE.json(claudePrompt(text,q.name),{modelTier:'default',images:images||undefined}),text};}
+    catch(e){if(text&&e&&!['cancelled','not_granted'].includes(e.code))return {res:parseLocally(text),text};throw e;}}
+  if(text)return {res:parseLocally(text),text};
+  throw {code:'needs_claude'};
+}
+async function calcAll(){
+  const todo=ui.queue.filter(q=>q.status==='pending');if(qBusy||!todo.length)return;
+  qBusy=true;const tot={added:0,dups:0,files:0,already:ui.queue.filter(q=>q.status==='already').length,errors:0,lines:[]};let lastMain=null;
+  for(let i=0;i<todo.length;i++){
+    const q=todo[i];q.status='reading';q.step=i+1;q.of=todo.length;renderFiles();
+    try{
+      const {res,text}=await readFile(q);
+      const card=cardFromName(q.name)||cardFromName(res.card)||String(res.card||'').trim().split(/\s+\d/)[0]||cardFromName(text.slice(0,3000))||'';
+      const who=ownerOf(card),fid=uid(),pool=allRows(),months={};
+      const tx=(Array.isArray(res.transactions)?res.transactions:[]).filter(t=>t&&/^\d{4}-\d{2}-\d{2}$/.test(t.date)&&+t.amount>0);
+      if(!tx.length)throw {code:'empty'};
+      let added=0,dups=0,sumAdded=0;
+      tx.forEach(t=>{
+        const desc=String(t.desc||'').trim()||'ללא תיאור',amt=Math.round(+t.amount*100)/100;
+        if(isDup({...t,desc},amt,card,pool)){dups++;return;}
+        let cat=state.cats.some(c=>c.id===t.cat&&c.type==='expense')?t.cat:null;
+        const g=guessCat(desc);if(g&&(g.src==='history'||!cat||cat==='other'))cat=g.cat;
+        if(t.credit)cat='extra';if(!cat)cat='other';
+        const mk=t.date.slice(0,7);(state.data[mk]=state.data[mk]||{rows:[],fx:[],files:[]});
+        state.data[mk].rows.push({id:uid(),date:t.date,desc,cat,who,amount:amt,fixed:!!t.fixed,note:card,src:fid});
+        months[mk]=(months[mk]||0)+1;added++;sumAdded+=(t.credit?-1:1)*amt;
+      });
+      const main=Object.entries(months).sort((a,b)=>b[1]-a[1])[0];
+      if(main){(state.data[main[0]].files=state.data[main[0]].files||[]).push({id:fid,name:q.name,card,who,n:added,total:sumAdded,at:todayISO(),hash:q.hash});lastMain=main[0];}
+      else{const m0=tx[0].date.slice(0,7);(state.data[m0]=state.data[m0]||{rows:[],fx:[],files:[]}).files.push({id:fid,name:q.name,card,who,n:0,total:0,at:todayISO(),hash:q.hash});}
+      if(card&&!state.settings.cardOwner[cardFromName(card)||card])state.settings.cardOwner[cardFromName(card)||card]=who;
+      q.status='done';tot.added+=added;tot.dups+=dups;tot.files++;
+      tot.lines.push({name:q.name,card,who,added,dups,month:main?main[0]:null});
+      persist();
+    }catch(e){
+      q.status='error';tot.errors++;
+      q.msg={cancelled:'דולג',scanned:'קובץ סרוק. כדי לקרוא אותו צריך לפתוח את המערכת מהקישור ב-claude.ai',needs_claude:'קריאת תמונה דורשת את הקישור ב-claude.ai',
+        empty:'לא נמצאו תנועות בקובץ',not_granted:'צריך לאשר ל-Claude לקרוא את הפירוט',rate_limited:'יותר מדי בקשות, נסו שוב בעוד דקה',prompt_too_large:'הקובץ ארוך מדי'}[e&&e.code]||'לא הצלחתי לקרוא את הקובץ';
+    }
+    renderFiles();
+  }
+  qBusy=false;
+  ui.queue=ui.queue.filter(q=>q.status==='error');
+  ui.lastCalc=tot;
+  if(lastMain&&lastMain>=trackStart())ui.month=lastMain;
+  commit();fillForm();
+  toast('החישוב הסתיים: נוספו '+tn(tot.added)+(tot.dups?' · '+tot.dups+' כפולות דולגו':''));
 }
 function fileIcon(type){return `<span class="ft ${type==='PDF'?'pdf':'img'}">${esc(type.slice(0,4))}</span>`;}
 function renderFiles(){
   const log=(state.data[ui.month]&&state.data[ui.month].files)||[];
-  $('#drop').classList.toggle('full',ui.queue.length>=5);
-  const q=ui.queue.map(x=>`<div class="file${x.status==='error'?' err':''}">${fileIcon(x.type)}<div style="min-width:0"><div class="fn" title="${esc(x.name)}">${esc(x.name)}</div>
-    <div class="fs">${x.status==='waiting'?'ממתין בתור':x.status==='reading'?'<span class="spin"></span>'+(esc(x.msg)||'קורא את הקובץ…'):x.status==='ready'?esc(x.card||'כרטיס לא זוהה')+' · '+(x.rows.every(r=>r.dup)?'<b>כל התנועות כבר קיימות</b>':tn(x.rows.filter(r=>!r.dup).length)+' חדשות'+(x.rows.some(r=>r.dup)?' · '+x.rows.filter(r=>r.dup).length+' כבר קיימות':''))+' · לבדיקה למטה':'<span class="neg">'+esc(x.msg)+'</span>'}</div></div>
-    ${x.status==='reading'?'':`<button class="ib sm" data-act="qDel" data-id="${x.id}" aria-label="הסרה" title="הסרה">✕</button>`}</div>`).join('');
+  const pend=ui.queue.filter(q=>q.status==='pending').length,cur=ui.queue.find(q=>q.status==='reading');
+  $('#drop').classList.toggle('full',qBusy||pend>=5);
+  const btn=$('#calcBtn');btn.disabled=qBusy||!pend;
+  btn.innerHTML=qBusy?`<span class="spin"></span>מחשב… קובץ ${cur?cur.step:''} מתוך ${cur?cur.of:''}`:pend?'חשב · '+(pend===1?'קובץ אחד':pend+' קבצים'):'חשב';
+  const st=x=>x.status==='pending'?'ממתין ללחיצה על "חשב"':x.status==='reading'?'<span class="spin"></span>'+(esc(x.msg)||'קורא את הקובץ…'):x.status==='already'?'<span class="neg">'+esc(x.msg)+'</span>':'<span class="neg">'+esc(x.msg)+'</span>';
+  const q=ui.queue.map(x=>`<div class="file${x.status==='error'||x.status==='already'?' err':''}">${fileIcon(x.type)}<div style="min-width:0"><div class="fn" title="${esc(x.name)}">${esc(x.name)}</div><div class="fs">${st(x)}</div></div>
+    ${x.status==='reading'||qBusy?'':`<button class="ib sm" data-act="qDel" data-id="${x.id}" aria-label="הסרה" title="הסרה">✕</button>`}</div>`).join('');
   const l=log.map(f=>`<div class="file">${fileIcon(/\.pdf$/i.test(f.name)?'PDF':(f.name.split('.').pop()||'IMG').toUpperCase())}<div style="min-width:0"><div class="fn" title="${esc(f.name)}">${esc(f.name)}</div>
-    <div class="fs">✓ ${esc(f.card||'')}${f.card?' · ':''}${esc(whoName(f.who))} · ${tn(f.n)} · ${M(f.total)}${f.at?' · הועלה '+esc(f.at.slice(8,10)+'/'+f.at.slice(5,7)):''}</div></div>
-    <button class="ib sm" data-act="fileDel" data-id="${f.id}" aria-label="ביטול הקובץ" title="מחיקת התנועות של הקובץ">✕</button></div>`).join('');
-  $('#files').innerHTML=(q||l)?q+l:'<div class="empty" style="padding:16px">כאן יופיעו הקבצים שהעליתם החודש: השם, הכרטיס וכמה תנועות נכנסו.</div>';
+    <div class="fs">✓ ${esc(f.card||'כרטיס')} של <select class="who" data-filewho="${f.id}" aria-label="של מי הכרטיס">${WHO.filter(w=>w!=='s').map(w=>`<option value="${w}"${w===f.who?' selected':''}>${esc(whoName(w))}</option>`).join('')}</select> · ${f.n?tn(f.n)+' · '+M(f.total):'כל התנועות כבר היו במערכת'}</div></div>
+    <button class="ib sm" data-act="fileDel" data-id="${f.id}" aria-label="ביטול הקובץ" title="ביטול הקובץ ומחיקת התנועות שלו">✕</button></div>`).join('');
+  $('#files').innerHTML=(q||l)?q+l:'<div class="empty" style="padding:16px">כאן יופיעו הקבצים: קודם כממתינים, ואחרי "חשב" עם הכרטיס, של מי הוא וכמה תנועות נכנסו.</div>';
 }
 function renderImport(){
-  const box=$('#impReview'),ready=ui.queue.filter(q=>q.status==='ready');
-  if(!ready.length){box.innerHTML='';return;}
-  const on=ready.flatMap(q=>q.rows.filter(r=>r.on)),tot=sum(on,r=>(r.credit?-1:1)*r.amount);
-  const wo=sel=>WHO.map(w=>`<option value="${w}"${w===sel?' selected':''}>${esc(whoName(w))}</option>`).join('');
-  const body=ready.map(q=>{
-    const all=sum(q.rows,r=>(r.credit?-1:1)*r.amount),dups=q.rows.filter(r=>r.dup).length;
-    const check=q.total?(Math.abs(all-q.total)<1?pill('good','✓ תואם לסה״כ בפירוט'):pill('warn','בפירוט: '+NF.format(q.total)+' ₪')):'';
-    return `<tr class="fh"><td colspan="7"><div class="row" style="justify-content:space-between">
-      <span class="row">${fileIcon(q.type)}<b>${esc(q.name)}</b>
-        <input data-q="card" data-id="${q.id}" value="${esc(q.card)}" placeholder="כרטיס" aria-label="כרטיס" style="width:130px">
-        <label class="small" for="qw-${q.id}">של</label><select id="qw-${q.id}" data-q="who" data-id="${q.id}" style="width:auto">${wo(q.who)}</select></span>
-      <span class="row">${check}${dups?pill('flat',dups+' כבר קיימות'):''}</span></div></td></tr>`+
-      q.rows.map((r,i)=>`<tr class="${r.on?'':'off'}"><td><input type="checkbox" data-imp="on" data-q="${q.id}" data-i="${i}"${r.on?' checked':''} aria-label="כלול"></td>
-       <td class="num" style="text-align:right">${r.date.slice(8,10)}/${r.date.slice(5,7)}</td>
-       <td><input data-imp="desc" data-q="${q.id}" data-i="${i}" value="${esc(r.desc)}" aria-label="תיאור" style="min-width:140px"></td>
-       <td><select data-imp="cat" data-q="${q.id}" data-i="${i}" aria-label="קטגוריה" style="min-width:150px">${catOptions(r.cat,r.credit?'':'expense')}</select></td>
-       <td><input type="checkbox" data-imp="fixed" data-q="${q.id}" data-i="${i}"${r.fixed?' checked':''} aria-label="קבוע" title="קבוע"></td>
-       <td class="num ${r.credit?'pos':''}">${r.credit?'+':''}${N2(r.amount)}</td>
-       <td>${r.dup?'<span class="tag">קיים</span> ':''}${r.inst?`<span class="tag">תשלום ${esc(r.inst)}</span>`:''}${r.credit?'<span class="tag">זיכוי</span>':''}</td></tr>`).join('');}).join('');
-  box.innerHTML=`<div class="sheet imprev"><h2>בדיקה לפני הוספה <span class="sub">${ready.length===1?'קובץ אחד':ready.length+' קבצים'} · ${tn(on.length)} מסומנות · ${M(tot)}</span></h2>
-   ${on.length?'':'<div class="note warn" style="margin-bottom:10px"><span>כל התנועות בקבצים האלה כבר נמצאות במערכת, כנראה שהקובץ הועלה כבר. אפשר ללחוץ ביטול.</span></div>'}
-   <p class="small" style="margin:-4px 0 10px">הקטגוריות נבחרו אוטומטית. שינוי כאן נלמד לפעם הבאה, וגם שאר התנועות מאותו בית עסק מתעדכנות.</p>
-   <div class="tw" style="max-height:540px"><table><thead><tr><th></th><th>תאריך</th><th>תיאור</th><th>קטגוריה</th><th>קבוע</th><th class="num">סכום</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
-   <div class="row" style="margin-top:12px"><button class="btn pri" data-act="impAdd"${on.length?'':' disabled'}>הוסף ${on.length} תנועות</button><button class="btn ghost" data-act="impCancel">ביטול</button></div></div>`;
-}
-function impEdit(t){
-  if(!t.dataset.imp){ /* file header: card and owner */
-    const q=ui.queue.find(x=>x.id===t.dataset.id);if(!q)return;
-    if(t.dataset.q==='card')q.card=t.value.trim();else if(t.dataset.q==='who')q.who=t.value;return;}
-  const q=ui.queue.find(x=>x.id===t.dataset.q);if(!q)return;
-  const r=q.rows[+t.dataset.i];if(!r)return;const f=t.dataset.imp;
-  if(f==='on'){r.on=t.checked;renderImport();}
-  else if(f==='fixed')r.fixed=t.checked;
-  else if(f==='desc')r.desc=t.value.trim()||r.desc;
-  else if(f==='cat'){r.cat=t.value;r.user=true;
-    ui.queue.forEach(x=>(x.rows||[]).forEach(o=>{if(o!==r&&!o.user&&normDesc(o.desc)===normDesc(r.desc))o.cat=t.value;}));renderImport();}
-}
-function impAdd(){
-  const ready=ui.queue.filter(q=>q.status==='ready');let n=0;
-  ready.forEach(q=>{
-    const card=q.card||'',rows=q.rows.filter(r=>r.on);if(!rows.length)return;
-    const fid=uid(),months={};
-    rows.forEach(r=>{const mk=r.date.slice(0,7);(state.data[mk]=state.data[mk]||{rows:[],fx:[],files:[]});
-      state.data[mk].rows.push({id:uid(),date:r.date,desc:r.desc,cat:r.cat,who:q.who,amount:r.amount,fixed:r.fixed,note:card,src:fid});months[mk]=(months[mk]||0)+1;n++;});
-    const main=Object.entries(months).sort((a,b)=>b[1]-a[1])[0][0];
-    (state.data[main].files=state.data[main].files||[]).push({id:fid,name:q.name,card,who:q.who,n:rows.length,total:sum(rows,r=>(r.credit?-1:1)*r.amount),at:todayISO()});
-    if(card)state.settings.cardOwner[cardFromName(card)||card]=q.who;
-  });
-  ui.queue=ui.queue.filter(q=>q.status!=='ready');
-  const mainMonth=ready.length?Object.keys(state.data).filter(k=>(state.data[k].files||[]).some(f=>f.at===todayISO())).sort().pop():null;
-  if(mainMonth&&mainMonth>=trackStart())ui.month=mainMonth;
-  commit();fillForm();toast('נוספו '+tn(n)+' מ'+(ready.length===1?'קובץ אחד':'-'+ready.length+' קבצים'));
+  const box=$('#impReview'),t=ui.lastCalc;
+  if(!t){box.innerHTML='';return;}
+  box.innerHTML=`<div class="sheet"><h2>החישוב הסתיים <button class="ib sm" data-act="closeSummary" aria-label="סגירה">✕</button></h2>
+   <div class="sumgrid"><div class="sb ok"><span class="small">נוספו</span><b>${NF.format(t.added)}</b><span class="small">תנועות</span></div>
+    <div class="sb"><span class="small">כפולות שדולגו</span><b>${NF.format(t.dups)}</b><span class="small">כבר היו במערכת</span></div>
+    <div class="sb"><span class="small">קבצים</span><b>${t.files}</b><span class="small">${t.already?t.already+' כבר הועלו בעבר ודולגו':'נקראו'}${t.errors?' · '+t.errors+' לא נקראו':''}</span></div></div>
+   ${t.lines.map(l=>`<div class="mover"><span>${esc(l.name)} · ${esc(l.card||'')} · ${esc(whoName(l.who))}</span><span class="small">${tn(l.added)}${l.month?' ל'+esc(mLabel(l.month)):''}${l.dups?' · '+l.dups+' כפולות':''}</span></div>`).join('')}
+   <p class="small" style="margin:10px 0 0">הכרטיס שויך לא נכון? משנים "של" ברשימת הקבצים. קטגוריה לא נכונה? לוחצים עליה בטבלה למטה.</p></div>`;
 }
 
 /* ---------- 11. budget ---------- */
@@ -1359,9 +1369,9 @@ const ACT={
   del:b=>{const x=removeRow(b.dataset.id);if(!x)return;commit();toast('נמחק: '+x.row.desc+' · '+money(x.row.amount),{label:'בטל',fn:()=>{state.data[x.k].rows.splice(x.i,0,x.row);commit();}});},
   recat:b=>{ui.recat=b.dataset.id;renderRows();},
   showOther:()=>{ui.fCat='other';ui.search='';$('#fSearch').value='';fillForm();renderRows();$('#rowsTable').scrollIntoView({behavior:'smooth',block:'start'});},
-  qDel:b=>{ui.queue=ui.queue.filter(q=>q.id!==b.dataset.id);renderFiles();renderImport();},
-  impAdd,
-  impCancel:()=>{ui.queue=ui.queue.filter(q=>q.status!=='ready');renderFiles();renderImport();},
+  qDel:b=>{ui.queue=ui.queue.filter(q=>q.id!==b.dataset.id);renderFiles();},
+  calc:()=>calcAll(),
+  closeSummary:()=>{ui.lastCalc=null;renderImport();},
   fileDel:async b=>{const id=b.dataset.id,m=state.data[ui.month],f=m&&(m.files||[]).find(x=>x.id===id);if(!f)return;
     const n=allRows().filter(r=>r.src===id).length;
     if(!await confirmBox('ביטול הקובץ '+f.name,n+' התנועות שנכנסו מהקובץ הזה יימחקו. אפשר להעלות אותו שוב אחר כך.','מחק '+n+' תנועות'))return;
@@ -1412,7 +1422,7 @@ function bind(){
     const t=e.target,dd=t.dataset;
     if(t.id==='impFile'){addFiles(t.files);t.value='';return;}
     if(t.id==='mPick'){if(/^\d{4}-\d{2}$/.test(t.value))nav(t.value);return;}
-    if(t.closest&&t.closest('#impReview')){impEdit(t);return;}
+    if(dd.filewho){const id=dd.filewho,w=t.value;Object.keys(state.data).forEach(k=>{rowsOf(k).forEach(r=>{if(r.src===id)r.who=w;});(state.data[k].files||[]).forEach(f=>{if(f.id===id){f.who=w;if(f.card)state.settings.cardOwner[cardFromName(f.card)||f.card]=w;}});});commit();toast('עודכן: הכרטיס של '+whoName(w));return;}
     if(t.id==='recat'){recategorize(dd.id,t.value);return;}
     if(t.id==='cmpA'){ui.cmpA=t.value;renderCompare();return;}
     if(t.id==='cmpB'){ui.cmpB=t.value;renderCompare();return;}
