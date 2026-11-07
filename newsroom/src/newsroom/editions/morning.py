@@ -7,172 +7,31 @@ fails, every section falls back to a fixed template, so the edition always goes 
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from .. import scheduler as sch
-from ..collectors import coingecko, rss, yahoo_fallback
-from ..collectors.fred import match_macro
 from ..collectors.sec import describe_items
-from ..collectors.tiingo import refresh_history
-from ..http import SourceError
 from ..llm import prompts
 from ..llm.base import LLMError, cached_generate, get_provider
 from ..llm.validator import allowed_numbers, validate_fields
-from ..models import EarningsEvent, Filing, Quote, Story
 from ..processing import cluster as cl
-from ..processing import links, volatility as vol
+from ..processing import links
+from ..snapshot import Collect, Snapshot, collect
 from ..telegram.send import esc, link
 from .common import HOUR_HE, bp, concept_of, money, pct, r2, sigma_tag
 
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class MorningData:
-    today_il: date
-    today_ny: date
-    session: date
-    quotes: dict[str, Quote] = field(default_factory=dict)
-    sigmas: dict[str, float] = field(default_factory=dict)
-    profiles: dict[str, vol.VolProfile] = field(default_factory=dict)
-    btc: Quote | None = None
-    fred: dict[str, dict] = field(default_factory=dict)
-    yahoo: dict[str, Quote] = field(default_factory=dict)
-    stories: list[Story] = field(default_factory=list)
-    fed: list[Story] = field(default_factory=list)
-    clusters: list[cl.Cluster] = field(default_factory=list)
-    filings: list[Filing] = field(default_factory=list)
-    earnings_today: list[EarningsEvent] = field(default_factory=list)
-    earnings_reported: list[EarningsEvent] = field(default_factory=list)
-    macro_today: list = field(default_factory=list)
+MorningData = Snapshot          # the morning edition reads a full snapshot
 
 
-# ================================================================ gather ===
-
-def gather(ctx) -> MorningData:
-    cfg, state = ctx.cfg, ctx.state
-    today_il = ctx.now.astimezone(sch.IL).date()
-    today_ny = ctx.now.astimezone(sch.NY).date()
-    extra = cfg.market.get("extra_closures") or []
-    d = MorningData(today_il=today_il, today_ny=today_ny,
-                    session=sch.last_completed_session(ctx.now, extra))
-    since = int((ctx.now - timedelta(hours=int(cfg.s("morning", "news_lookback_hours", default=24)))).timestamp())
-    fh = ctx.finnhub
-
-    def job_quotes():
-        if not fh:
-            return
-        d.quotes, failed = fh.quotes(cfg.all_quote_symbols())
-        if failed and len(failed) > len(d.quotes):
-            ctx.fail("Finnhub quotes", f"{len(failed)} failed")
-
-    def job_history():
-        if ctx.tiingo:
-            failed = refresh_history(ctx.tiingo, state, cfg.watchlist + cfg.index_symbols + cfg.sector_symbols,
-                                     today_il)
-            if failed:
-                ctx.fail("Tiingo", ", ".join(failed[:5]))
-
-    def job_rss():
-        stories, failed = rss.fetch_feeds(cfg.sources.get("rss", []))
-        d.stories.extend(s for s in stories if s.published >= since)
-        if failed:
-            ctx.fail("RSS", ", ".join(failed))
-        fed, failed = rss.fetch_feeds(cfg.sources.get("fed", []), kind="fed")
-        d.fed = [s for s in fed if s.published >= since]
-        if failed:
-            ctx.fail("Fed RSS", ", ".join(failed))
-
-    def job_finnhub_news():
-        if not fh:
-            return
-        try:
-            d.stories.extend(s for s in fh.market_news() if s.published >= since)
-            frm = d.session - timedelta(days=1)
-            for t in cfg.watchlist:
-                d.stories.extend(s for s in fh.company_news(t, frm, today_ny) if s.published >= since)
-            d.earnings_today = fh.earnings(today_ny, today_ny)
-            d.earnings_reported = [e for e in fh.earnings(d.session, today_ny)
-                                   if e.eps_actual is not None
-                                   and (e.date == d.session.isoformat() or e.hour == "bmo")]
-        except SourceError as exc:
-            ctx.fail("Finnhub news", exc)
-
-    def job_btc():
-        try:
-            d.btc = coingecko.bitcoin(cfg.secrets.coingecko)
-        except SourceError as exc:
-            ctx.fail("CoinGecko", exc)
-
-    def job_fred():
-        if not ctx.fred:
-            return
-        try:
-            for sid in cfg.market.get("fred_series", {}):
-                v = ctx.fred.latest(sid)
-                if v:
-                    d.fred[sid] = v
-            d.macro_today = match_macro(ctx.fred.release_dates(today_ny, 1),
-                                        cfg.market.get("macro_releases", []), on=today_ny)
-        except SourceError as exc:
-            ctx.fail("FRED", exc)
-
-    def job_sec():
-        if not ctx.sec:
-            return
-        try:
-            d.filings, failed = ctx.sec.recent(cfg.watchlist, cfg.sources.get("sec_forms", ["8-K"]))
-            if failed:
-                ctx.fail("SEC", ", ".join(failed))
-        except SourceError as exc:
-            ctx.fail("SEC", exc)
-
-    def job_yahoo():
-        if cfg.s("sources", "yahoo_fallback", default=False):
-            d.yahoo, failed = yahoo_fallback.quotes(list(cfg.market.get("yahoo_symbols", {})))
-            if failed and not d.yahoo:
-                ctx.fail("Yahoo (גיבוי)", "blocked")
-
-    jobs = [job_quotes, job_history, job_rss, job_finnhub_news, job_btc, job_fred, job_sec, job_yahoo]
-    with ThreadPoolExecutor(max_workers=len(jobs)) as pool:
-        futures = [(j, pool.submit(j)) for j in jobs]
-        for j, f in futures:
-            try:
-                f.result()
-            except Exception as exc:  # noqa: BLE001 - one broken source must not stop the edition
-                ctx.fail(j.__name__.removeprefix("job_"), exc)
-                log.exception("collector crashed")
-
-    _volatility(d, cfg, state)
-    _tag_and_cluster(d, cfg, ctx)
-    state.archive(today_il, [s.archive_row() for s in d.stories + d.fed])
-    return d
-
-
-def _volatility(d: MorningData, cfg, state) -> None:
-    v = cfg.settings.get("volatility", {})
-    for sym, q in d.quotes.items():
-        prof = vol.profile(state.history(sym), d.session.isoformat(), int(v.get("lookback_days", 60)),
-                           int(v.get("min_history_days", 20)), float(v.get("default_daily_stdev_pct", 3.0)))
-        d.profiles[sym] = prof
-        d.sigmas[sym] = vol.sigma(q.change_pct, prof)
-
-
-def _tag_and_cluster(d: MorningData, cfg, ctx) -> None:
-    names = ctx.state.cache("company_names")
-    if ctx.finnhub:
-        for t in cfg.watchlist:
-            if t not in names:
-                try:
-                    names[t] = ctx.finnhub.profile_name(t) or ""
-                except SourceError:
-                    pass
-        ctx.state.set_cache("company_names", names)
-    aliases = {t: links.aliases(t, names.get(t)) for t in cfg.watchlist}
-    cl.tag_tickers(d.stories, aliases)
-    d.clusters = cl.cluster(d.stories)
+def gather(ctx) -> Snapshot:
+    cfg = ctx.cfg
+    return collect(ctx, Collect(
+        lookback_hours=int(cfg.s("morning", "news_lookback_hours", default=24)),
+        history=True, company_news=cfg.watchlist, earnings_days=(-1, 0),
+        fred_series=True, macro_days=1))
 
 
 # ================================================================= facts ===
@@ -457,11 +316,18 @@ def render(d: MorningData, cfg, facts: dict, refs: dict[str, cl.Cluster], stocks
 # =================================================================== run ===
 
 def run(ctx, force: bool = False) -> bool:
+    from ..alerts.antinoise import take_queue
+    from ..alerts.format import queued_section
+    from .writer import publish
+
     d = gather(ctx)
     facts, refs, stocks = build_facts(d, ctx.cfg)
     text, label = write_text(ctx, facts)
     msg = render(d, ctx.cfg, facts, refs, stocks, text, label, ctx.failed_sources, ctx.now)
-    ctx.telegram.send(msg)
-    ctx.state.mark_sent("morning", d.today_il.isoformat())
-    ctx.state.set("last_morning_facts", {"date": d.today_il.isoformat(), "facts": facts})
+    queued = queued_section(take_queue(ctx.state), "📥 <b>נצבר מהלילה</b>")
+    if queued:                                   # just before the footer
+        head, _, foot = msg.rpartition("\n\n🕐")
+        msg = f"{head}\n\n{queued}\n\n🕐{foot}"
+    publish(ctx, "morning", msg, d.today_il.isoformat())
+    ctx.state.set_cache("last_morning_facts", {"date": d.today_il.isoformat(), "facts": facts})
     return True

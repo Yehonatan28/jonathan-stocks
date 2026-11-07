@@ -97,3 +97,79 @@ fomc_decisions:
 
 # ימי סגירה מיוחדים של NYSE (אבל לאומי וכו') שאי אפשר לחשב מראש
 extra_closures: []
+
+# ---------------------------------------------------------------- התראות שוק ---
+# כל הספים בשינוי יומי. symbol = מקור הנתון (Finnhub, או Yahoo לסימולים עם ^ / =F)
+market_alerts:
+  - {symbol: SPY, label: "S&P 500", pct: 1.5}
+  - {symbol: QQQ, label: "נאסד\"ק 100", pct: 2.0}
+  - {symbol: BTC, label: "ביטקוין", pct: 5.0}
+  - {symbol: USO, label: "נפט WTI", pct: 4.0}
+  - {symbol: BNO, label: "נפט ברנט", pct: 4.0}
+  - {symbol: "^VIX", label: "VIX", pct: 15.0}
+  - {symbol: "^TNX", label: "תשואת 10 שנים", bp: 10}
+
+# נתוני מאקרו שמתפרסמים -> סדרות FRED. kind: mom = שינוי חודשי באחוזים, level = הרמה, diff = הפרש (אלפים)
+macro_series:
+  "Consumer Price Index":
+    - {id: CPIAUCSL, label: "CPI", kind: mom}
+    - {id: CPILFESL, label: "CPI ליבה", kind: mom}
+  "Employment Situation":
+    - {id: PAYEMS, label: "משרות חדשות (אלפים)", kind: diff}
+    - {id: UNRATE, label: "שיעור האבטלה", kind: level}
+  "Personal Income and Outlays":
+    - {id: PCEPI, label: "PCE", kind: mom}
+    - {id: PCEPILFE, label: "PCE ליבה", kind: mom}
+  "Gross Domestic Product":
+    - {id: A191RL1Q225SBEA, label: "צמיחת התוצר (שנתי)", kind: level}
+  "Producer Price Index":
+    - {id: PPIFIS, label: "PPI", kind: mom}
+
+# מילות מפתח שמעלות ציון חשיבות של ידיעה
+keywords_high: [fed, fomc, powell, rate cut, rate hike, interest rate, tariff, sanction, sec, fda, doj,
+                antitrust, guidance, outlook, downgrade, upgrade, ipo, bankrupt, chapter 11, acquire,
+                acquisition, merger, buyout, recall, halt, opec, cpi, inflation, jobs report, payrolls,
+                layoffs, buyback, stock split, lawsuit, probe, investigation, default, recession, shutdown,
+                war, ceasefire, export controls, earnings, beats, misses, raises, cuts]
+
+# "שרשרת ההשפעה": אירוע -> גורם -> סקטור -> המניות שלי
+impact_chains:
+  - {name: "נפט", match: [oil, opec, crude, brent, wti], driver: USO, sector: XLE, holdings: [XLE]}
+  - {name: "ריבית", match: [fed, fomc, powell, yield, treasury, rate cut, rate hike, inflation, cpi, pce],
+     driver: "^TNX", sector: XLK, holdings: [MAGS, NVDA, MSFT, AAPL, GOOG, AMZN, TSLA]}
+  - {name: "ביטקוין", match: [bitcoin, crypto, btc, etf flows], driver: BTC, sector: null, holdings: [IBIT, MSTR]}
+  - {name: "שבבים ו-AI", match: [chip, semiconductor, nvidia, ai, data center, export controls],
+     driver: null, sector: XLK, holdings: [NVDA, MSFT, GOOG, AMZN, MAGS]}
+  - {name: "מכסים וסחר", match: [tariff, trade war, china, export], driver: null, sector: XLI,
+     holdings: [AAPL, TSLA, AMZN, WMT]}
+  - {name: "צרכן", match: [retail sales, consumer, spending, holiday sales], driver: null, sector: XLY,
+     holdings: [WMT, AMZN, TSLA]}
+  - {name: "משחקים", match: [gta, rockstar, video game, gaming, console], driver: null, sector: XLC,
+     holdings: [TTWO]}
+  - {name: "חלל", match: [spacex, starlink, starship, launch], driver: null, sector: null, holdings: [SPCX]}
+
+# משקלות משוערים במדד S&P 500 (באחוזים), לתרשים "מה הזיז את השוק". לעדכן פעם ברבעון.
+sector_weights:
+  XLK: 33.0
+  XLF: 13.0
+  XLY: 10.5
+  XLC: 10.0
+  XLV: 9.0
+  XLI: 8.0
+  XLP: 5.0
+  XLE: 3.0
+  XLU: 2.5
+  XLRE: 2.0
+  XLB: 1.8
+megacap_weights:
+  NVDA: 7.5
+  MSFT: 6.3
+  AAPL: 6.2
+  AMZN: 4.0
+  GOOGL: 2.2
+  GOOG: 1.8
+  META: 2.9
+  AVGO: 2.6
+  TSLA: 2.2
+  BRK.B: 1.6
+  JPM: 1.5

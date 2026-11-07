@@ -1,0 +1,13 @@
+# Cloudflare Worker (free plan): serves the static dashboard and data.json from KV.
+name = "newsroom"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[[kv_namespaces]]
+binding = "DATA"
+id = "__KV_NAMESPACE_ID__"

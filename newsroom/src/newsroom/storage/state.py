@@ -86,6 +86,20 @@ class State:
                     fh.write(json.dumps(r, ensure_ascii=False) + "\n")
                     known.add(r["id"])
 
+    def read_archive(self, start: date, end: date) -> list[dict]:
+        rows = []
+        d = start
+        while d <= end:
+            path = self.root / "archive" / f"{d.isoformat()}.jsonl"
+            if path.exists():
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    try:
+                        rows.append(json.loads(line))
+                    except ValueError:
+                        continue
+            d += timedelta(days=1)
+        return rows
+
     def prune(self, today: date, keep_days: int) -> int:
         cutoff = today - timedelta(days=keep_days)
         removed = 0

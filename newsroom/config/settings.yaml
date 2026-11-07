@@ -9,6 +9,17 @@ quiet_hours:
   end: "06:30"
 
 editions:
+  preopen:
+    minutes_before_open: 30    # 09:00 בניו יורק (נגזר מלוח הבורסה, כולל ימים מקוצרים)
+    window_minutes: 45
+  close:
+    minutes_after_close: 15    # 16:15 בניו יורק, או 13:15 ביום מקוצר. נשלח בלי צליל.
+    window_minutes: 150
+    silent: true
+  weekly:
+    weekday: sun
+    time: "08:00"              # שעון ישראל
+    latest: "14:00"
   morning:
     time: "07:00"              # שעון ישראל
     earliest_minutes_before: 5 # מותר לשלוח עד 5 דקות לפני
@@ -16,12 +27,23 @@ editions:
     # ימים בשבוע (שעון ישראל). ראשון שמור לסיכום השבועי (שלב 4).
     weekdays: [mon, tue, wed, thu, fri, sat]
 
+alerts:
+  threshold: 7                 # ציון חשיבות מינימלי להתראה (1 עד 10)
+  urgent: 9                    # מעל זה: דחוף (נשלח גם בשעות שקט, בלי צליל)
+  cooldown_minutes: 120        # זמן צינון לכל נייר, אלא אם יש התפתחות מהותית
+  daily_cap: 8                 # תקרה יומית להתראות לא דחופות. מעבר לזה -> למהדורה הבאה
+  story_window_hours: 3        # "סיפור חם": כמה שעות אחורה סופרים מקורות
+  hot_story_sources: 4         # כמה מקורות שונים הופכים סיפור ל"חם" גם אם הוא לא קשור לרשימה
+  megacap_move_pct: 5.0        # מניה גדולה מחוץ לרשימה שזזה יותר מזה
+  use_llm_rating: true         # המודל מוסיף דירוג משלו לציון (30% מהמשקל)
+
 volatility:
   lookback_days: 60            # כמה ימי מסחר אחורה לחישוב סטיית התקן
   min_history_days: 20         # פחות מזה (מניה חדשה) -> סטיית תקן ברירת מחדל
   default_daily_stdev_pct: 3.0
   alert_sigma: 2.0             # "תנועה חריגה" (שלב 2: מפעיל התראה)
   notable_sigma: 1.0           # מספיק כדי להופיע ב"המניות שלי" במהדורה
+  urgent_sigma: 3.5            # תנועה כזו היא דחופה
 
 morning:
   max_my_stocks: 6
@@ -45,5 +67,7 @@ sources:
   # false = המהדורה פשוט תכתוב "אין נתון".
   yahoo_fallback: true
 
-dashboard_url: ""              # יתמלא בשלב 3
+dashboard_url: ""              # כתובת הדשבורד אחרי הפריסה, למשל https://newsroom-xyz.pages.dev
+dashboard:
+  min_push_minutes: 10         # עדכון נתוני הדשבורד לכל היותר פעם ב-10 דקות (מכסת KV: 1,000 כתיבות ביום)
 archive_days: 90               # ארכיון כותרות נמחק אחרי 90 יום

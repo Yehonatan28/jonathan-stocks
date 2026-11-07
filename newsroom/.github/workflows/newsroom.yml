@@ -1,18 +1,28 @@
 # חדר החדשות: הפעימה. רצה לפי לוח זמנים, והקוד מחליט מה צריך לקרות עכשיו.
-# כל הזמנים כאן ב-UTC. המרת שעון ישראל/ניו יורק נעשית בקוד (scheduler.py), כך שמעברי שעון לא שוברים כלום.
+# כל הזמנים כאן ב-UTC. ההמרה לשעון ישראל וניו יורק נעשית בקוד (scheduler.py), כך שמעברי שעון לא שוברים כלום.
+#
+# תקציב דקות (repo פרטי: 2,000 בחודש, כל הרצה מעוגלת לדקה):
+#   שעות המסחר + שעה לפניהן, כל 15 דקות: 40 ביום x 22 ימי מסחר  = ~880
+#   שאר השעות בימי חול, כל שעה:          14 x 22               = ~310
+#   סופי שבוע, כל שעתיים:                12 x 8.6              = ~105
+#   מהדורת בוקר + שבועי:                                       = ~70
+#   סה"כ ~1,365 הרצות. כל הרצה חייבת להישאר מתחת ל-60 שניות.
 name: newsroom
 
 on:
   schedule:
-    - cron: "57 3,4 * * *"   # לפני 07:00 בישראל: 03:57 UTC בקיץ, 04:57 UTC בחורף
-    - cron: "17 * * * *"     # כל שעה: פקודות בוט + גיבוי למהדורה שהתעכבה
+    - cron: "*/15 12-21 * * 1-5"         # 07:00/08:00 עד 16:45/17:45 בניו יורק (קיץ/חורף)
+    - cron: "17 0-11,22,23 * * 1-5"      # שאר השעות בימי חול
+    - cron: "17 */2 * * 0,6"             # סופי שבוע
+    - cron: "57 3,4 * * *"               # לפני 07:00 בישראל (קיץ: 03:57 UTC, חורף: 04:57 UTC)
+    - cron: "57 4,5 * * 0"               # לפני 08:00 בישראל ביום ראשון (הסיכום השבועי)
   workflow_dispatch:
     inputs:
       task:
         description: "מה להריץ"
         type: choice
         default: tick
-        options: [tick, morning, probe, whoami]
+        options: [tick, morning, preopen, close, weekly, alerts, site, probe, whoami]
 
 permissions:
   contents: write
@@ -25,9 +35,6 @@ jobs:
   run:
     runs-on: ubuntu-latest
     timeout-minutes: 6
-    defaults:
-      run:
-        working-directory: newsroom
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: newsroom/requirements.txt
+          cache-dependency-path: requirements.txt
 
       - name: Install
         run: pip install --quiet -r requirements.txt
@@ -59,6 +66,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SEC_CONTACT: ${{ secrets.SEC_CONTACT }}
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
         run: python -m newsroom ${{ inputs.task || 'tick' }}
 
       - name: Save state
@@ -74,12 +84,12 @@ jobs:
             git config user.name "newsroom-bot"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add config/watchlist.yaml
-            git commit -m "newsroom: watchlist updated from Telegram"
+            git commit -m "watchlist updated from Telegram"
             git pull --rebase --quiet origin "${GITHUB_REF_NAME}"
             git push --quiet origin "HEAD:${GITHUB_REF_NAME}"
           fi
 
-      # Last line of defence: Python itself could not start (bad install, syntax error...)
+      # Last line of defence: Python could not even report (bad install, syntax error...)
       - name: Watchdog
         if: failure()
         env:

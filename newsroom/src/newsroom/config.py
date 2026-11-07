@@ -118,6 +118,10 @@ class Config:
             for item in self.market.get(group, []):
                 if item["symbol"] == symbol:
                     return item["name"]
+        if symbol in self.market.get("yahoo_symbols", {}):
+            return self.market["yahoo_symbols"][symbol]
+        if symbol == "BTC":
+            return "ביטקוין"
         sec = self.market.get("sectors", {}).get(symbol)
         return f"{sec} ({symbol})" if sec else symbol
 

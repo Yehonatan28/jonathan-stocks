@@ -45,7 +45,7 @@ _session = requests.Session()
 
 
 def request(method: str, url: str, *, params: dict | None = None, headers: dict | None = None,
-            json: Any = None, timeout: float = 15, retries: int = 3,
+            json: Any = None, data: bytes | None = None, timeout: float = 15, retries: int = 3,
             limiter: RateLimiter | None = None, backoff: float = 2.0) -> requests.Response:
     hdrs = {"User-Agent": DEFAULT_UA}
     hdrs.update(headers or {})
@@ -54,7 +54,8 @@ def request(method: str, url: str, *, params: dict | None = None, headers: dict 
         if limiter:
             limiter.wait()
         try:
-            resp = _session.request(method, url, params=params, headers=hdrs, json=json, timeout=timeout)
+            resp = _session.request(method, url, params=params, headers=hdrs, json=json, data=data,
+                                    timeout=timeout)
         except requests.RequestException as exc:
             last = exc
         else:

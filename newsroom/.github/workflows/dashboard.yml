@@ -1,0 +1,29 @@
+# פריסת "המעטפת" של הדשבורד (HTML/JS/CSS) ל-Cloudflare Workers.
+# רצה רק כשקוד הדשבורד משתנה. הנתונים עצמם מתעדכנים בכל הרצה של הפעימה, ישר ל-KV, בלי פריסה.
+name: dashboard
+
+on:
+  push:
+    paths: ["dashboard/**", ".github/workflows/dashboard.yml"]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        working-directory: dashboard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          DASHBOARD_KEY: ${{ secrets.DASHBOARD_KEY }}
+        run: |
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || { echo "Cloudflare not configured yet"; exit 0; }
+          sed -i "s/__KV_NAMESPACE_ID__/${CF_KV_NAMESPACE_ID}/" wrangler.toml
+          npx --yes wrangler@4.40.0 deploy
+          if [ -n "$DASHBOARD_KEY" ]; then
+            echo "$DASHBOARD_KEY" | npx --yes wrangler@4.40.0 secret put DASHBOARD_KEY
+          fi

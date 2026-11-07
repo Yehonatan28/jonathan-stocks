@@ -166,3 +166,38 @@ def et_to_il(d: date, hhmm: str) -> datetime:
 
 def heb_date(d: date) -> str:
     return f"יום {HEB_DAYS[d.weekday()]} {d.day}.{d.month}"
+
+
+def preopen_due(now: datetime, cfg: dict, sent_on: str | None, extra_closures: list | None = None) -> bool:
+    """30 minutes before the New York open (09:00 ET), on trading days only."""
+    ny = now.astimezone(NY)
+    s = session(ny.date(), extra_closures)
+    if not s or sent_on == ny.date().isoformat():
+        return False
+    target = s[0] - timedelta(minutes=int(cfg.get("minutes_before_open", 30)))
+    return target - timedelta(minutes=3) <= ny <= target + timedelta(minutes=int(cfg.get("window_minutes", 45)))
+
+
+def close_due(now: datetime, cfg: dict, sent_on: str | None, extra_closures: list | None = None) -> bool:
+    """~15 minutes after the close (13:15 on early-close days)."""
+    ny = now.astimezone(NY)
+    s = session(ny.date(), extra_closures)
+    if not s or sent_on == ny.date().isoformat():
+        return False
+    target = s[1] + timedelta(minutes=int(cfg.get("minutes_after_close", 15)))
+    return target <= ny <= target + timedelta(minutes=int(cfg.get("window_minutes", 150)))
+
+
+def weekly_due(now: datetime, cfg: dict, sent_on: str | None) -> bool:
+    il = now.astimezone(IL)
+    if WEEKDAYS[il.weekday()] != cfg.get("weekday", "sun") or sent_on == il.date().isoformat():
+        return False
+    target = datetime.combine(il.date(), _hm(cfg.get("time", "08:00")), IL)
+    latest = datetime.combine(il.date(), _hm(cfg.get("latest", "14:00")), IL)
+    return target - timedelta(minutes=5) <= il <= latest
+
+
+def week_bounds(last_session: date, extra_closures: list | None = None) -> tuple[date, date]:
+    """(previous week's last session, this week's last session) for a weekly summary."""
+    monday = last_session - timedelta(days=last_session.weekday())
+    return previous_trading_day(monday, extra_closures), last_session

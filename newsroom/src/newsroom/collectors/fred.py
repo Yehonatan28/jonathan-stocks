@@ -30,6 +30,11 @@ class Fred:
         return {"date": obs[0]["date"], "value": cur, "prev": prev,
                 "change": round(cur - prev, 4) if prev is not None else None}
 
+    def observations(self, series_id: str, limit: int = 14) -> list[dict]:
+        """Newest first. Each row has realtime_start = the day this value became public."""
+        d = self._get("/series/observations", series_id=series_id, sort_order="desc", limit=limit)
+        return [o for o in d.get("observations", []) if o.get("value") not in (".", "", None)]
+
     def release_dates(self, start: date, days: int = 7) -> list[dict]:
         d = self._get("/releases/dates", realtime_start=start.isoformat(),
                       realtime_end=(start + timedelta(days=days)).isoformat(),
