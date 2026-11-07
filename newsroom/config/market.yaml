@@ -1,0 +1,99 @@
+# הסמנים שתמיד במעקב (לא צריך להוסיף אותם לרשימה).
+# המסלול החינמי של Finnhub לא כולל מדדים, ולכן משתמשים בתעודות סל שעוקבות אחריהם.
+
+indices:
+  - {symbol: SPY, name: "S&P 500"}
+  - {symbol: QQQ, name: "נאסד\"ק 100"}
+  - {symbol: DIA, name: "דאו ג'ונס"}
+  - {symbol: IWM, name: "ראסל 2000"}
+
+sectors:
+  XLK: טכנולוגיה
+  XLF: פיננסים
+  XLE: אנרגיה
+  XLV: בריאות
+  XLY: צריכה מחזורית
+  XLP: צריכה בסיסית
+  XLI: תעשייה
+  XLU: תשתיות
+  XLB: חומרים
+  XLRE: נדל"ן
+  XLC: תקשורת
+
+proxies:
+  - {symbol: USO, name: "נפט WTI (USO)"}
+  - {symbol: BNO, name: "נפט ברנט (BNO)"}
+  - {symbol: GLD, name: "זהב (GLD)"}
+  - {symbol: UUP, name: "דולר (UUP)"}
+
+# בשביל השורה על ת"א: תעודת הסל של ישראל בניו יורק + מניות דואליות גדולות
+israel:
+  - {symbol: EIS, name: "ישראל (EIS)"}
+  - {symbol: TEVA, name: "טבע"}
+  - {symbol: CHKP, name: "צ'ק פוינט"}
+
+# נתוני FRED (יומיים, מתעדכנים בדרך כלל ביום העסקים הבא)
+fred_series:
+  DGS10: "תשואת 10 שנים"
+  VIXCLS: "VIX"
+  DCOILWTICO: "נפט WTI"
+  DCOILBRENTEU: "נפט ברנט"
+  DTWEXBGS: "מדד הדולר"
+
+# גיבוי (Yahoo), רק כשהמתג yahoo_fallback דלוק
+yahoo_symbols:
+  "^VIX": "VIX"
+  "^TNX": "תשואת 10 שנים"
+  "ES=F": "חוזי S&P"
+  "NQ=F": "חוזי נאסד\"ק"
+  "^N225": "ניקיי (יפן)"
+  "^HSI": "האנג סנג (הונג קונג)"
+
+# קשרים שהמערכת משתמשת בהם ב"למה זה חשוב"
+groups:
+  mags:
+    etf: MAGS
+    members: [AAPL, MSFT, GOOG, AMZN, NVDA, META, TSLA]
+    note: "MAGS מחזיקה את שבע המופלאות במשקלות דומים. כשהן זזות יחד, זה פוגע או עוזר פעמיים."
+  bitcoin:
+    members: [IBIT, MSTR]
+    note: "IBIT עוקבת אחרי ביטקוין. MSTR מגיבה לביטקוין במינוף."
+  energy:
+    members: [XLE]
+    note: "XLE רגישה לנפט ולהחלטות OPEC."
+  gaming:
+    members: [TTWO]
+    note: "חדשות על משחקים ומועדי השקה מזיזות את TTWO חזק."
+
+# החברות הגדולות בארה"ב: הדוחות שלהן מזיזים שוק גם אם הן לא ברשימה שלי.
+# לעדכן פעם ברבעון.
+megacaps: [NVDA, MSFT, AAPL, GOOGL, GOOG, AMZN, META, AVGO, TSLA, BRK.B, SPCX,
+           JPM, LLY, WMT, V, ORCL, MA, XOM, NFLX, COST, JNJ, HD, PG, BAC, ABBV,
+           PLTR, AMD, KO, CRM, UNH, CVX, GS, MU, TSM, ASML]
+
+# נתוני מאקרו מרכזיים: שם הפרסום ב-FRED -> תיאור ושעה רגילה (ניו יורק)
+macro_releases:
+  - {match: "Consumer Price Index", label: "מדד המחירים לצרכן (CPI)", time_et: "08:30", tier: 1}
+  - {match: "Employment Situation", label: "דוח התעסוקה", time_et: "08:30", tier: 1}
+  - {match: "Personal Income and Outlays", label: "הכנסות והוצאות (PCE)", time_et: "08:30", tier: 1}
+  - {match: "Gross Domestic Product", label: "תוצר (GDP)", time_et: "08:30", tier: 1}
+  - {match: "Producer Price Index", label: "מדד המחירים ליצרן (PPI)", time_et: "08:30", tier: 2}
+  - {match: "Advance Monthly Sales for Retail", label: "מכירות קמעונאיות", time_et: "08:30", tier: 2}
+  - {match: "Job Openings and Labor Turnover", label: "משרות פנויות (JOLTS)", time_et: "10:00", tier: 2}
+  - {match: "Unemployment Insurance Weekly Claims", label: "תביעות אבטלה שבועיות", time_et: "08:30", tier: 3}
+  - {match: "Surveys of Consumers", label: "אמון הצרכנים (מישיגן)", time_et: "10:00", tier: 3}
+
+# ישיבות ה-FOMC (היום השני = יום ההחלטה, 14:00 ניו יורק).
+# מקור: federalreserve.gov/monetarypolicy/fomccalendars.htm. לוח 2027: לאמת ולהוסיף.
+fomc_decisions:
+  - 2026-01-28
+  - 2026-03-18
+  - 2026-04-29
+  - 2026-06-17
+  - 2026-07-29
+  - 2026-09-16
+  - 2026-10-28
+  - 2026-12-09
+
+# ימי סגירה מיוחדים של NYSE (אבל לאומי וכו') שאי אפשר לחשב מראש
+extra_closures: []

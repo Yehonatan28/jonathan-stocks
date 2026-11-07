@@ -1,0 +1,49 @@
+# הגדרות כלליות. כל שינוי כאן נכנס לתוקף בהרצה הבאה.
+
+timezone_user: Asia/Jerusalem
+timezone_market: America/New_York
+
+# שעות שקט (שעון ישראל): רק התראות דחופות, ובלי צליל. (בשימוש משלב 2)
+quiet_hours:
+  start: "23:30"
+  end: "06:30"
+
+editions:
+  morning:
+    time: "07:00"              # שעון ישראל
+    earliest_minutes_before: 5 # מותר לשלוח עד 5 דקות לפני
+    latest: "12:00"            # אם עד אז לא נשלחה (תקלה ממושכת), מוותרים להיום
+    # ימים בשבוע (שעון ישראל). ראשון שמור לסיכום השבועי (שלב 4).
+    weekdays: [mon, tue, wed, thu, fri, sat]
+
+volatility:
+  lookback_days: 60            # כמה ימי מסחר אחורה לחישוב סטיית התקן
+  min_history_days: 20         # פחות מזה (מניה חדשה) -> סטיית תקן ברירת מחדל
+  default_daily_stdev_pct: 3.0
+  alert_sigma: 2.0             # "תנועה חריגה" (שלב 2: מפעיל התראה)
+  notable_sigma: 1.0           # מספיק כדי להופיע ב"המניות שלי" במהדורה
+
+morning:
+  max_my_stocks: 6
+  hot_stories: 3
+  news_lookback_hours: 24
+
+# "המוח". החלפת ספק = שינוי provider. המודלים נוסים לפי הסדר:
+# אם אחד יוצא משימוש או חסום, עוברים לבא. אם כולם נכשלים -> מהדורת גיבוי מתבנית.
+llm:
+  provider: gemini             # gemini | none
+  models:
+    - gemini-flash-latest
+    - gemini-2.5-flash
+    - gemini-flash-lite-latest
+  temperature: 0.4
+  max_retries: 4
+  timeout_seconds: 60
+
+sources:
+  # גיבוי בלבד, ל-VIX, אג"ח 10 שנים, חוזים עתידיים ואסיה (אין להם מקור חינמי רשמי בזמן אמת).
+  # false = המהדורה פשוט תכתוב "אין נתון".
+  yahoo_fallback: true
+
+dashboard_url: ""              # יתמלא בשלב 3
+archive_days: 90               # ארכיון כותרות נמחק אחרי 90 יום

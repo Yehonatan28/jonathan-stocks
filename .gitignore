@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# newsroom: state lives on the data branch, never on main
+newsroom/state/

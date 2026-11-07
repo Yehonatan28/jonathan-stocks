@@ -1,0 +1,17 @@
+# פידי RSS. quality = משקל המקור בציון החשיבות (1 עד 3).
+# שומרים רק כותרת, קישור, מקור ושעה. אף פעם לא טקסט מלא.
+rss:
+  - {key: cnbc-markets, name: CNBC, quality: 3, url: "https://www.cnbc.com/id/20910258/device/rss/rss.html"}
+  - {key: cnbc-top, name: CNBC, quality: 3, url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"}
+  - {key: marketwatch, name: MarketWatch, quality: 3, url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"}
+  - {key: marketwatch-pulse, name: MarketWatch, quality: 3, url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"}
+  - {key: yahoo, name: Yahoo Finance, quality: 2, url: "https://finance.yahoo.com/news/rssindex"}
+  - {key: investing, name: Investing.com, quality: 2, url: "https://www.investing.com/rss/news_25.rss"}
+  - {key: nasdaq-markets, name: Nasdaq, quality: 2, url: "https://www.nasdaq.com/feed/rssoutbound?category=Markets"}
+
+fed:
+  - {key: fed-press, name: Federal Reserve, quality: 3, url: "https://www.federalreserve.gov/feeds/press_all.xml"}
+  - {key: fed-speeches, name: Federal Reserve, quality: 3, url: "https://www.federalreserve.gov/feeds/speeches.xml"}
+
+# טפסי SEC שמעניינים אותנו
+sec_forms: ["8-K", "10-Q", "10-K"]

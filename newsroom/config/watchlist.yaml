@@ -1,0 +1,16 @@
+# רשימת המעקב. רק סימולים: בלי כמויות, סכומים או שווי.
+# אפשר לערוך ידנית, או מהבוט: /add TICKER, /remove TICKER
+tickers:
+- IBIT
+- MSTR
+- TTWO
+- WMT
+- GOOG
+- NVDA
+- AAPL
+- AMZN
+- MSFT
+- TSLA
+- SPCX
+- XLE
+- MAGS
