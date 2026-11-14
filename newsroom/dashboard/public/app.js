@@ -531,6 +531,156 @@
     box.append(safeHTML(eds[cur].html));
   }
 
+  // ------------------------------------------------------------- setup lab --
+  const SETUP_COLOR = { breakout: "var(--a-chain)", near_pivot: "var(--a-lab)", pullback: "var(--a-chart)",
+    squeeze: "var(--a-river)", pocket_pivot: "var(--a-mags)", oversold_uptrend: "var(--a-weather)", reclaim_200: "var(--a-week)" };
+  const fmtN = (x) => (x == null ? "—" : Math.abs(x) >= 1000 ? Math.round(x).toLocaleString("en-US") : (+x).toFixed(2));
+  let GID = 0;
+
+  function ring(score) {
+    const id = `rg${++GID}`, r = 21, C = 2 * Math.PI * r, v = Math.max(0, Math.min(100, score || 0));
+    return sv("svg", { class: "ring", width: 56, height: 56, viewBox: "0 0 56 56", role: "img", "aria-label": `ציון ${v}` },
+      sv("defs", {}, sv("linearGradient", { id, x1: 0, y1: 0, x2: 1, y2: 1 },
+        sv("stop", { offset: "0%", "stop-color": "var(--a-lab)" }), sv("stop", { offset: "100%", "stop-color": "var(--a-mags)" }))),
+      sv("circle", { cx: 28, cy: 28, r, fill: "none", stroke: "var(--line)", "stroke-width": 5 }),
+      sv("circle", { cx: 28, cy: 28, r, fill: "none", stroke: `url(#${id})`, "stroke-width": 5, "stroke-linecap": "round",
+        "stroke-dasharray": `${(C * v) / 100} ${C}`, transform: "rotate(-90 28 28)" }),
+      sv("text", { x: 28, y: 33, "text-anchor": "middle", "font-size": 15, "font-weight": 800, fill: "var(--ink)", "font-family": "Rubik, Heebo, sans-serif", text: Math.round(v) }));
+  }
+
+  function maLine(closes, n, kind) {
+    const out = new Array(closes.length).fill(null);
+    if (closes.length < n) return out;
+    if (kind === "sma") { let s = 0; closes.forEach((c, i) => { s += c; if (i >= n) s -= closes[i - n]; if (i >= n - 1) out[i] = s / n; }); return out; }
+    const k = 2 / (n + 1); let e = closes.slice(0, n).reduce((a, b) => a + b, 0) / n; out[n - 1] = e;
+    for (let i = n; i < closes.length; i++) { e = closes[i] * k + e * (1 - k); out[i] = e; }
+    return out;
+  }
+
+  function candleChart(c, lv, color) {
+    const svg = sv("svg", { class: "candles", role: "img", "aria-label": "גרף נרות יומי עם רמות" });
+    if (!c || c.length < 10) return svg;
+    requestAnimationFrame(() => drawCandles(svg, c, lv, color));
+    return svg;
+  }
+  function drawCandles(svg, c, lv, color) {
+    const W = svg.clientWidth || 340, H = svg.clientHeight || 190, VOL = 28, PR = Math.round(W * 0.2), PL = 4, PT = 8;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const lows = c.map((r) => r[3]), highs = c.map((r) => r[2]);
+    let lo = Math.min(...lows, lv.stop ?? Infinity), hi = Math.max(...highs, lv.target ?? -Infinity);
+    const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
+    const plotW = W - PL - PR, step = plotW / c.length, bw = Math.max(1.5, step * 0.62);
+    const X = (i) => PL + i * step + step / 2, Y = (v) => PT + (1 - (v - lo) / (hi - lo)) * (H - PT - VOL - 6);
+    const vmax = Math.max(...c.map((r) => r[5])) || 1;
+    // future zone: risk (trigger -> stop) and reward (trigger -> target), like a position tool
+    const fx = W - PR + 6, fw = PR - 10;
+    if (lv.trigger && lv.stop) svg.append(sv("rect", { x: fx, y: Y(lv.trigger), width: fw, height: Math.max(1, Y(lv.stop) - Y(lv.trigger)), fill: "var(--down)", opacity: 0.16, rx: 3 }));
+    if (lv.trigger && lv.target) svg.append(sv("rect", { x: fx, y: Y(lv.target), width: fw, height: Math.max(1, Y(lv.trigger) - Y(lv.target)), fill: "var(--up)", opacity: 0.16, rx: 3 }));
+    // volume
+    c.forEach((r, i) => {
+      const h = (r[5] / vmax) * VOL;
+      svg.append(sv("rect", { x: X(i) - bw / 2, y: H - h, width: bw, height: h, fill: r[4] >= r[1] ? "var(--up)" : "var(--down)", opacity: 0.28 }));
+    });
+    // moving averages
+    const closes = c.map((r) => r[4]);
+    for (const [ma, col] of [[maLine(closes, 21, "ema"), "var(--a-weather)"], [maLine(closes, 50, "sma"), "var(--a-river)"]]) {
+      const pts = ma.map((v, i) => (v == null ? null : `${X(i).toFixed(1)},${Y(v).toFixed(1)}`)).filter(Boolean);
+      if (pts.length > 1) svg.append(sv("polyline", { points: pts.join(" "), fill: "none", stroke: col, "stroke-width": 1.6, opacity: 0.9 }));
+    }
+    // candles
+    c.forEach((r, i) => {
+      const up = r[4] >= r[1], col = up ? "var(--up)" : "var(--down)";
+      svg.append(sv("line", { x1: X(i), x2: X(i), y1: Y(r[2]), y2: Y(r[3]), stroke: col, "stroke-width": 1 }));
+      const y1 = Y(Math.max(r[1], r[4])), y2 = Y(Math.min(r[1], r[4]));
+      svg.append(sv("rect", { x: X(i) - bw / 2, y: y1, width: bw, height: Math.max(1, y2 - y1), fill: col, rx: 1 }));
+    });
+    // levels
+    const level = (v, col, label) => {
+      if (v == null) return;
+      svg.append(sv("line", { x1: PL, x2: W - 4, y1: Y(v), y2: Y(v), stroke: col, "stroke-width": 1.4, opacity: 0.9 }));
+      svg.append(sv("text", { x: W - 6, y: Y(v) - 4, "text-anchor": "end", "font-size": 10.5, "font-weight": 700, fill: col, text: `${label} ${fmtN(v)}` }));
+    };
+    level(lv.target, "var(--up)", "יעד");
+    level(lv.trigger, "var(--a-chart)", "טריגר");
+    level(lv.stop, "var(--down)", "ביטול");
+    svg.append(sv("text", { x: PL + 2, y: H - VOL - 2, "font-size": 10, fill: "var(--muted)", text: "EMA21 (כתום) · SMA50 (תכלת)" }));
+  }
+
+  function linkLine(l) {
+    const parts = [];
+    if (l.held) parts.push("כבר ברשימה שלך");
+    if (l.peer_of?.length) parts.push(`מתחרה/דומה ל-${l.peer_of.join(", ")}`);
+    else if (l.same_sector?.length) parts.push(`אותו סקטור כמו ${l.same_sector.slice(0, 3).join(", ")}`);
+    if (l.corr != null) parts.push(`מתאם לתיק \u2066${l.corr.toFixed(2)}\u2069${l.corr < 0.3 ? " (מפזר)" : l.corr > 0.75 ? " (חופף)" : ""}`);
+    return parts.join(" · ");
+  }
+
+  function renderLab(d) {
+    const res = d.research, box = clear($("#lab-picks")), more = clear($("#lab-more"));
+    if (!res) { box.append(el("div", { class: "empty", text: "המחקר הראשון ירוץ הערב אחרי הסגירה בניו יורק" })); return; }
+    $("#lab-meta").textContent = `נסרקו ${res.analyzed} מניות · מסחר ${res.session.split("-").reverse().slice(0, 2).join(".")}`;
+    if (!res.picks.length) box.append(el("div", { class: "empty", text: "אין היום סטאפ שעובר את רף האיכות. גם זו תשובה: לא כל יום צריך לעשות משהו." }));
+    res.picks.forEach((p, i) => {
+      const color = SETUP_COLOR[p.setup] || "var(--a-lab)", lv = p.levels || {}, m = p.metrics || {};
+      const bd = p.breakdown || {};
+      const card = el("article", { class: "pick", style: `--pc:${color}` },
+        el("div", { class: "pick-h" }, el("span", { class: "rank", text: i + 1 }),
+          el("div", {}, el("div", { class: "sym", text: p.symbol }),
+            el("div", { class: "px" }, el("span", { class: "num", text: money(m.close) }), " ", pctNode(m.change_pct),
+              m.rs_rating ? el("span", { text: ` · RS ${m.rs_rating}` }) : null)),
+          ring(p.score)),
+        el("div", { class: "chips" }, el("span", { class: "chip setup", text: p.setup_he }),
+          p.status === "חדש" ? el("span", { class: "chip new", text: "חדש היום" }) : el("span", { class: "chip", text: "ממשיך מאתמול" }),
+          ...p.tags.slice(0, 4).map((t) => el("span", { class: "chip", text: t })),
+          ...p.flags.map((f) => el("span", { class: "chip warn", text: `⚠ ${f}` }))),
+        candleChart(p.candles, lv, color),
+        el("div", { class: "levels" },
+          el("div", { class: "trig" }, el("span", { class: "k", text: "טריגר" }), el("span", { class: "v num", text: fmtN(lv.trigger) })),
+          el("div", { class: "stop" }, el("span", { class: "k", text: "ביטול" }), el("span", { class: "v num", text: fmtN(lv.stop) })),
+          el("div", { class: "tgt" }, el("span", { class: "k", text: "יעד ראשון" }), el("span", { class: "v num", text: fmtN(lv.target) })),
+          el("div", {}, el("span", { class: "k", text: "סיכוי/סיכון" }), el("span", { class: "v num", text: lv.rr != null ? `${lv.rr}:1` : "—" }))),
+        el("div", { class: "thesis", text: p.thesis || "" }),
+        el("div", { class: "cv" }, el("div", {}, el("b", { text: "✓ מה יאשר: " }), p.confirm || ""),
+          el("div", {}, el("b", { text: "✕ מה יבטל: " }), p.invalidate || "")),
+        el("div", { class: "linkline", text: `🔗 ${linkLine(p.link || {})}` }),
+        el("div", { class: "bd" }, ...[["מגמה", bd.trend, 25], ["חוזק יחסי", bd.rs, 25], ["מבנה", bd.setup, 20], ["סיכוי/סיכון", bd.risk_reward, 15], ["הקשר", bd.context, 15]]
+          .map(([k, v, max]) => el("div", { title: `${k}: ${v ?? 0} מתוך ${max}` }, el("i", {}, el("b", { style: `width:${((v || 0) / max) * 100}%` })), k))));
+      box.append(card);
+    });
+    if (res.shortlist?.length) {
+      more.append(el("div", { class: "sub-h", text: "ברשימה המורחבת" }),
+        el("div", { class: "lab-row" }, ...res.shortlist.map((x) => el("div", { class: "mini" },
+          el("b", { text: x.symbol }), ` · ${x.setup_he || ""} · `, el("span", { class: "num", text: Math.round(x.score) })))));
+    }
+    if (res.holdings?.length) {
+      more.append(el("div", { class: "sub-h", text: "המניות שלך, בעין טכנית" }),
+        el("div", { class: "holdings" }, ...res.holdings.map((h) => {
+          const m = h.metrics || {}, tt = m.trend_template || 0;
+          return el("div", { class: "hold" }, el("span", { class: "s", text: h.symbol }),
+            el("div", {}, el("div", { class: "dots", title: `תבנית מגמה: ${tt} מתוך 8` }, ...Array.from({ length: 8 }, (_, k) => el("i", { class: k < tt ? "on" : "" }))),
+              el("span", { class: "muted" }, `RS ${m.rs_rating ?? "—"}`,
+                m.ext_ema21_pct != null ? ` · ${m.ext_ema21_pct >= 0 ? "מעל" : "מתחת ל"}-EMA21 ב-` : "",
+                m.ext_ema21_pct != null ? el("span", { class: "num", text: `${Math.abs(m.ext_ema21_pct)}%` }) : null)),
+            h.setup ? el("span", { class: "chip setup", style: `--pc:${SETUP_COLOR[h.setup] || "var(--a-lab)"}`, text: h.setup_he }) : el("span", { class: "muted", text: "אין סטאפ" }));
+        })));
+    }
+    const t = res.track || {};
+    more.append(el("div", { class: "sub-h", text: "מעקב ביצועים של המעבדה (כנות לפני הכול)" }),
+      el("div", { class: "track-strip" },
+        ...[["סטאפים שסומנו", t.picks], ["הטריגר הופעל", t.triggered], ["נסגרו", t.closed],
+            ["אחוז הצלחה", t.win_rate != null ? `${t.win_rate}%` : "—"], ["ממוצע R", t.avg_r != null ? t.avg_r : "—"]]
+          .map(([k, v]) => el("div", {}, el("span", { class: "k", text: k }), el("span", { class: "v num", text: v ?? 0 })))),
+      t.closed ? null : el("div", { class: "muted", style: "font-size:12px;margin-top:6px", text: "המעקב מתחיל לצבור נתונים. כל סטאפ נבדק יום אחרי יום: הגיע ליעד, נעצר, או פג תוקף." }));
+  }
+
+  function renderTicker(d) {
+    const wrap = $("#ticker"), track = clear($("#ticker-track"));
+    const items = (d.headlines || []).slice(0, 10);
+    wrap.hidden = !items.length;
+    const mk = (h) => el("a", { href: h.url, target: "_blank", rel: "noopener" }, el("b", { text: h.score.toFixed(1) }), h.title);
+    for (const round of [0, 1]) for (const h of items) { const a = mk(h); if (round) a.setAttribute("aria-hidden", "true"); track.append(a); }
+  }
+
   // ------------------------------------------------------------------ boot --
   function renderAll(d) {
     DATA = d;
@@ -547,7 +697,7 @@
     ban.firstElementChild.textContent = notes.join(" · ");
     const m = /t=([A-Z0-9.^=\-]+)/.exec(location.hash);
     if (m) SEL = m[1];
-    const parts = [renderWeather, renderHeat, renderChart, renderWaterfall, renderRiver, renderChains, renderTrain, renderMags, renderAlerts, (x) => renderEditions(x)];
+    const parts = [renderTicker, renderWeather, renderLab, renderHeat, renderChart, renderWaterfall, renderRiver, renderChains, renderTrain, renderMags, renderAlerts, (x) => renderEditions(x)];
     for (const f of parts) { try { f(d); } catch (e) { console.error(f.name, e); } }
     $("#foot-src").textContent = `מקורות: Finnhub, Tiingo, FRED, SEC EDGAR, Federal Reserve, CoinGecko, RSS${d.weather?.components?.some((c) => (c.source || "").startsWith("Yahoo")) ? ", Yahoo (גיבוי)" : ""} · עודכן ${when(d.generated)}`;
   }
@@ -571,7 +721,7 @@
   $("#theme").addEventListener("click", () => {
     root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
     store.set("nr-theme", root.dataset.theme);
-    document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === "light" ? "#f4f4f1" : "#0b0c0e";
+    document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === "light" ? "#fbf7f2" : "#080b1a";
     if (DATA) renderAll(DATA);
   });
   const cvdBtn = $("#cvd");

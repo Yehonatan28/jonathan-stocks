@@ -4,6 +4,7 @@ Tasks:
   tick     bot commands + due editions + alerts + dashboard (the normal scheduled run)
   morning | preopen | close | weekly   send that edition now, regardless of the clock (manual test)
   alerts   run only the alerts pass
+  research run the technical research now (otherwise every evening after the close)
   bot      handle queued bot commands only (started instantly by the Worker in webhook mode)
   webhook_on | webhook_off   switch instant bot commands on or off
   site     rebuild the dashboard now
@@ -37,7 +38,7 @@ def _validate_ticker(ctx: Context):
     return check
 
 
-PART_HE = {"bot": "הבוט", "morning": "מהדורת הבוקר", "preopen": "מהדורת לפני הפתיחה", "close": "סיכום הסגירה",
+PART_HE = {"research": "מעבדת הסטאפים", "bot": "הבוט", "morning": "מהדורת הבוקר", "preopen": "מהדורת לפני הפתיחה", "close": "סיכום הסגירה",
            "weekly": "הסיכום השבועי", "alerts": "מנוע ההתראות", "dashboard": "הדשבורד", "startup": "ההפעלה"}
 
 
@@ -125,6 +126,9 @@ def tick(ctx: Context, force: str | None = None) -> list[tuple[str, BaseExceptio
         part(name, lambda n=name: runners[n](ctx))
     if force in (None, "alerts"):
         part("alerts", lambda: alerts.run(ctx))
+    if force in (None, "research"):
+        from .research import run as research
+        part("research", lambda: research.run(ctx, force=force == "research"))
     part("dashboard", lambda: site.maybe_build(ctx, force=force == "site"))
 
     ctx.state.prune(ctx.now.astimezone(sch.IL).date(), int(ctx.cfg.s("archive_days", default=90)))

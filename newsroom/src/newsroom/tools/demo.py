@@ -117,7 +117,68 @@ def make_state(root, now: datetime) -> State:
         "☀️ <b>מהדורת בוקר</b> · נתוני הדגמה\n📌 <b>הטכנולוגיה הובילה ירידה, האנרגיה הציעה מקלט</b>\n\n"
         "⚡ <b>שלושה דברים שחייבים לדעת</b>\n• ענקיות הענן רומזות על האטה בהשקעות AI.\n"
         "• OPEC+ מאריכה קיצוצים, הנפט מזנק.\n• מדד המחירים לצרכן יתפרסם ביום חמישי."})
+    make_candles(st, cfg, now)
     return st
+
+
+def _walk(rnd, n, start, drift, vol):
+    out, c = [], start
+    for _ in range(n):
+        c *= 1 + drift + rnd.gauss(0, vol)
+        out.append(c)
+    return out
+
+
+def _base(pre, depths=(0.12, 0.07, 0.03), seg=8):
+    top = pre[-1] * 1.02
+    out = [top]
+    for dep in depths:
+        lo, half = top * (1 - dep), seg // 2
+        out += [top - (top - lo) * (k + 1) / half for k in range(half)]
+        out += [lo + (top * 0.985 - lo) * (k + 1) / half for k in range(half)]
+    return pre + out
+
+
+def make_candles(st, cfg, now) -> None:
+    """Invented daily candles for the research universe, with a few textbook patterns planted."""
+    rnd = random.Random(11)
+    end = now.astimezone(sch.NY).date()
+    days = []
+    d = end
+    while len(days) < 260:
+        if sch.is_trading_day(d):
+            days.append(d)
+        d -= timedelta(days=1)
+    days.reverse()
+    planted = {"AMD": "vcp", "COST": "breakout", "META": "pullback", "XOM": "squeeze", "RKLB": "vcp"}
+    for sym in cfg.research_universe():
+        start = PRICES.get(sym, 40 + rnd.random() * 300)
+        kind = planted.get(sym)
+        if kind in ("vcp", "breakout"):
+            closes = _base(_walk(rnd, 260 - 25, start * 0.55, 0.0028, 0.009))
+            if kind == "breakout":
+                closes = closes[1:] + [max(closes[-25:]) * 1.025]
+        elif kind == "pullback":
+            closes = _walk(rnd, 248, start * 0.6, 0.0025, 0.008)
+            closes += [closes[-1] * (1 - 0.006 * k) for k in range(1, 13)]
+        elif kind == "squeeze":
+            closes = _walk(rnd, 200, start * 0.8, 0.0012, 0.01) + _walk(rnd, 60, 0, 0, 0)
+            closes = closes[:200] + [closes[199] * (1 + rnd.gauss(0, 0.002)) for _ in range(60)]
+        else:
+            closes = _walk(rnd, 260, start, rnd.uniform(-0.001, 0.002), rnd.uniform(0.008, 0.02))
+        closes = closes[-260:]
+        rows = []
+        for i, c in enumerate(closes):
+            prev = closes[i - 1] if i else c
+            sp = abs(rnd.gauss(0, 0.008)) + 0.004
+            hi, lo = max(c, prev) * (1 + sp), min(c, prev) * (1 - sp)
+            vol = 2e6 * (0.5 + rnd.random())
+            if kind in ("vcp", "breakout") and i > 225:
+                vol *= max(0.35, 1 - (i - 225) / 30)
+            if kind == "breakout" and i == len(closes) - 1:
+                vol = 5e6
+            rows.append([days[i].isoformat(), round(prev, 2), round(hi, 2), round(lo, 2), round(c, 2), int(vol)])
+        st.set_ohlc(sym, rows)
 
 
 def run() -> int:
@@ -130,6 +191,10 @@ def run() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         st = make_state(tmp, now)
         ctx = Context(Config.load(), st, now=now)
+        ctx.__dict__["tiingo"] = None                     # demo: no network, candles are already in state
+        ctx.__dict__["finnhub"] = None
+        from ..research import run as research
+        research.run(ctx, force=True)
         data = build.build_data(ctx)
     data["demo"] = True
     build.LOCAL_OUT.parent.mkdir(parents=True, exist_ok=True)

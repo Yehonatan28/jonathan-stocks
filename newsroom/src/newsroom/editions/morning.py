@@ -315,6 +315,22 @@ def render(d: MorningData, cfg, facts: dict, refs: dict[str, cl.Cluster], stocks
 
 # =================================================================== run ===
 
+def research_section(res: dict, dashboard_url: str = "") -> str | None:
+    """🔬 The setup lab in three lines. Analysis, not a recommendation."""
+    picks = res.get("picks") or []
+    if not picks:
+        return None
+    lines = ["🔬 <b>מעבדת הסטאפים</b> <i>(ניתוח טכני, לא ייעוץ)</i>"]
+    for p in picks:
+        lv = p.get("levels") or {}
+        new = " 🆕" if p.get("status") == "חדש" else ""
+        lines.append(f"• <b>{esc(p['symbol'])}</b>{new} · {esc(p.get('setup_he') or '')} · ציון {p['score']:g}\n"
+                     f"  טריגר {lv.get('trigger', 0):g} · ביטול {lv.get('stop', 0):g} · סיכוי/סיכון {lv.get('rr', 0):g}")
+    if dashboard_url:
+        lines.append(link(dashboard_url.rstrip("/") + "/#lab", "📊 הניתוח המלא בדשבורד"))
+    return "\n".join(lines)
+
+
 def run(ctx, force: bool = False) -> bool:
     from ..alerts.antinoise import take_queue
     from ..alerts.format import queued_section
@@ -325,6 +341,9 @@ def run(ctx, force: bool = False) -> bool:
     text, label = write_text(ctx, facts)
     msg = render(d, ctx.cfg, facts, refs, stocks, text, label, ctx.failed_sources, ctx.now)
     queued = queued_section(take_queue(ctx.state), "📥 <b>נצבר מהלילה</b>")
+    lab = research_section(ctx.state.cache("research") or {}, ctx.cfg.s("dashboard_url") or "")
+    if lab:
+        queued = f"{lab}\n\n{queued}" if queued else lab
     if queued:                                   # just before the footer
         head, _, foot = msg.rpartition("\n\n🕐")
         msg = f"{head}\n\n{queued}\n\n🕐{foot}"

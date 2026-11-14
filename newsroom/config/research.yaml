@@ -1,0 +1,100 @@
+# 🔬 מעבדת הסטאפים: המחקר הטכני היומי.
+# כל ערב אחרי הסגירה המערכת סורקת את "היקום" הזה, ובוחרת עד 3 סטאפים טכניים שקשורים לתיק.
+# זה מידע וניתוח, לא ייעוץ ולא המלצה. ההחלטה תמיד שלך.
+
+enabled: true
+picks: 3                    # כמה סטאפים להציג בראש (במהדורה ובדשבורד)
+shortlist: 8                # כמה עוד יופיעו ברשימה המורחבת בדשבורד
+min_score: 60               # מתחת לציון הזה (0-100) לא מציגים, גם אם יוצאות פחות משלוש
+run_after_et: "18:00"       # שעה בניו יורק שאחריה מתחיל המחקר (נתוני הסגירה כבר אצל Tiingo)
+calls_per_run: 35           # כמה קריאות Tiingo מותר לכל הרצה (מכסה: 50 לשעה)
+earnings_warning_days: 7    # דוח בטווח הזה = אזהרת "סיכון אירוע"
+max_extension_pct: 8.0      # מעל זה מעל ממוצע 21 = "מתוח מדי", לא נכנס לרשימה
+
+# המתחרות, הספקיות והדומות לכל החזקה. מכאן מגיע "הקשר לתיק".
+peers:
+  NVDA: [AMD, AVGO, TSM, MU, ARM, SMCI, ANET]
+  MSFT: [ORCL, CRM, NOW, ADBE]
+  GOOG: [META, TTD]
+  AMZN: [SHOP, COST]
+  AAPL: [QCOM]
+  TSLA: [RIVN, GM, F]
+  MSTR: [COIN, MARA, RIOT, HOOD]
+  IBIT: [COIN, HOOD]
+  XLE: [XOM, CVX, COP, SLB, OXY, EOG]
+  TTWO: [EA, RBLX, U]
+  WMT: [COST, TGT, KR, DG]
+  SPCX: [RKLB, ASTS, LMT, NOC]
+  MAGS: [META, NFLX]
+
+# סקטור לכל סימול (תעודת הסל הסקטוריאלית שמייצגת אותו). משמש לחוזק יחסי ולקשר לתיק.
+sectors:
+  NVDA: XLK
+  AMD: XLK
+  AVGO: XLK
+  TSM: XLK
+  MU: XLK
+  ARM: XLK
+  SMCI: XLK
+  ANET: XLK
+  MSFT: XLK
+  ORCL: XLK
+  CRM: XLK
+  NOW: XLK
+  ADBE: XLK
+  AAPL: XLK
+  QCOM: XLK
+  PLTR: XLK
+  GOOG: XLC
+  GOOGL: XLC
+  META: XLC
+  NFLX: XLC
+  TTD: XLC
+  TTWO: XLC
+  EA: XLC
+  RBLX: XLC
+  U: XLK
+  AMZN: XLY
+  TSLA: XLY
+  RIVN: XLY
+  GM: XLY
+  F: XLY
+  SHOP: XLY
+  HD: XLY
+  WMT: XLP
+  COST: XLP
+  TGT: XLP
+  KR: XLP
+  DG: XLP
+  KO: XLP
+  PG: XLP
+  XOM: XLE
+  CVX: XLE
+  COP: XLE
+  SLB: XLE
+  OXY: XLE
+  EOG: XLE
+  XLE: XLE
+  COIN: XLF
+  HOOD: XLF
+  MARA: XLF
+  RIOT: XLF
+  MSTR: XLK
+  IBIT: XLF
+  JPM: XLF
+  BAC: XLF
+  GS: XLF
+  V: XLF
+  MA: XLF
+  BRK.B: XLF
+  LLY: XLV
+  UNH: XLV
+  JNJ: XLV
+  ABBV: XLV
+  RKLB: XLI
+  ASTS: XLC
+  LMT: XLI
+  NOC: XLI
+  SPCX: XLI
+  MAGS: XLK
+  ASML: XLK

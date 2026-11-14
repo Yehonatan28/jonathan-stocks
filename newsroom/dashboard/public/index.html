@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>חדר החדשות</title>
   <meta name="description" content="חדשות ומצב השוק האמריקאי, במבט אחד.">
-  <meta name="theme-color" content="#0b0c0e">
+  <meta name="theme-color" content="#080b1a">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&family=Rubik:wght@600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script>
     try {
@@ -42,23 +42,34 @@
       </button>
     </div>
     <nav class="nav" aria-label="ניווט">
-      <a href="#weather">מזג האוויר</a><a href="#mine">הרשימה שלי</a><a href="#chart">גרף וחדשות</a>
+      <a href="#weather">מזג האוויר</a><a href="#lab">מעבדת הסטאפים</a><a href="#mine">הרשימה שלי</a><a href="#chart">גרף וחדשות</a>
       <a href="#moved">מה הזיז</a><a href="#river">נהר הסיפורים</a><a href="#chain">שרשרת ההשפעה</a>
       <a href="#week">השבוע</a><a href="#mags">MAGS</a><a href="#editions">מהדורות</a>
     </nav>
   </header>
+  <div class="ticker" id="ticker" hidden><div class="ticker-in"><span class="live-tag">מבזקים</span><div class="track" id="ticker-track"></div></div></div>
   <div class="banner" id="banner" hidden><div></div></div>
 
   <main id="app">
     <section class="card span-12" id="weather" aria-labelledby="h-weather">
-      <div class="card-h"><h2 id="h-weather">מזג האוויר בשוק</h2><span class="hint">מצב השוק במבט אחד</span></div>
+      <div class="card-h"><h2 id="h-weather"><span class="ic" aria-hidden="true">🌦️</span>מזג האוויר בשוק</h2><span class="hint">מצב השוק במבט אחד</span></div>
       <div class="weather" id="weather-body"></div>
       <div class="idx" id="indices" style="margin-top:16px"></div>
       <div class="src" id="weather-src"></div>
     </section>
 
+    <section class="card span-12" id="lab" aria-labelledby="h-lab">
+      <div class="card-h"><h2 id="h-lab"><span class="ic" aria-hidden="true">🔬</span>מעבדת הסטאפים</h2>
+        <span class="hint">סריקה טכנית יומית של המניות שקשורות לתיק שלך · ניתוח, לא ייעוץ</span>
+        <span class="end lab-meta" id="lab-meta"></span></div>
+      <div class="lab-grid" id="lab-picks"></div>
+      <div id="lab-more"></div>
+      <div class="disclaimer">המעבדה מסמנת מבנים טכניים שמעניינים לניתוח, לפי שיטות מקובלות (תבנית המגמה של מינרביני, חוזק יחסי בסגנון IBD, VCP, פוקט פיבוט, נפח פריצה).
+        היא לא אומרת לקנות או למכור, ולא מכירה את התיק, את הסכומים או את הסיבולת שלך לסיכון. ההחלטה שלך בלבד.</div>
+    </section>
+
     <section class="card span-7" id="mine" aria-labelledby="h-mine">
-      <div class="card-h"><h2 id="h-mine">הרשימה שלי</h2><span class="hint">גודל = עוצמת התנועה ביחס לתנודתיות הרגילה של כל נייר</span></div>
+      <div class="card-h"><h2 id="h-mine"><span class="ic" aria-hidden="true">🗺️</span>הרשימה שלי</h2><span class="hint">גודל = עוצמת התנועה ביחס לתנודתיות הרגילה של כל נייר</span></div>
       <div class="heat" id="heat"></div>
       <div class="legend-ramp" dir="ltr"><span dir="rtl">ירידה חריגה ▼</span><span class="r"></span><span dir="rtl">▲ עלייה חריגה</span></div>
       <details class="tbl" id="heat-tbl"><summary>הצג כטבלה</summary></details>
@@ -66,7 +77,7 @@
     </section>
 
     <section class="card span-5" id="chart" aria-labelledby="h-chart">
-      <div class="card-h"><h2 id="h-chart">גרף עם סיכות חדשות</h2><span class="hint">כל סיכה היא ידיעה, בשעה שבה פורסמה</span></div>
+      <div class="card-h"><h2 id="h-chart"><span class="ic" aria-hidden="true">📈</span>גרף עם סיכות חדשות</h2><span class="hint">כל סיכה היא ידיעה, בשעה שבה פורסמה</span></div>
       <div class="sym-row" id="sym-row"></div>
       <div class="chart-wrap"><svg class="chart" id="price" role="img" aria-label="גרף תוך-יומי"></svg><div class="tip" id="price-tip"></div></div>
       <div id="pin-card"></div>
@@ -74,7 +85,7 @@
     </section>
 
     <section class="card span-6" id="moved" aria-labelledby="h-moved">
-      <div class="card-h"><h2 id="h-moved">מה הזיז את השוק</h2><span class="hint">תרומת כל סקטור לתנועת ה-S&amp;P 500, בנקודות אחוז</span></div>
+      <div class="card-h"><h2 id="h-moved"><span class="ic" aria-hidden="true">🧱</span>מה הזיז את השוק</h2><span class="hint">תרומת כל סקטור לתנועת ה-S&amp;P 500, בנקודות אחוז</span></div>
       <div id="wf"></div>
       <div class="mega" id="mega"></div>
       <details class="tbl" id="wf-tbl"><summary>הצג כטבלה</summary></details>
@@ -82,37 +93,37 @@
     </section>
 
     <section class="card span-6" id="river" aria-labelledby="h-river">
-      <div class="card-h"><h2 id="h-river">נהר הסיפורים</h2><span class="hint">עובי = חשיבות · צבע = כיוון · מתפצל לניירות שהסיפור נוגע בהם</span></div>
+      <div class="card-h"><h2 id="h-river"><span class="ic" aria-hidden="true">🌊</span>נהר הסיפורים</h2><span class="hint">עובי = חשיבות · צבע = כיוון · מתפצל לניירות שהסיפור נוגע בהם</span></div>
       <svg class="river" id="river-svg" role="img" aria-label="ציר הזמן של הסיפורים היום"></svg>
       <div class="river-list" id="river-list"></div>
       <div class="src" id="river-src"></div>
     </section>
 
     <section class="card span-7" id="chain" aria-labelledby="h-chain">
-      <div class="card-h"><h2 id="h-chain">שרשרת ההשפעה</h2><span class="hint">אירוע ← גורם ← סקטור ← המניות שלי</span></div>
+      <div class="card-h"><h2 id="h-chain"><span class="ic" aria-hidden="true">🕸️</span>שרשרת ההשפעה</h2><span class="hint">אירוע ← גורם ← סקטור ← המניות שלי</span></div>
       <div class="chains" id="chains"></div>
       <div class="src" id="chain-src"></div>
     </section>
 
     <section class="card span-5" id="week" aria-labelledby="h-week">
-      <div class="card-h"><h2 id="h-week">קו הרכבת של השבוע</h2><span class="hint">מאקרו, דוחות והפד · שעון ישראל</span></div>
+      <div class="card-h"><h2 id="h-week"><span class="ic" aria-hidden="true">🚉</span>קו הרכבת של השבוע</h2><span class="hint">מאקרו, דוחות והפד · שעון ישראל</span></div>
       <div class="train" id="train"></div>
       <div class="src" id="week-src"></div>
     </section>
 
     <section class="card span-6" id="mags" aria-labelledby="h-mags">
-      <div class="card-h"><h2 id="h-mags">חפיפת MAGS</h2><span class="hint">כמה מהרשימה חשופה פעמיים לאותן שבע מניות</span></div>
+      <div class="card-h"><h2 id="h-mags"><span class="ic" aria-hidden="true">🎯</span>חפיפת MAGS</h2><span class="hint">כמה מהרשימה חשופה פעמיים לאותן שבע מניות</span></div>
       <div class="mags" id="mags-body"></div>
       <div class="src" id="mags-src"></div>
     </section>
 
     <section class="card span-6" id="alerts-card" aria-labelledby="h-alerts">
-      <div class="card-h"><h2 id="h-alerts">התראות אחרונות</h2></div>
+      <div class="card-h"><h2 id="h-alerts"><span class="ic" aria-hidden="true">🔔</span>התראות אחרונות</h2></div>
       <div class="alerts" id="alerts"></div>
     </section>
 
     <section class="card span-12" id="editions" aria-labelledby="h-editions">
-      <div class="card-h"><h2 id="h-editions">המהדורות</h2><div class="end tabs" id="ed-tabs"></div></div>
+      <div class="card-h"><h2 id="h-editions"><span class="ic" aria-hidden="true">📰</span>המהדורות</h2><div class="end tabs" id="ed-tabs"></div></div>
       <div class="edition" id="edition"></div>
     </section>
   </main>

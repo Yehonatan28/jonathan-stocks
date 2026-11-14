@@ -22,7 +22,7 @@ on:
         description: "מה להריץ"
         type: choice
         default: tick
-        options: [tick, morning, preopen, close, weekly, alerts, bot, site, probe, whoami, webhook_on, webhook_off]
+        options: [tick, morning, preopen, close, weekly, alerts, research, bot, site, probe, whoami, webhook_on, webhook_off]
 
 permissions:
   contents: write

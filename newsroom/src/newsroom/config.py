@@ -73,6 +73,7 @@ class Config:
     market: dict[str, Any]
     sources: dict[str, Any]
     watchlist: list[str]
+    research: dict[str, Any] = field(default_factory=dict)
     secrets: Secrets = field(default_factory=Secrets.from_env)
 
     @classmethod
@@ -83,6 +84,7 @@ class Config:
             market=_load("market.yaml"),
             sources=_load("sources.yaml"),
             watchlist=[str(t).upper() for t in wl],
+            research=_load("research.yaml") if (CONFIG_DIR / "research.yaml").exists() else {},
         )
 
     # ---- convenience views -------------------------------------------------
@@ -112,6 +114,15 @@ class Config:
         for s in syms:
             seen.setdefault(s, None)
         return list(seen)
+
+    def research_universe(self) -> list[str]:
+        """Watchlist + each holding's peers + megacaps + SPY + sector ETFs (for relative strength)."""
+        peers = self.research.get("peers", {})
+        syms = list(self.watchlist)
+        for t in self.watchlist:
+            syms += peers.get(t, [])
+        syms += self.market.get("megacaps", []) + ["SPY"] + self.sector_symbols
+        return list(dict.fromkeys(s for s in syms if s and not s.startswith("^")))
 
     def display_name(self, symbol: str) -> str:
         for group in ("indices", "proxies", "israel"):

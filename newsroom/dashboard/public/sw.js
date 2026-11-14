@@ -1,5 +1,5 @@
 /* Shell: cache first. data.json: network first, cached copy when offline. */
-const SHELL = "nr-shell-v1";
+const SHELL = "nr-shell-v2";
 const FILES = ["./", "index.html", "styles.css", "app.js", "manifest.webmanifest", "icon.svg", "icon-192.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) => e.waitUntil(

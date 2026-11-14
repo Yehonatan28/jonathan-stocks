@@ -276,6 +276,9 @@ def build_data(ctx) -> dict:
         "intraday": intraday_block(ctx, cfg, today_ny, stories),
         "macro": macro,
         "alerts": list(reversed(state.cache("alerts_log", [])))[:15],
+        "research": state.cache("research") or None,
+        "headlines": [{"title": x["title"], "url": x["url"], "source": x["source"], "score": x["score"]}
+                      for x in stories[:12]],
         "editions": editions_block(state),
         "failed_sources": ctx.failed_sources,
         "market_updated": m.get("updated"),

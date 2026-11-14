@@ -61,6 +61,13 @@ class State:
     def set_history(self, symbol: str, rows: list[list]) -> None:
         self._write(self.root / "history" / f"{_safe(symbol)}.json", rows)
 
+    def ohlc(self, symbol: str) -> list[list]:
+        """[[date, open, high, low, close, volume], ...] oldest first, split-adjusted."""
+        return self._read(self.root / "ohlc" / f"{_safe(symbol)}.json", [])
+
+    def set_ohlc(self, symbol: str, rows: list[list]) -> None:
+        self._write(self.root / "ohlc" / f"{_safe(symbol)}.json", rows)
+
     def cache(self, name: str, default: Any = None) -> Any:
         return self._read(self.root / "cache" / f"{name}.json", default if default is not None else {})
 
