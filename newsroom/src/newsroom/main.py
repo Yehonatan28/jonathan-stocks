@@ -14,6 +14,7 @@ Tasks:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import time
 import traceback
@@ -149,6 +150,12 @@ def main(argv: list[str] | None = None) -> int:
     if task == "probe":
         from .tools.probe import run as probe
         return probe()
+
+    if not os.environ.get("TELEGRAM_BOT_TOKEN", "").strip():
+        # Not set up yet (no secrets): finish quietly instead of failing every hour,
+        # which would also make GitHub e-mail a failure notice for each run.
+        log.warning("TELEGRAM_BOT_TOKEN is not set yet - nothing to do. See README, setup step 5.")
+        return 0
 
     ctx: Context | None = None
     try:
