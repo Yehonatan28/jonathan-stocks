@@ -4,6 +4,8 @@ Tasks:
   tick     bot commands + due editions + alerts + dashboard (the normal scheduled run)
   morning | preopen | close | weekly   send that edition now, regardless of the clock (manual test)
   alerts   run only the alerts pass
+  bot      handle queued bot commands only (started instantly by the Worker in webhook mode)
+  webhook_on | webhook_off   switch instant bot commands on or off
   site     rebuild the dashboard now
   probe    check every data source and key, report to Telegram
   whoami   print the chat ids that wrote to the bot (setup helper)
@@ -115,6 +117,8 @@ def tick(ctx: Context, force: str | None = None) -> list[tuple[str, BaseExceptio
             ctx.fail("Telegram getUpdates", exc)
 
     part("bot", commands)
+    if force == "bot":                     # instant mode: a command just arrived, nothing else to do
+        return errors
     runners = {"morning": morning.run, "preopen": preopen.run, "close": close.run, "weekly": weekly.run}
     for name in ([force] if force in runners else due_editions(ctx)):
         log.info("edition due: %s", name)
@@ -135,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     if task == "whoami":
         from .tools.whoami import run as whoami
         return whoami()
+    if task in ("webhook_on", "webhook_off"):
+        from .tools.webhook import run as webhook
+        return webhook(on=task == "webhook_on")
     if task == "probe":
         from .tools.probe import run as probe
         return probe()

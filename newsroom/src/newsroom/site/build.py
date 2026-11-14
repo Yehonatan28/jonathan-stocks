@@ -283,14 +283,10 @@ def build_data(ctx) -> dict:
 
 
 def push_kv(ctx, payload: str) -> None:
-    import os
-    acc, ns, tok = (os.environ.get(k, "").strip() for k in ("CLOUDFLARE_ACCOUNT_ID", "CF_KV_NAMESPACE_ID",
-                                                            "CLOUDFLARE_API_TOKEN"))
-    if not (acc and ns and tok):
-        return
-    url = f"https://api.cloudflare.com/client/v4/accounts/{acc}/storage/kv/namespaces/{ns}/values/data.json"
-    request("PUT", url, headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json"},
-            data=payload.encode("utf-8"), timeout=20, retries=2)
+    from ..cloudflare import KV
+    kv = KV.from_env()
+    if kv:
+        kv.put("data.json", payload)
 
 
 def maybe_build(ctx, force: bool = False) -> bool:

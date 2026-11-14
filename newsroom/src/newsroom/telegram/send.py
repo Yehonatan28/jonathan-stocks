@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 import logging
 import re
+import time
 
 from ..http import SourceError, request
 
@@ -75,6 +76,28 @@ class Telegram:
                 payload.pop("parse_mode")
                 payload["text"] = html.unescape(re.sub(r"<[^>]+>", "", part))
                 self.call("sendMessage", **payload)
+
+    def send_audio(self, path, title: str, performer: str = "", silent: bool = True) -> None:
+        """Upload an MP3 (multipart). Telegram shows it as a playable track with a title."""
+        import requests
+        url = API.format(token=self.token, method="sendAudio")
+        last = None
+        for attempt in range(3):
+            try:
+                with open(path, "rb") as fh:
+                    r = requests.post(url, data={"chat_id": self.chat_id, "title": title, "performer": performer,
+                                                 "disable_notification": str(silent).lower()},
+                                      files={"audio": ("morning.mp3", fh, "audio/mpeg")}, timeout=60)
+                d = r.json()
+                if d.get("ok"):
+                    return
+                last = d.get("description")
+                if r.status_code < 500 and r.status_code != 429:
+                    break
+            except (requests.RequestException, ValueError) as exc:
+                last = type(exc).__name__
+            time.sleep(2 * 2 ** attempt)
+        raise SourceError(f"telegram sendAudio: {last}")
 
     def updates(self, offset: int | None) -> list[dict]:
         params = {"timeout": 0, "allowed_updates": ["message"]}

@@ -16,6 +16,8 @@
 | 🔔 | **לפני הפתיחה**: פרה-מרקט, חוזים, מאקרו ודוחות מהבוקר | 30 דקות לפני הפתיחה בניו יורק |
 | 🌆 | **סיכום סגירה** (בלי צליל) | כ-15 דקות אחרי הסגירה |
 | 📅 | **סיכום שבועי** (כתוב כך שאפשר להפוך אותו לפוסט) | ראשון 08:00 |
+| 🎧 | **מהדורת בוקר קולית** (קובץ שמע בטלגרם, אחרי הכתובה) | 07:00 |
+| ⚡ | **פקודות מיידיות לבוט** (אופציונלי, שלב 9) | תשובה תוך כדקה |
 | 🎨 | **דשבורד**: מזג האוויר בשוק, מפת חום, גרף עם סיכות חדשות, "מה הזיז את השוק", נהר הסיפורים, שרשרת ההשפעה, קו הרכבת של השבוע, חפיפת MAGS | מתעדכן כל 10 דקות |
 
 ### איך זה עובד
@@ -92,6 +94,19 @@ GitHub Actions (cron, UTC)  ──►  python -m newsroom tick
 ### 8. לפני הנסיעה (מומלץ): התראה אם GitHub מפסיק להריץ
 healthchecks.io ← **Sign Up** ← **Add Check** (Period: 1 hour, Grace: 2 hours) ← **Integrations** ← **Telegram** ← מעתיקים את כתובת ה-Ping לסוד `HEALTHCHECK_URL`.
 
+### 9. אופציונלי: פקודות מיידיות לבוט
+בלי השלב הזה, פקודה כמו `/add` נקלטת בהרצה המתוזמנת הבאה (עד כשעה). עם השלב הזה, טלגרם שולחת את הפקודה ישר לדשבורד ב-Cloudflare, והוא מפעיל הרצה מיד. התשובה מגיעה תוך כדקה, כי לוקח ל-GitHub זמן להעלות מכונה.
+1. **טוקן ל-GitHub:** github.com ← תמונת הפרופיל ← **Settings** ← **Developer settings** ← **Personal access tokens** ← **Fine-grained tokens** ← **Generate new token**.
+   - Repository access: **Only select repositories** ← `newsroom`.
+   - Permissions: **Actions: Read and write**. זו ההרשאה היחידה.
+   - Expiration: עד אחרי החזרה מהנסיעה (למשל סוף מרץ 2027).
+   - **Generate**, ושומרים את הטוקן כסוד `GH_DISPATCH_TOKEN`.
+2. **סוד נוסף:** `TG_WEBHOOK_SECRET`. מילה אקראית של אותיות ומספרים בלבד, 20 תווים ומעלה. משמשת כדי שרק טלגרם תוכל לשלוח לדשבורד.
+3. **Actions** ← **dashboard** ← **Run workflow**. זה מעביר את הסודות לדשבורד.
+4. **Actions** ← **newsroom** ← **Run workflow** ← `webhook_on`. תגיע הודעה: "מצב הפקודות בבוט: מיידי".
+
+לביטול: `webhook_off`. הבוט חוזר לבדוק פקודות בכל הרצה. כשהטוקן של GitHub פג, הפקודות לא אובדות: הן מחכות, ומטופלות בהרצה המתוזמנת הבאה.
+
 ---
 
 ## ⚙️ שינוי הגדרות
@@ -106,7 +121,8 @@ healthchecks.io ← **Sign Up** ← **Add Check** (Period: 1 hour, Grace: 2 hour
 | שעות המהדורות | `config/settings.yaml` ← `editions` |
 | ספק ומודל שפה | `config/settings.yaml` ← `llm` (המודלים נוסים לפי הסדר) |
 | כללי "שרשרת ההשפעה", משקלות סקטורים, מילות מפתח | `config/market.yaml` |
-| מועדי הפד ל-2027 | `config/market.yaml` ← `fomc_decisions`. **לאמת ולהוסיף לפני ינואר.** |
+| מהדורה קולית: הפעלה, קול (גבר/אישה), מהירות | `config/settings.yaml` ← `audio` |
+| מועדי הפד | `config/market.yaml` ← `fomc_decisions` (2026 + לוח 2027 הזמני) |
 
 **פקודות הבוט:** `/add` · `/remove` · `/list` · `/settings` · `/pause` (גם `/pause 6h`, `/pause 2d`) · `/resume` · `/help`.
 בזמן השהיה ההתראות נאספות ומופיעות במהדורה הבאה. המהדורות עצמן ממשיכות.
@@ -122,6 +138,8 @@ healthchecks.io ← **Sign Up** ← **Add Check** (Period: 1 hour, Grace: 2 hour
 | "X משפטים נפסלו בבדיקת המספרים" | תקין. המודל כתב מספר שלא היה בנתונים, והמשפט נמחק. |
 | "⚠️ המערכת נתקלה בתקלה · <חלק>" | **Actions** ← ההרצה האחרונה ← הלוג. ההרצה הבאה תנסה שוב בעצמה. |
 | הדשבורד לא מתעדכן | לבדוק את סודות Cloudflare. הנתונים נכתבים ל-KV בכל הרצה. |
+| אין קובץ שמע בבוקר, ו"קול (edge-tts)" ברשימת המקורות שלא ענו | השירות הקולי לא רשמי, ולפעמים לא זמין. המהדורה הכתובה לא מושפעת. לכיבוי: `audio.enabled: false`. |
+| פקודות לבוט לא עונות במצב מיידי | `webhook_off`, ואחר כך `webhook_on`. ההודעה תציג את השגיאה האחרונה של טלגרם, אם יש. |
 | לא מגיע כלום בכלל | **Actions**: יש הרצות? אם לא: **newsroom** ← **Enable workflow**. |
 
 ---
@@ -168,6 +186,8 @@ src/newsroom/
   telegram/          שליחה ובוט
 dashboard/
   public/            הדשבורד: HTML/CSS/JS בלי ספריות, PWA
-  src/worker.js      Cloudflare Worker: מגיש קבצים + data.json, נעילה אופציונלית
-tests/               85 בדיקות
+  src/worker.js      Cloudflare Worker: מגיש קבצים + data.json, נעילה, webhook לבוט
+src/newsroom/audio.py        המהדורה הקולית (תסריט לאוזן + edge-tts)
+src/newsroom/cloudflare.py   KV: נתוני הדשבורד ותור הפקודות
+tests/               94 בדיקות (כולל הרצה של ה-Worker עצמו ב-Node)
 ```

@@ -22,7 +22,7 @@ on:
         description: "מה להריץ"
         type: choice
         default: tick
-        options: [tick, morning, preopen, close, weekly, alerts, site, probe, whoami]
+        options: [tick, morning, preopen, close, weekly, alerts, bot, site, probe, whoami, webhook_on, webhook_off]
 
 permissions:
   contents: write
@@ -69,6 +69,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          TG_WEBHOOK_SECRET: ${{ secrets.TG_WEBHOOK_SECRET }}
         run: python -m newsroom ${{ inputs.task || 'tick' }}
 
       - name: Save state

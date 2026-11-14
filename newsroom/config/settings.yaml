@@ -62,6 +62,14 @@ llm:
   max_retries: 4
   timeout_seconds: 60
 
+# 🎧 גרסה קולית של מהדורת הבוקר (edge-tts, חינמי, בלי מפתח). נשלחת אחרי המהדורה הכתובה, בלי צליל.
+# קולות: he-IL-AvriNeural (גבר) או he-IL-HilaNeural (אישה). rate: מהירות, למשל "+10%".
+audio:
+  enabled: true
+  voice: he-IL-AvriNeural
+  rate: "+5%"
+  max_chars: 3500
+
 sources:
   # גיבוי בלבד, ל-VIX, אג"ח 10 שנים, חוזים עתידיים ואסיה (אין להם מקור חינמי רשמי בזמן אמת).
   # false = המהדורה פשוט תכתוב "אין נתון".

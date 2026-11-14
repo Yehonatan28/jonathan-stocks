@@ -330,4 +330,6 @@ def run(ctx, force: bool = False) -> bool:
         msg = f"{head}\n\n{queued}\n\n🕐{foot}"
     publish(ctx, "morning", msg, d.today_il.isoformat())
     ctx.state.set_cache("last_morning_facts", {"date": d.today_il.isoformat(), "facts": facts})
+    from ..audio import send_morning_audio
+    send_morning_audio(ctx, facts, text, d.today_il)        # 🎧 best effort, after the written edition
     return True

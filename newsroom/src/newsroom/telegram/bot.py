@@ -25,7 +25,7 @@ HELP = (
     "/settings · ספים ושעות שקט\n"
     "/pause · עצירת התראות (אפשר גם /pause 6h או /pause 2d)\n"
     "/resume · חידוש התראות\n\n"
-    "פקודות נקלטות בהרצה המתוזמנת הבאה (עד כשעה), והמהדורות ממשיכות גם בזמן השהיה."
+    "פקודות נקלטות בהרצה הבאה: תוך כדקה במצב מיידי, או עד כשעה בלי. המהדורות ממשיכות גם בזמן השהיה."
 )
 
 
@@ -117,10 +117,28 @@ def handle(cmd: str, args: list[str], *, watchlist: list[str], state, settings: 
     return "לא מכיר את הפקודה הזו. /help לרשימת הפקודות.", False
 
 
-def process_updates(tg: Telegram, state, cfg, validate: Callable[[str], bool]) -> bool:
+def fetch_updates(tg: Telegram, state) -> list[dict]:
+    """Polling (getUpdates) by default. Once a webhook is set (instant mode), Telegram refuses
+    getUpdates with 409, and the commands are waiting in Cloudflare KV, queued by the Worker."""
+    from ..cloudflare import KV, take_bot_updates
+    from ..http import SourceError
+    try:
+        return tg.updates(state.get("telegram_offset"))
+    except SourceError as exc:
+        msg = str(exc).lower()
+        if "409" not in msg and "conflict" not in msg and "webhook" not in msg:
+            raise
+        kv = KV.from_env()
+        if kv is None:
+            raise SourceError("webhook is set but Cloudflare KV is not configured") from exc
+        return take_bot_updates(kv)
+
+
+def process_updates(tg: Telegram, state, cfg, validate: Callable[[str], bool],
+                    updates: list[dict] | None = None) -> bool:
     """Read pending messages, answer the owner, persist the offset. Returns watchlist_changed."""
-    offset = state.get("telegram_offset")
-    updates = tg.updates(offset)
+    if updates is None:
+        updates = fetch_updates(tg, state)
     changed_any = False
     watchlist = list(cfg.watchlist)
     for u in updates:
