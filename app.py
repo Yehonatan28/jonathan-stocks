@@ -967,75 +967,57 @@ def sw():
 
 @app.route('/api/stock/<ticker>')
 def get_stock(ticker):
+    """The stock card. Every number comes from the shared engine and quant/indicators.py, so the card,
+    the command centre and the chart always agree. Facts only: no buy/sell call, no invented confidence."""
+    from quant import indicators as qi
     try:
-        hist = yf_chart(ticker, '1d', '3mo')
-        if hist.empty:
-            return jsonify({'error': 'Ticker not found'}), 404
-        close = hist['Close']
-        high = hist['High']
-        low = hist['Low']
-        vol = hist['Volume']
-        delta = close.diff()
-        gain = delta.clip(lower=0).ewm(span=14).mean()
-        loss = (-delta.clip(upper=0)).ewm(span=14).mean()
-        rsi = round(float(100 - (100 / (1 + gain.iloc[-1] / (loss.iloc[-1] + 1e-10)))), 1)
-        ema12 = close.ewm(span=12).mean()
-        ema26 = close.ewm(span=26).mean()
-        macd = ema12 - ema26
-        signal = macd.ewm(span=9).mean()
-        macd_b = bool(macd.iloc[-1] > signal.iloc[-1])
-        tr = (high - low).ewm(span=14).mean()
-        atr_pct = round(float(tr.iloc[-1] / close.iloc[-1] * 100), 2)
-        ma20 = close.rolling(20).mean()
-        std20 = close.rolling(20).std()
-        bb_u = ma20 + 2 * std20
-        bb_l = ma20 - 2 * std20
-        bb_pct = round(float((close.iloc[-1] - bb_l.iloc[-1]) / (bb_u.iloc[-1] - bb_l.iloc[-1] + 1e-10) * 100), 1)
-        vol_ratio = round(float(vol.iloc[-1] / vol.mean()), 2)
-        price = round(float(close.iloc[-1]), 2)
-        prev = round(float(close.iloc[-2]), 2)
-        chg = round((price - prev) / prev * 100, 2)
-        atr_abs = price * atr_pct / 100
-        sc = 0
-        if rsi < 35: sc += 3
-        elif rsi < 50: sc += 2
-        elif rsi > 72: sc -= 3
-        elif rsi > 65: sc -= 1
-        if macd_b: sc += 2
-        else: sc -= 2
-        if bb_pct < 20: sc += 2
-        elif bb_pct > 85: sc -= 2
-        if vol_ratio > 1.4: sc += 1
-        if sc >= 4: rec = 'BUY'
-        elif sc <= -3: rec = 'SELL'
-        else: rec = 'WAIT'
-        conf = min(95, max(40, 55 + sc * 7))
-        dy, ex, sector, name = 0, None, '', ticker.upper()
-        w52l = w52h = None
+        an = engine.analyze(ticker)
+        if not an.get('ok'):
+            return jsonify({'error': an.get('error') or 'Ticker not found'}), 404
+        df = engine.fetch_daily(an['ticker'])
+        close = df['Close']
+        _, _, _, pct_b = qi.bollinger(close)
+        bb_pct = round(float(pct_b.iloc[-1]) * 100, 1) if pct_b.notna().iloc[-1] else None
+        rsi_v, lv = an.get('rsi'), an.get('levels') or {}
+        conditions = []
+        if rsi_v is not None:
+            conditions.append(f"RSI(14) {rsi_v}" + (' · above 70, stretched' if rsi_v > 70 else
+                              ' · below 30, oversold zone' if rsi_v < 30 else ''))
+        conditions.append('MACD above its signal line' if an.get('macd_up') else 'MACD below its signal line')
+        ma = an.get('ma') or {}
+        if ma.get('dist200') is not None:
+            conditions.append(f"{'Above' if ma['dist200'] >= 0 else 'Below'} the 200-day average ({ma['dist200']:+.1f}%)")
+        if an.get('vol_ratio') and an['vol_ratio'] >= 1.5:
+            conditions.append(f"Volume ×{an['vol_ratio']} its 20-day average")
+        if lv.get('from_high_pct') is not None:
+            conditions.append(f"{lv['from_high_pct']:+.1f}% from the 52-week high")
+        dy, ex, sector, name = 0, None, '', an['ticker']
         try:
             result = yf_summary(ticker, 'assetProfile,summaryDetail,price')
             sector = result.get('assetProfile', {}).get('sector', '')
-            name = result.get('price', {}).get('longName', ticker.upper()) or ticker.upper()
+            name = result.get('price', {}).get('longName', an['ticker']) or an['ticker']
             summary = result.get('summaryDetail', {})
             dy = round(float(raw(summary, 'dividendYield') or 0), 4)
             ex = (summary.get('exDividendDate') or {}).get('fmt')
-            w52l = raw(summary, 'fiftyTwoWeekLow')
-            w52h = raw(summary, 'fiftyTwoWeekHigh')
         except Exception:
             pass
+        last = df.index[-1]
         return jsonify({
-            'ticker': ticker.upper(), 'name': name, 'sector': sector,
-            'price': price, 'chg': chg, 'rsi': rsi,
-            'macd': 'BULLISH' if macd_b else 'BEARISH',
-            'atr_pct': atr_pct, 'bb_pct': bb_pct, 'vol_ratio': vol_ratio,
-            'rec': rec, 'conf': conf, 'entry': price,
-            'target': round(price + 2 * atr_abs, 2),
-            'stop': round(price - 1.5 * atr_abs, 2),
-            'support': round(float(low.rolling(20).min().iloc[-1]), 2),
-            'resistance': round(float(high.rolling(20).max().iloc[-1]), 2),
+            'ticker': an['ticker'], 'name': name, 'sector': sector,
+            'price': an['price'], 'chg': an.get('chg_pct'), 'rsi': rsi_v,
+            'macd': 'BULLISH' if an.get('macd_up') else 'BEARISH',
+            'atr_pct': an.get('atr_pct'), 'bb_pct': bb_pct, 'vol_ratio': an.get('vol_ratio'),
+            'regime': an.get('regime'), 'regime_label': an.get('regime_he'),
+            # a transparent, rule-based trend score (components in engine._snapshot), not a forecast
+            'trend_score': an.get('trend_score'),
+            'conditions': conditions,
+            'suggested_stop': (an.get('suggested_stop') or {}).get('price') if isinstance(an.get('suggested_stop'), dict) else an.get('suggested_stop'),
+            'support': lv.get('support'), 'resistance': lv.get('resistance'),
             'dividend_yield': dy, 'ex_dividend_date': ex,
-            'wk52_low': w52l, 'wk52_high': w52h,
-            'history': [round(float(p), 2) for p in close.tolist()],
+            'wk52_low': lv.get('wk52_low'), 'wk52_high': lv.get('wk52_high'),
+            'history': an.get('history', [])[-63:],
+            'meta': {'source': 'Yahoo Finance daily bars', 'status': 'end-of-day / delayed',
+                     'as_of': str(getattr(last, 'date', lambda: last)()), 'currency': 'USD'},
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

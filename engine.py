@@ -59,47 +59,33 @@ def fetch_daily(ticker, range_='2y'):
 
 # ---------------------------------------------------------- 2. indicators ---
 
+# One definition of every indicator, shared with every route: quant/indicators.py.
+from quant import indicators as _ind
+
+
 def _wilder(series, n):
-    """Wilder's smoothing - the averaging RSI/ATR/ADX are defined with."""
-    return series.ewm(alpha=1.0 / n, adjust=False).mean()
+    """Wilder's smoothing (seeded with the SMA of the first n values)."""
+    return _ind.rma(series, n)
 
 
 def rsi(close, n=14):
-    delta = close.diff()
-    gain = _wilder(delta.clip(lower=0), n)
-    loss = _wilder((-delta).clip(lower=0), n)
-    return 100 - 100 / (1 + gain / loss.replace(0, 1e-10))
+    return _ind.rsi(close, n)
 
 
 def true_range(df):
-    prev_close = df['Close'].shift()
-    return pd.concat([
-        df['High'] - df['Low'],
-        (df['High'] - prev_close).abs(),
-        (df['Low'] - prev_close).abs(),
-    ], axis=1).max(axis=1)
+    return _ind.true_range(df)
 
 
 def atr(df, n=14):
-    return _wilder(true_range(df), n)
+    return _ind.atr(df, n)
 
 
 def adx(df, n=14):
-    up = df['High'].diff()
-    down = -df['Low'].diff()
-    plus_dm = ((up > down) & (up > 0)) * up.clip(lower=0)
-    minus_dm = ((down > up) & (down > 0)) * down.clip(lower=0)
-    tr_n = _wilder(true_range(df), n).replace(0, 1e-10)
-    plus_di = 100 * _wilder(plus_dm, n) / tr_n
-    minus_di = 100 * _wilder(minus_dm, n) / tr_n
-    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, 1e-10)
-    return _wilder(dx, n), plus_di, minus_di
+    return _ind.adx(df, n)
 
 
 def macd(close, fast=12, slow=26, sig=9):
-    line = close.ewm(span=fast, adjust=False).mean() - close.ewm(span=slow, adjust=False).mean()
-    signal = line.ewm(span=sig, adjust=False).mean()
-    return line, signal, line - signal
+    return _ind.macd(close, fast, slow, sig)
 
 
 def _f(value, digits=2):
@@ -167,7 +153,7 @@ def _indicators(df):
         'sma100': close.rolling(100 if n >= 100 else n).mean(),
         'sma150': close.rolling(150 if n >= 150 else n).mean(),
         'sma200': close.rolling(200 if n >= 200 else n).mean(),
-        'ema21': close.ewm(span=21, adjust=False).mean(),
+        'ema21': _ind.ema(close, 21),
         'rsi': rsi(close),
         'atr': atr(df),
         'adx': adx_s, 'plus_di': plus_di, 'minus_di': minus_di,

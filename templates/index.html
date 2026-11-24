@@ -596,8 +596,8 @@ option{background:var(--s2);color:var(--tx)}
  </div>
  <div class="tiles">
   <div class="glass tile"><div class="t-lab">Average RSI</div><div class="t-val" id="stAvgRsi">—</div><div class="t-sub">across scanned names</div></div>
-  <div class="glass tile"><div class="t-lab">Buy signals</div><div class="t-val up" id="stBuy">—</div><div class="t-sub">BUY</div></div>
-  <div class="glass tile"><div class="t-lab">Sell signals</div><div class="t-val dn" id="stSell">—</div><div class="t-sub">SELL</div></div>
+  <div class="glass tile"><div class="t-lab">In an uptrend</div><div class="t-val up" id="stBuy">—</div><div class="t-sub">trend state</div></div>
+  <div class="glass tile"><div class="t-lab">In a downtrend</div><div class="t-val dn" id="stSell">—</div><div class="t-sub">trend state</div></div>
   <div class="glass tile"><div class="t-lab">Scanned</div><div class="t-val" id="stCount">—</div><div class="t-sub">stocks</div></div>
  </div>
  <div class="sec">Stock scanner <span class="tag">LIVE SCORE</span></div>
@@ -1209,7 +1209,7 @@ async function openChart(t){
   $('chChg').textContent=(s.chg>=0?'▲ +':'▼ ')+fmt(Math.abs(s.chg))+'%';
   $('chChg').className='ch-chg '+(s.chg>=0?'up':'dn');
   const f=(lab,val,c='')=>`<div class="chf"><i>${lab}</i><b class="${c}">${val}</b></div>`;
-  $('chFoot').innerHTML=f('Signal',s.rec,s.rec==='BUY'?'up':s.rec==='SELL'?'dn':'')
+  $('chFoot').innerHTML=f('Trend',s.regime_label||'—',['up','strong_up'].includes(s.regime)?'up':['down','weak'].includes(s.regime)?'dn':'')
    +f('RSI 14',s.rsi)+f('MACD',s.macd==='BULLISH'?'Bullish':'Bearish',s.macd==='BULLISH'?'up':'dn')
    +f('ATR',s.atr_pct+'%')+f('Support','$'+fmt(s.support))+f('Resistance','$'+fmt(s.resistance))
    +f('Suggested stop','$'+fmt(s.stop),'dn')+f('Target','$'+fmt(s.target),'up')
@@ -1400,12 +1400,13 @@ async function loadPreset(key,btn){
  renderCards(stocks);updateStats(stocks)}
 function updateStats(stocks){if(!stocks.length)return;
  $('stAvgRsi').textContent=fmt(stocks.reduce((a,s)=>a+s.rsi,0)/stocks.length,1);
- $('stBuy').textContent=stocks.filter(s=>s.rec==='BUY').length;
- $('stSell').textContent=stocks.filter(s=>s.rec==='SELL').length;
+ $('stBuy').textContent=stocks.filter(s=>['up','strong_up'].includes(s.regime)).length;
+ $('stSell').textContent=stocks.filter(s=>['down','weak'].includes(s.regime)).length;
  $('stCount').textContent=stocks.length}
 const ringColor=c=>c>=75?'#26d07c':c>=55?'#e5b048':'#ff4d6a';
 function cardHTML(s){
- const up=s.chg>=0,inW=S.watch.includes(s.ticker),rc=ringColor(s.conf),circ=2*Math.PI*27,dash=(s.conf/100)*circ;
+ const up=s.chg>=0,inW=S.watch.includes(s.ticker),ts=s.trend_score??0,rc=ringColor(ts),circ=2*Math.PI*27,dash=(ts/100)*circ;
+ const rg=s.regime||'range',rgc=['up','strong_up','recovering'].includes(rg)?'up':['down','weak'].includes(rg)?'dn':'warn';
  const name=esc(s.name||'');
  return`<div class="glass card">
   <div class="c-top">
@@ -1416,7 +1417,7 @@ function cardHTML(s){
    </div>
    <div class="score-ring"><svg width="60" height="60"><circle cx="30" cy="30" r="27" fill="none" stroke="var(--s3)" stroke-width="5"/>
     <circle cx="30" cy="30" r="27" fill="none" stroke="${rc}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${dash} ${circ}"/></svg>
-    <div class="sr-num" style="color:${rc}">${s.conf}</div><div class="sr-lab">SCORE</div></div>
+    <div class="sr-num" style="color:${rc}" title="Rule-based trend score: moving-average structure, slope, MACD, ADX and RSI. A description of the trend, not a forecast.">${ts}</div><div class="sr-lab">TREND</div></div>
   </div>
   <div class="c-price-row"><div class="c-price">$${fmt(s.price)}</div><div class="c-chg ${up?'up':'dn'}">${up?'▲ +':'▼ '}${fmt(Math.abs(s.chg))}%</div></div>
   <canvas class="spark c-spark" data-s='${JSON.stringify(s.history||[]).replace(/'/g,'')}' height="38"></canvas>
@@ -1427,8 +1428,8 @@ function cardHTML(s){
    <div class="m"><div class="lbl">VOL</div><div class="vl ${s.vol_ratio>1.4?'up':''}">×${s.vol_ratio}</div></div>
   </div>
   <div class="c-bottom">
-   <span class="rec" style="color:${s.rec==='BUY'?'var(--up)':s.rec==='SELL'?'var(--dn)':'var(--warn)'};border-color:${s.rec==='BUY'?'var(--up-br)':s.rec==='SELL'?'var(--dn-br)':'var(--warn-br)'};background:${s.rec==='BUY'?'var(--up-bg)':s.rec==='SELL'?'var(--dn-bg)':'var(--warn-bg)'}">${s.rec}</span>
-   <div class="levels">Stop $${fmt(s.stop)}<br>Target $${fmt(s.target)}</div>
+   <span class="rec" style="color:var(--${rgc});border-color:var(--${rgc}-br);background:var(--${rgc}-bg)">${esc(s.regime_label||rg)}</span>
+   <div class="levels">${s.suggested_stop!=null?`Suggested stop $${fmt(s.suggested_stop)}<br>`:''}52w high $${fmt(s.wk52_high)}</div>
   </div></div>`}
 function renderCards(stocks){
  $('stocksGrid').innerHTML=stocks.length?stocks.map(cardHTML).join('')
@@ -1726,8 +1727,8 @@ async function runCompare(){
   ['Volatility (ATR)',s=>s.atr_pct+'%',(a,b)=>a.atr_pct<b.atr_pct],
   ['Relative volume',s=>'×'+s.vol_ratio,null],
   ['Dividend yield',s=>s.dividend_yield?fmt(s.dividend_yield*100)+'%':'—',(a,b)=>(a.dividend_yield||0)>(b.dividend_yield||0)],
-  ['Score',s=>s.conf,(a,b)=>a.conf>b.conf],
-  ['Signal',s=>s.rec,null]];
+  ['Trend score',s=>s.trend_score,(a,b)=>(a.trend_score??0)>(b.trend_score??0)],
+  ['Trend',s=>s.regime_label,null]];
  $('cmpBox').innerHTML=`<table class="cmp-table"><thead><tr><th>Metric</th>${st.map(s=>`<th style="color:var(--gold);font-family:var(--mono);font-size:13px">${esc(s.ticker)}</th>`).join('')}</tr></thead><tbody>
   ${rows.map(([lab,fn,better])=>{let bestIdx=-1;if(better){bestIdx=0;st.forEach((s,i)=>{if(better(s,st[bestIdx]))bestIdx=i})}
    return`<tr><td style="font-family:var(--ui);color:var(--tx2);text-align:left;font-weight:600">${lab}</td>${st.map((s,i)=>`<td class="${i===bestIdx?'cmp-best':''}">${fn(s)}</td>`).join('')}</tr>`}).join('')}
