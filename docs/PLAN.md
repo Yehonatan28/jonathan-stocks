@@ -14,7 +14,8 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 
 ## Phase 1 · Foundations
 - [x] Audit (docs/AUDIT.md)
-- [ ] One indicator library (`quant/indicators.py`: SMA, EMA, Wilder RSI, MACD, true-range ATR, ADX, Bollinger, OBV, VWAP, stochastic) used by every route; remove the duplicate math in `/api/stock`
+- [x] Remove the buy/sell call and the invented "confidence" from the stock card; state the trend facts
+- [x] One indicator library (`quant/indicators.py`: SMA, EMA, Wilder RSI, MACD, true-range ATR, ADX, Bollinger, OBV, VWAP, stochastic) used by every route; remove the duplicate math in `/api/stock`
 - [ ] Data provenance envelope on every API response: `source`, `as_of`, `status` (live / delayed / end-of-day / historical / unavailable), `currency`, `tz`
 - [ ] Cache with explicit age; stale data is labelled, never shown as live
 - [ ] Storage adapter: SQLite locally, hosted libSQL/Postgres when configured (🔑); safe, versioned migrations
