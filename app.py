@@ -20,7 +20,19 @@ app = Flask(__name__)
 # rather than a literal: a constant checked into a public repository lets anyone
 # forge a session cookie and sign in as any user. Set SECRET_KEY in the host's
 # environment so sessions survive a restart.
-app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+# On a serverless host every instance is a separate process, so a random
+# fallback would give each one a different key and sign users out at random.
+# When SECRET_KEY is absent, derive a stable key from the database token, which
+# is already a deployment secret; only with neither is the key random.
+def _session_key():
+    if os.environ.get('SECRET_KEY'):
+        return os.environ['SECRET_KEY'], 'env'
+    if os.environ.get('TURSO_AUTH_TOKEN'):
+        return hashlib.sha256(b'jonathan-stocks/session/v1:' + os.environ['TURSO_AUTH_TOKEN'].encode()).hexdigest(), 'derived'
+    return secrets.token_hex(32), 'random'
+
+
+app.secret_key, SESSION_KEY_SOURCE = _session_key()
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     # Lax still sends the cookie on a normal top-level visit but not on a
@@ -40,6 +52,70 @@ HEADERS = {'User-Agent': 'Mozilla/5.0'}
 DB_PATH = os.environ.get('DB_PATH') or (
     '/tmp/stocks.db' if os.environ.get('VERCEL')
     else os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stocks.db'))
+
+# Content policy. Scripts and styles come only from this site (the chart
+# libraries and fonts are vendored); Google Fonts serves the Hebrew face. Inline
+# handlers are still used by the legacy modules, hence 'unsafe-inline' for
+# scripts, until they move to listeners. News thumbnails come from the
+# publishers, so images may load from any https host.
+CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+SECURITY_HEADERS = {
+    'Content-Security-Policy': CSP,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+}
+
+
+@app.after_request
+def _security_headers(resp):
+    for k, v in SECURITY_HEADERS.items():
+        resp.headers.setdefault(k, v)
+    if app.config['SESSION_COOKIE_SECURE']:
+        resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    if request.path.startswith('/api/'):
+        resp.headers.setdefault('Cache-Control', 'no-store')
+    return resp
+
+
+# Request budget per address for the API. Held per server instance, so on a
+# serverless host it is a brake on one client hammering one instance rather
+# than an exact global quota; the sign-in throttle below is the strict one.
+API_BUDGET = int(os.environ.get('API_BUDGET_PER_MIN', '240'))
+_API_HITS = {}
+
+
+@app.before_request
+def _api_budget():
+    if not request.path.startswith('/api/') or request.path == '/api/health':
+        return None
+    ip, now = _client_ip(), time.time()
+    hits = [t for t in _API_HITS.get(ip, []) if t > now - 60]
+    if len(hits) >= API_BUDGET:
+        _API_HITS[ip] = hits
+        resp = jsonify({'error': 'Too many requests. Slow down and try again in a minute.'})
+        resp.headers['Retry-After'] = '60'
+        return resp, 429
+    hits.append(now)
+    _API_HITS[ip] = hits
+    if len(_API_HITS) > 5000:            # bound the table on a long-lived process
+        for k in [k for k, v in _API_HITS.items() if not v or v[-1] < now - 60]:
+            _API_HITS.pop(k, None)
+    return None
+
 
 # simple in-memory cache {key: (expires_at, data)}
 _CACHE = {}
@@ -100,6 +176,10 @@ def init_db():
         equity REAL DEFAULT 0,
         risk_pct REAL DEFAULT 1.0,
         trail_mult REAL DEFAULT 3.0);
+    CREATE TABLE IF NOT EXISTS login_fails(
+        ip TEXT NOT NULL,
+        t REAL NOT NULL);
+    CREATE INDEX IF NOT EXISTS login_fails_ip ON login_fails(ip, t);
     ''')
     # risk-management columns, added to portfolios created before the engine
     existing = {r['name'] for r in conn.execute('PRAGMA table_info(portfolio)')}
@@ -160,8 +240,9 @@ def _num(v):
 
 
 # Sign-in throttle. Without one, a weak password is only as safe as how fast an
-# attacker can POST. Keyed per source address and held in memory, which is the
-# right scope here: the window is minutes and a restart losing it is harmless.
+# attacker can POST. Failures are recorded in the database, keyed per source
+# address, so every server instance enforces the same count; if the database
+# cannot be reached the in-memory copy still applies.
 _LOGIN_FAILS = {}
 LOGIN_MAX_FAILS = 8
 LOGIN_WINDOW = 600
@@ -172,18 +253,45 @@ def _client_ip():
     return (fwd.split(',')[0].strip() if fwd else request.remote_addr) or 'unknown'
 
 
+def _ip_key(ip):
+    # the address itself is not stored, only a keyed hash of it
+    return hashlib.sha256((app.secret_key + '|' + ip).encode()).hexdigest()[:32]
+
+
 def _login_blocked(ip):
-    fails = [t for t in _LOGIN_FAILS.get(ip, []) if t > time.time() - LOGIN_WINDOW]
+    since = time.time() - LOGIN_WINDOW
+    fails = [t for t in _LOGIN_FAILS.get(ip, []) if t > since]
     _LOGIN_FAILS[ip] = fails
-    return len(fails) >= LOGIN_MAX_FAILS
+    try:
+        conn = db()
+        n = conn.execute('SELECT COUNT(*) FROM login_fails WHERE ip=? AND t>?', (_ip_key(ip), since)).fetchone()[0]
+        conn.close()
+    except Exception:                    # noqa: BLE001
+        n = 0
+    return max(n, len(fails)) >= LOGIN_MAX_FAILS
 
 
 def _login_fail(ip):
     _LOGIN_FAILS.setdefault(ip, []).append(time.time())
+    try:
+        conn = db()
+        conn.execute('INSERT INTO login_fails(ip,t) VALUES(?,?)', (_ip_key(ip), time.time()))
+        conn.execute('DELETE FROM login_fails WHERE t<?', (time.time() - 86400,))
+        conn.commit()
+        conn.close()
+    except Exception:                    # noqa: BLE001
+        pass
 
 
 def _login_ok(ip):
     _LOGIN_FAILS.pop(ip, None)
+    try:
+        conn = db()
+        conn.execute('DELETE FROM login_fails WHERE ip=?', (_ip_key(ip),))
+        conn.commit()
+        conn.close()
+    except Exception:                    # noqa: BLE001
+        pass
 
 
 def current_user():
@@ -203,6 +311,7 @@ def health():
     except Exception as exc:               # noqa: BLE001
         ok, err = False, type(exc).__name__
     return jsonify({'storage': storage.backend(), 'storage_ok': ok, 'error': err,
+                    'session_key': SESSION_KEY_SOURCE,
                     'host': 'vercel' if os.environ.get('VERCEL') else 'render' if os.environ.get('RENDER') else 'local'})
 
 

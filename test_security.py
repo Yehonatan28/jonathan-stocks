@@ -91,6 +91,40 @@ codes = [burst.post('/api/auth/login', json={'email':'jon@x.com','password':'bad
          for i in range(12)]
 ok('repeated failed sign-ins get throttled', 429 in codes, codes)
 
+# the count lives in the database: a fresh server instance (empty memory) still refuses
+A._LOGIN_FAILS.clear()
+ok('the throttle holds on another server instance',
+   A.app.test_client().post('/api/auth/login', json={'email':'jon@x.com','password':'bad'}).status_code == 429)
+conn2 = A.db()
+ips = [r[0] for r in conn2.execute('SELECT ip FROM login_fails').fetchall()]
+conn2.close()
+ok('the address itself is not stored, only a keyed hash', ips and all('127.0.0.1' not in i and len(i) == 32 for i in ips), ips[:2])
+
+# --- response headers
+r = A.app.test_client().get('/')
+csp = r.headers.get('Content-Security-Policy', '')
+ok('pages carry a content policy', "default-src 'self'" in csp and "frame-ancestors 'none'" in csp and "object-src 'none'" in csp, csp)
+ok('pages cannot be framed or sniffed', r.headers.get('X-Frame-Options') == 'DENY' and r.headers.get('X-Content-Type-Options') == 'nosniff')
+ok('API answers are not cached by the browser', A.app.test_client().get('/api/health').headers.get('Cache-Control') == 'no-store')
+h = A.app.test_client().get('/api/health').get_json()
+ok('health reports where the session key comes from, never the key', h.get('session_key') in ('env', 'derived', 'random') and A.app.secret_key not in str(h), h)
+
+# --- request budget per address
+A._API_HITS.clear()
+old, A.API_BUDGET = A.API_BUDGET, 5
+flood = A.app.test_client()
+codes = [flood.get('/api/watchlist').status_code for _ in range(8)]
+A.API_BUDGET = old; A._API_HITS.clear()
+ok('one address hammering the API is slowed down', codes[-1] == 429 and 429 not in codes[:5], codes)
+
+# --- the session key is stable across instances when the database token is set
+import importlib
+os.environ.pop('SECRET_KEY', None)
+os.environ['TURSO_AUTH_TOKEN'] = 'unit-test-token'
+k1 = A._session_key(); k2 = A._session_key()
+os.environ.pop('TURSO_AUTH_TOKEN')
+ok('without SECRET_KEY the key is derived, the same on every instance', k1 == k2 and k1[1] == 'derived' and 'unit-test-token' not in k1[0], k1[1])
+
 if os.path.exists(A.DB_PATH):
     os.unlink(A.DB_PATH)
 print('\n' + ('ALL SECURITY CHECKS PASS' if not fails else f'{len(fails)} FAILED: ' + ', '.join(fails)))
