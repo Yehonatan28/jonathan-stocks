@@ -168,7 +168,7 @@
     analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search',
     company: 'Company financials', ledger: 'Portfolio valuation', risk: 'Holdings and daily bars', lab: 'Strategy backtest', relative: 'Comparison', calendar: 'Calendar', alerts: 'Alerts', digest: 'Your names today', assistant: 'Research assistant', breadth: 'Market breadth', sectors: 'Sector performance', snapshot: 'Rates, FX, commodities', scan: 'Stock scanner' };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const hhmm = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const hhmm = (d) => (window.HM ? window.HM(d) : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   function age(d) {
     const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
     if (s < 60) return 'just now';
@@ -201,12 +201,12 @@
     const sources = Array.from(new Set(rows.map((r) => r.source.replace(/ (quotes|daily bars)$/, ''))));
     btn.hidden = false;
     btn.className = 'prov st-' + worst;
-    btn.innerHTML = `<i></i><b>${STATUS[worst] || worst}</b><span>${hhmm(oldest)}</span>`;
+    btn.innerHTML = `<i></i><b>${T(STATUS[worst] || worst)}</b><span dir="ltr">${hhmm(oldest)}</span>`;
     btn.title = `${STATUS[worst] || worst} · ${sources.join(', ')} · click for details`;
     btn.setAttribute('aria-label', `Data status: ${STATUS[worst] || worst}, from ${sources.join(', ')}. Show details`);
-    pop.innerHTML = '<h5>Data on this screen</h5>' + rows.map((r) =>
+    pop.innerHTML = `<h5>${T('Data on this screen')}</h5>` + rows.map((r) =>
       `<div class="pr"><i class="st-${r.status}"></i><div><b>${NAMES[r.id] || esc(r.id)}</b><small>${esc(r.source)}</small></div>` +
-      `<div class="pr-r"><span>${STATUS[r.status] || esc(r.status)}</span>${r.observed ? `<small>data from ${esc(r.observed.slice(0, 10))}</small>` : ''}<small>retrieved ${hhmm(r.at)} · ${age(r.at)}</small></div></div>`).join('') +
+      `<div class="pr-r"><span>${T(STATUS[r.status] || esc(r.status))}</span>${r.observed ? `<small>data from ${esc(r.observed.slice(0, 10))}</small>` : ''}<small>retrieved ${hhmm(r.at)} · ${age(r.at)}</small></div></div>`).join('') +
       '<p><b>Data from</b> is the session or period the numbers belong to; <b>retrieved</b> is when this site fetched them. ' +
       'Nothing here is a real-time exchange feed: delayed quotes may lag by 15 minutes or more, end-of-day figures come from daily closing bars, ' +
       'news and calendars are shown as published. Information only, not investment advice.</p>';
@@ -240,5 +240,5 @@
   renderSide();
   renderTabbar();
   if (!route()) mark('home');
-  document.addEventListener('langchange', () => { renderSide(); renderTabbar(); mark(curView); });
+  document.addEventListener('langchange', () => { renderSide(); renderTabbar(); mark(curView); renderProv(); });
 })();

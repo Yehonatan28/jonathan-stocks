@@ -37,7 +37,7 @@
     if (!el) return null;
     const ch = new Chart(el, { type: 'line', data: { labels, datasets: sets.map((s) => ({ pointRadius: 0, borderWidth: 1.8, tension: 0, ...s })) },
       options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
-        scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 7 }, grid: { display: false } },
+        scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 6, maxRotation: 0, autoSkip: true, autoSkipPadding: 14, callback: ChartFrame.shortLabel }, grid: { display: false } },
           y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--grid', '#222') } } },
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: (x) => `${x.dataset.label}: ${x.parsed.y == null ? '—' : fmt(x.parsed.y)}` } } } } });
     charts.push(ch);

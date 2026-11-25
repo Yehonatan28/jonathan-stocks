@@ -1308,8 +1308,9 @@ def scan():
     out = {'ok': True, 'universe': universe, 'members': len(members), 'rows': rs,
            'coverage': scanner.coverage(rs),
            'fields': [{'key': k, 'label': l, 'unit': u, 'help': h} for k, l, u, h in scanner.FIELDS],
-           'note': 'Quotes are delayed. Valuation fields come from the same quote feed and are missing '
-                   'for some names; a missing value never passes a filter.'}
+           'note': 'Prices are delayed. P/E and yield use the quote feed where it answers, otherwise the last fiscal '
+                   "year's figures filed with the SEC; market value is price x filed shares (est. where marked). "
+                   'A missing value is shown as a dash and never passes a filter.'}
     cache_set(key, out, 120)
     return jsonify(out)
 

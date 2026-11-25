@@ -59,6 +59,9 @@
     'Basis': 'בסיס', 'Breadth': 'רוחב השוק', 'Sectors': 'סקטורים', 'Volatility': 'תנודתיות', 'Rates': 'ריביות',
     'Find a company to follow': 'מציאת חברה למעקב', 'Add a holding': 'הוספת החזקה', 'Retry': 'ניסיון חוזר',
     'Chart': 'גרף', 'Table': 'טבלה', 'Annual': 'שנתי', 'Quarterly': 'רבעוני', 'Map': 'מפה',
+    'Delayed': 'מושהה', 'End of day': 'סוף יום', 'As filed': 'כפי שדווח', 'As published': 'כפי שפורסם', 'Schedule': 'לוח זמנים',
+    'Estimated': 'הערכה', 'Stale': 'לא עדכני', 'Unavailable': 'לא זמין', 'From site data': 'מנתוני האתר', 'Reference': 'רשימת עזר', 'Live': 'בזמן אמת',
+    'Data on this screen': 'הנתונים במסך הזה',
     'Continue as guest': 'המשך כאורח', 'Create account': 'יצירת חשבון',
     'quotes delayed, retrieved': 'מחירים מושהים, נמשכו ב־',
     'Follow a few names and this space lists what is notable about them today: large moves, unusual volume, 52-week extremes, a stop nearby, a report this week.':
@@ -69,6 +72,8 @@
   let lang = get();
   window.T = (s) => (lang === 'he' && HE[s] ? HE[s] : s);
   window.LANG = () => lang;
+  // times: 24-hour in Hebrew (no AM/PM to mirror), the reader's own format in English
+  window.HM = (d) => d.toLocaleTimeString(lang === 'he' ? 'he-IL' : [], { hour: '2-digit', minute: '2-digit', hourCycle: lang === 'he' ? 'h23' : undefined });
 
   function applyStatic(root) {
     (root || document).querySelectorAll('[data-i18n]').forEach((el) => {

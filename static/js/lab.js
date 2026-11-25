@@ -111,7 +111,7 @@
     const css = getComputedStyle(document.documentElement);
     const c = (n, fb) => (css.getPropertyValue(n) || fb).trim();
     const labels = r.curve.map((x) => x.date);
-    const axes = (fmt) => ({ x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 7 }, grid: { display: false } },
+    const axes = (fmt) => ({ x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 6, maxRotation: 0, autoSkip: true, autoSkipPadding: 14, callback: ChartFrame.shortLabel }, grid: { display: false } },
       y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--grid', '#222') } } });
     const base = { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: c('--tx3', '#889'), boxWidth: 10, font: { size: 11 } } } } };

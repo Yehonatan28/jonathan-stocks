@@ -104,6 +104,7 @@
         : await api('/api/performance', { method: 'POST', body: JSON.stringify({ transactions: list, currency: cur }) });
     } catch (err) { p = { ok: false, reason: (err && (err.reason || err.error)) || 'Performance is unavailable right now.' }; }
     box.hidden = false;
+    box.classList.toggle('lg-perf-empty', !p.ok);       // no empty chart frame when there is nothing to draw
     if (!p.ok) {
       $l('lgPerfStats').innerHTML = `<div class="mi-empty">${e(p.reason)}</div>`;
       $l('lgPerfNote').textContent = '';
@@ -134,8 +135,8 @@
       { label: 'S&P 500 (SPY)', data: p.series.map((x) => x.benchmark), borderColor: c('--tx3', '#889'), pointRadius: 0, borderWidth: 1.5, borderDash: [4, 3], tension: 0 }] },
       options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
         plugins: { legend: { labels: { color: c('--tx3', '#889'), boxWidth: 10, font: { size: 11 } } } },
-        scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 6 }, grid: { display: false } },
-          y: { ticks: { color: c('--tx3', '#889') }, grid: { color: c('--line', '#222') }, title: { display: true, text: 'indexed to 100', color: c('--tx3', '#889') } } } } });
+        scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 6, maxRotation: 0, autoSkip: true, autoSkipPadding: 14, callback: ChartFrame.shortLabel }, grid: { display: false } },
+          y: { ticks: { color: c('--tx3', '#889') }, grid: { color: c('--grid', '#222') }, title: { display: true, text: 'indexed to 100', color: c('--tx3', '#889') } } } } });
   }
 
   function renderTotals(totals) {

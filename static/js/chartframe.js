@@ -58,6 +58,13 @@
     return idx;
   }
 
+  // '2023-04-04' -> 'Apr 2023' on a time axis; other labels unchanged
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function shortLabel(v) {
+    const l = this && this.getLabelForValue ? this.getLabelForValue(v) : v;
+    const m = /^(\d{4})-(\d{2})-\d{2}$/.exec(String(l));
+    return m ? MON[+m[2] - 1] + ' ' + m[1] : l;
+  }
   // shared Chart.js look: theme tokens, exact values in the tooltip
   function base(fmt) {
     const css = getComputedStyle(document.documentElement);
@@ -66,9 +73,9 @@
     return { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y == null ? '—' : fmt ? fmt(ctx.parsed.y) : ctx.parsed.y}` } } },
-      scales: { x: { grid: { display: false }, ticks: { color: tx, maxTicksLimit: 8 } },
+      scales: { x: { grid: { display: false }, ticks: { color: tx, maxTicksLimit: 6, maxRotation: 0, autoSkip: true, autoSkipPadding: 14, callback: shortLabel } },
         y: { grid: { color: c('--grid', 'rgba(255,255,255,.06)') }, ticks: { color: tx, callback: fmt ? (v) => fmt(v) : undefined } } } };
   }
 
-  window.ChartFrame = { html, fill, monthly, base };
+  window.ChartFrame = { html, fill, monthly, base, shortLabel };
 })();

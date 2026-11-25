@@ -13,10 +13,10 @@ ABOUT = """
 <div class="hero"><p class="lead">Market context, company research, portfolio accounting and risk tools in one place,
 with the source and freshness of every number shown beside it.</p></div>
 <div class="feat">
-<div><b>Market Intelligence</b><span>Breadth over all S&amp;P 500 members, sectors against the index, rates, currencies and commodities.</span></div>
-<div><b>Equity Research</b><span>Five years of statements from SEC filings, a stock screener, and side-by-side comparison with correlation.</span></div>
-<div><b>Portfolio</b><span>Transactions with first-in, first-out lots, realised and unrealised gains, and time-weighted performance against the S&amp;P 500.</span></div>
-<div><b>Quant &amp; Risk</b><span>Risk against your own limits, position sizing, a strategy backtester without look-ahead, and gap detection.</span></div>
+<div><b>Market</b><span>What moved today and how broadly: breadth over all S&amp;P 500 members, sectors against the index, rates, currencies and commodities, a sector heatmap, news and the calendar.</span></div>
+<div><b>Research</b><span>Five years and eight quarters of statements from SEC filings, a stock screener, comparison against the S&amp;P 500 with correlation, and an assistant that answers only from the site's data.</span></div>
+<div><b>Portfolio</b><span>Holdings with stops, a daily check of your own rules, risk against your limits, alerts, and transactions with first-in, first-out lots and time-weighted performance against the S&amp;P 500.</span></div>
+<div><b>Lab</b><span>A strategy backtester with costs, next-open fills and no look-ahead, compared with buy and hold; replay of the daily check's rules; gap detection.</span></div>
 </div>
 <h2>Principles</h2>
 <ul>

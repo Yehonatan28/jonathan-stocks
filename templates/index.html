@@ -212,13 +212,13 @@
  <div class="glass cc-brief" id="ccBrief" style="display:none"><div class="bi" id="ccBriefIc" aria-hidden="true"></div><div style="flex:1"><h3 id="ccBriefTitle">—</h3><p id="ccBriefText">—</p></div></div>
 
  <div class="sec">Conditions met <span class="tag">ON THE LAST CLOSE</span></div>
- <div class="sub">Each position is checked against price, the moving averages and volatility (ATR), and the system says exactly which stop to place and when to move it.</div>
+ <div class="sub">Each position is checked against price, the moving averages and volatility (ATR), and each rule shows the stop level it would use. The levels describe the rules; placing or moving an order is your decision.</div>
  <div id="ccActions"></div>
 
  <div class="sec" style="margin-top:30px">Positions <span class="tag">STOPS &amp; RISK</span></div>
  <div class="sub">Edit a stop directly in the table. <b>R</b> is the open profit measured in units of the risk you took: 2R means you have made twice what you risked.</div>
  <div class="glass tbl-wrap"><table class="risk-tbl"><thead><tr>
-  <th>Symbol</th><th>Trend</th><th>Price</th><th>Entry</th><th>P&amp;L</th><th>Stop</th><th>Type</th><th>Distance</th><th>R</th><th>Risk $</th><th>Suggested</th><th></th>
+  <th>Symbol</th><th>Trend</th><th>Price</th><th>Entry</th><th>P&amp;L</th><th>Stop</th><th>Type</th><th>Distance</th><th>R</th><th>Risk $</th><th>Rule stop</th><th></th>
  </tr></thead><tbody id="ccRisk"></tbody></table></div>
 
  <div class="sec" style="margin-top:30px">Watchlist setups <span class="tag">TECHNICAL PATTERNS, NOT RECOMMENDATIONS</span></div>
@@ -299,7 +299,7 @@
 
 <section id="v-watchlist" class="view"><div class="wrap">
  <div class="sec">Watchlist <span class="tag">FAVOURITES</span></div>
- <div class="sub">Names here are scanned for entry signals in the command centre.</div>
+ <div class="sub">The Daily check scans these names for technical setups (patterns, not recommendations).</div>
  <div class="wl-grid" id="wlGrid"></div>
 </div></section>
 

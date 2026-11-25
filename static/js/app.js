@@ -106,7 +106,7 @@ function tickClock(){const now=new Date();$('clockChip').textContent=now.toLocal
  const ny=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
  const d=ny.getDay(),m=ny.getHours()*60+ny.getMinutes();const open=d>=1&&d<=5&&m>=570&&m<960;
  const c=$('mktChip');c.className='chip '+(open?'mkt-open':'mkt-closed');
- $('mktTxt').textContent=(window.T||String)(open?'US market open':'US market closed')}
+ {const t=(window.T||String)(open?'US market open':'US market closed');$('mktTxt').textContent=t;$('mktChip').title=t;$('mktChip').setAttribute('aria-label',t)}}
 
 function sparkline(canvas,data,color){if(!canvas||!data||data.length<2)return;
  const dpr=window.devicePixelRatio||1;const w=canvas.clientWidth||canvas.parentElement.clientWidth,h=+canvas.getAttribute('height')||52;
@@ -690,7 +690,7 @@ function timeAgo(ts){if(!ts)return'unknown time';
 /* ===================== command centre ===================== */
 const ACT_ICON={SET_STOP:ICON('shield'),STOP_HIT:ICON('alert'),STOP_NEAR:ICON('alert'),BREAKEVEN:ICON('lock'),TRAIL_UP:ICON('up'),
  TREND_BREAK:ICON('down'),TAKE_PARTIAL:ICON('target'),RISK_OVERSIZE:ICON('scale'),PORTFOLIO_HEAT:ICON('flame')};
-const SEV_EN={critical:'Critical',high:'Urgent',medium:'Review',info:'Note'};
+const SEV_EN={critical:'Critical',high:'High',medium:'Check',info:'Note'};
 const today=()=>new Date().toISOString().slice(0,10);
 const actKey=a=>`${a.code}:${a.ticker}:${a.suggest||''}`;
 function getDone(){try{const d=JSON.parse(localStorage.getItem('js_done')||'{}');return d._day===today()?d:{_day:today()}}catch(e){return{_day:today()}}}
@@ -901,7 +901,7 @@ async function loadPortfolio(){
   data:{labels:Object.keys(agg),datasets:[{data:Object.values(agg),
    backgroundColor:[tok('--gold'),tok('--info'),tok('--up'),'#a78bfa','#22d3ee',tok('--dn'),tok('--warn'),tok('--tx3')],
    borderColor:tok('--s1'),borderWidth:3}]},
-  options:{plugins:{legend:{position:'bottom',labels:{color:tok('--tx2'),font:{size:11,family:'Inter'},boxWidth:10}}},cutout:'62%'}})}
+  options:{animation:false,plugins:{legend:{position:'bottom',labels:{color:tok('--tx2'),font:{size:11,family:'Inter'},boxWidth:10}}},cutout:'62%'}})}
 
 async function addPosition(){
  const t=$('pfTicker').value.trim().toUpperCase(),q=parseFloat($('pfQty').value),e=parseFloat($('pfEntry').value);

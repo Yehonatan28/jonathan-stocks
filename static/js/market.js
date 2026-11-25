@@ -192,7 +192,7 @@
     const box = el('hSession'); if (!box) return;
     const st = (el('mktTxt') || {}).textContent || '';
     const q = window.provOf && window.provOf('quotes');
-    const he = window.LANG && LANG() === 'he', tm = q ? q.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    const he = window.LANG && LANG() === 'he', tm = q ? (window.HM ? HM(q.at) : q.at.toLocaleTimeString()) : '';
     box.textContent = [st, q ? (he ? `מחירים ${q.status === 'delayed' ? 'מושהים' : 'סוף יום'}, נמשכו ב־${tm}` : `quotes ${STATUS[q.status] || q.status}, retrieved ${tm}`) : ''].filter(Boolean).join(' · ');
   }
   document.addEventListener('langchange', () => { insights(); session(); digestLoad(); });

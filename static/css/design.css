@@ -744,3 +744,44 @@ html[dir="rtl"] .gloss:not(.open) { transform: translateX(105%); }
 .tbl-wrap { overflow-x: auto; }
 /* short viewports (200% zoom, phones in landscape): only the bottom tab bar stays fixed */
 @media (max-height: 520px) { .topbar, .tape-wrap { position: static !important; } html { scroll-padding-top: 12px; } }
+
+/* =====================================================================================
+   Top bar, final layout: one row, nothing overlaps at any width. Fixed-size groups never
+   shrink; only the page title gives way (truncates). The clock and the F&G chip are left
+   out: the market state carries the session, and Fear & Greed is on the home screen.
+   ===================================================================================== */
+.topbar { display: flex !important; align-items: center; flex-wrap: nowrap !important; gap: 10px; }
+.topbar > * { flex: none; }
+.topbar .crumbs { flex: 0 1 auto !important; min-width: 0; }
+.topbar .spacer { flex: 1 1 0 !important; min-width: 4px; }
+.topbar .hdr-mid, .topbar .hdr-actions { display: flex !important; flex: none !important; flex-wrap: nowrap !important; align-items: center; gap: 8px; margin: 0 !important; width: auto !important; order: 0 !important; }
+.topbar .hdr-mid > *, .topbar .hdr-actions > * { flex: none !important; }
+.topbar #clockChip, .topbar #fgChip { display: none !important; }
+.topbar .btn, .topbar .chip, .topbar .cmdk-btn { min-height: 38px; white-space: nowrap; }
+@media (min-width: 861px) and (max-width: 1240px) { .topbar #mktTxt { display: none; } .topbar #mktChip { padding: 0 10px; } }
+@media (min-width: 861px) and (max-width: 1100px) { .topbar .prov span { display: none; } .topbar .cmdk-btn span:nth-child(2) { display: none !important; } .topbar .cmdk-btn { min-width: 0 !important; } }
+
+/* Fear & Greed: the number sits below the dial, clear of the needle and its hub */
+.fg-num { margin-top: 6px !important; font-size: 30px; }
+.fg-dial { margin-bottom: 0; }
+
+/* final polish */
+.lg-perf-empty .rs-chart { display: none; }
+.lg-perf-empty .lg-perf { grid-template-columns: 1fr; }
+.h-fg .fg-prev { grid-template-columns: repeat(2, 1fr); row-gap: 10px; }
+.h-fg .fg-prev i { white-space: nowrap; }
+.labw .mi-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) { .labw .mi-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* the page header already names the screen: older screens' own first title is not repeated */
+#v-heatmap .cc-head > .sec, #v-command .cc-head > .sec, #v-gaps .cc-head > .sec, #v-news .cc-head > .sec,
+#v-backtest > .wrap > .sec:first-child, #v-portfolio > .wrap > .sec:first-child,
+#v-watchlist > .wrap > .sec:first-child, #v-compare > .wrap > .sec:first-child { display: none; }
+#v-heatmap .cc-head, #v-command .cc-head, #v-gaps .cc-head, #v-news .cc-head { justify-content: flex-end; }
+/* index strip: on wide screens the cards wrap into rows instead of being cut at the edge */
+@media (min-width: 761px) {
+  .home .idx-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); overflow: visible; }
+  .home .idx-card { flex: none; min-width: 0; }
+}
+.home .idx-card .nm { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; justify-content: space-between; gap: 6px; }
+.home .idx-card .nm small { flex: none; }
+.prov span, #hSession { unicode-bidi: plaintext; }
