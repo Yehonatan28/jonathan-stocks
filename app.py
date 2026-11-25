@@ -1095,6 +1095,19 @@ def index_quotes(index):
             for k, v in (trend.get(t) or {}).items():
                 if quotes[t].get(k) is None:
                     quotes[t][k] = v
+    # valuation per share from SEC filings when the quote feed has none: last full-year EPS and dividends
+    if any(q.get('pe') is None for q in quotes.values()) and '@' in os.environ.get('SEC_CONTACT', ''):
+        try:
+            ps = fundamentals.annual_per_share()
+        except Exception:                    # noqa: BLE001
+            ps = {}
+        for t, q in quotes.items():
+            f = ps.get(t) or ps.get(t.replace('.', '-')) or {}
+            px = q.get('price')
+            if px and q.get('pe') is None and f.get('eps') and f['eps'] > 0:
+                q['pe'], q['pe_basis'] = round(px / f['eps'], 1), f'FY{f["eps_year"]} EPS (SEC)'
+            if px and q.get('div_yield') is None and f.get('dps') is not None:
+                q['div_yield'], q['dy_basis'] = round(f['dps'] / px * 100, 2), f'FY{f["dps_year"]} dividends (SEC)'
     if quotes:
         cache_set(key, quotes, 300)
     return quotes

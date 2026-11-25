@@ -101,3 +101,15 @@ def test_without_contact_nothing_is_fetched(monkeypatch):
         assert 'not configured' in str(exc)
     else:
         raise AssertionError('should not fetch without a contact')
+
+
+def test_annual_per_share_falls_back_a_year(monkeypatch):
+    from datetime import date
+    F._CIK.update(at=9e12, map={'AAA': 1, 'BBB': 2, 'CCC': 3})
+    frames = {('EarningsPerShareDiluted', 'CY2025'): {1: 2.0}, ('EarningsPerShareDiluted', 'CY2024'): {1: 1.5, 2: -0.4},
+              ('CommonStockDividendsPerShareDeclared', 'CY2025'): {1: 0.8}, ('CommonStockDividendsPerShareDeclared', 'CY2024'): {}}
+    monkeypatch.setattr(F, 'frame', lambda tag, unit, period: frames[(tag, period)])
+    out = F.annual_per_share(today=date(2026, 11, 25))
+    assert out['AAA'] == {'eps': 2.0, 'eps_year': 2025, 'dps': 0.8, 'dps_year': 2025}
+    assert out['BBB'] == {'eps': -0.4, 'eps_year': 2024} and 'CCC' not in out
+    F._CIK.update(at=0, map={})

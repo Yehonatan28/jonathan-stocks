@@ -361,3 +361,47 @@ def report(ticker):
         'source_url': FACTS_URL.format(cik=cik),
         'method': __doc__.split('What is extracted, and how:')[1].strip(),
     }
+
+
+# ------------------------------------------------------------ cross-company frames
+FRAMES_URL = 'https://data.sec.gov/api/xbrl/frames/us-gaap/{tag}/{unit}/{period}.json'
+_FRAMES = {}
+
+
+def frame(tag, unit, period):
+    """{cik: value} for one fact across every filer, from the SEC's frames service: the value
+    from each company's filing that best fits the calendar period (e.g. CY2025 for a year).
+    Cached for a day. Raises Unavailable."""
+    key = (tag, unit, period)
+    hit = _FRAMES.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    data = _get(FRAMES_URL.format(tag=tag, unit=unit, period=period), timeout=25) or {}
+    out = {int(r['cik']): r['val'] for r in data.get('data', []) if r.get('cik') and r.get('val') is not None}
+    _FRAMES[key] = (time.time() + 86400, out)
+    return out
+
+
+def annual_per_share(today=None):
+    """Diluted EPS and dividends per share of the last full calendar year, by ticker, with the
+    year used. Companies missing from the latest year's frame fall back to the year before."""
+    from datetime import date as _date
+    y = (today or _date.today()).year - 1
+    if not _CIK['map']:
+        cik_for('AAPL')                       # fills the ticker map
+    by_cik = {}
+    for tag, field in (('EarningsPerShareDiluted', 'eps'), ('CommonStockDividendsPerShareDeclared', 'dps')):
+        for year in (y, y - 1):
+            try:
+                vals = frame(tag, 'USD-per-shares', f'CY{year}')
+            except Unavailable:
+                continue
+            for cik, v in vals.items():
+                row = by_cik.setdefault(cik, {})
+                if field not in row:
+                    row[field], row[field + '_year'] = v, year
+    out = {}
+    for t, cik in _CIK['map'].items():
+        if cik in by_cik:
+            out[t] = by_cik[cik]
+    return out
