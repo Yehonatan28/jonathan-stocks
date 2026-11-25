@@ -390,3 +390,22 @@ input, select, textarea { font-family: var(--ui); }
 .rk-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; }
 .rk-grid .scr-t { min-width: 560px; }
 @media (max-width: 1280px) { .rk-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---- Strategy Lab */
+.labw .ph h1 { margin: 0 0 4px; font-size: 22px; } .labw .ph p { margin: 0 0 14px; color: var(--tx2); font-size: 13.5px; }
+.lab-form { padding: 14px; margin-bottom: 18px; }
+.lab-top { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.lab-top label, .lab-n { display: grid; gap: 4px; font-size: 12px; color: var(--tx2); }
+.lab-form input, .lab-form select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; color: var(--tx); padding: 6px 8px; font: 500 13px var(--ui); min-width: 0; }
+.lab-form input[type=number], .lab-top input { font-family: var(--mono); }
+.lab-top input[name=ticker] { width: 110px; text-transform: uppercase; }
+.lab-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 12px; }
+.lab-cols fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; margin: 0; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.lab-cols legend { font-size: 12px; font-weight: 600; color: var(--tx); padding: 0 4px; }
+.lab-c { display: grid; grid-template-columns: auto 1fr 74px; gap: 8px; align-items: center; font-size: 13px; color: var(--tx2); }
+.lab-c input[type=checkbox] { accent-color: var(--accent); }
+.lab-c input[type=number] { width: 100%; }
+.lab-chart { height: 300px; margin-bottom: 8px; } .lab-dd { height: 140px; }
+.lab-heat td { min-width: 52px; } .lab-heat th { font: 600 12px var(--mono); }
+@media (max-width: 1000px) { .lab-cols { grid-template-columns: minmax(0, 1fr); } }
+.mi-tile .t-val small { font-size: 12px; color: var(--tx3); font-weight: 500; }

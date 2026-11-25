@@ -36,7 +36,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Risk engine extension: Portfolio Risk review against the user's limits (largest position, sector, risk per trade, total open risk), unprotected positions, stops under 1 or over 4 ATR, 60-day correlation matrix and high pairs; long/short position sizing capped by the position limit (`riskx.py`)
 
 ## Phase 3 · Analytical differentiation
-- [ ] Backtesting lab: configurable entries/exits (RSI, MA, MACD, ATR), stops, targets, trailing, costs, slippage, next-bar execution (no look-ahead), equity/drawdown curves, monthly heatmap, benchmark
+- [x] Backtesting lab (Strategy Lab): entries/exits from RSI, MA, MA cross, MACD cross, breakout, time; ATR stop, target and trailing stop checked intrabar with gap fills; commission and slippage both sides; next-open fills with a no-look-ahead test; equity vs buy-and-hold, drawdown, monthly heatmap, trade list; presets (`strategylab.py`)
 - [ ] Comparison of up to four companies, normalised charts
 - [ ] ETF research (holdings, sectors, expense ratio where available)
 - [ ] Correlation lab: matrix, rolling correlation, volatility, drawdown comparison

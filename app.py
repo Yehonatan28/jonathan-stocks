@@ -21,6 +21,7 @@ import fundamentals
 import ledger
 import performance
 import riskx
+import strategylab
 from quant import indicators as _qi
 
 import mimetypes
@@ -1415,6 +1416,43 @@ def risk_review():
     sectors = {p['ticker']: (market._BY_TICKER.get(p['ticker']) or {}).get('sector') for p in positions}
     out = riskx.review(positions, prices, atrs, sectors, equity, d.get('limits'), closes)
     out['ok'] = True
+    return jsonify(out)
+
+
+@app.route('/api/lab', methods=['POST'])
+def strategy_lab():
+    """Run a user-defined rule set on one symbol's daily bars. Indicators are computed on the
+    full history so the averages are warmed up before the test window starts."""
+    d = request.get_json(silent=True) or {}
+    t = str(d.get('ticker') or '').strip().upper()
+    if not t or len(t) > 15 or not all(ch.isalnum() or ch in '.-^=' for ch in t):
+        return jsonify({'error': 'Enter a symbol'}), 400
+    try:
+        years = int(d.get('years') or 5)
+    except (TypeError, ValueError):
+        years = 5
+    years = min(10, max(1, years))
+    try:
+        strategylab.clean(d.get('strategy'))
+    except strategylab.StrategyError as exc:
+        return jsonify({'error': str(exc)}), 400
+    key = f'lab:{t}:{"10y" if years > 4 else "5y"}'
+    df = cache_get(key)
+    if df is None:
+        try:
+            df = yf_chart(t, '1d', '10y' if years > 4 else '5y')
+        except Exception:                    # noqa: BLE001
+            return jsonify({'error': f'No daily history for {t} right now'}), 503
+        cache_set(key, df, 3 * 3600)
+    start = max(0, len(df) - years * 252)
+    if len(df) - start < 60:
+        return jsonify({'error': 'Not enough history for this window'}), 400
+    try:
+        out = strategylab.run(df, d.get('strategy'), start_index=start)
+    except strategylab.StrategyError as exc:
+        return jsonify({'error': str(exc)}), 400
+    out['ticker'] = t
+    out['warmup_bars'] = start
     return jsonify(out)
 
 
