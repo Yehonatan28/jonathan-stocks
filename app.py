@@ -17,6 +17,7 @@ import storage
 import provenance
 import marketintel
 import scanner
+import fundamentals
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -887,6 +888,27 @@ def market_breadth():
         return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503
     out = {'ok': True, 'index': index, **marketintel.breadth(rows)}
     cache_set(key, out, 120)
+    return jsonify(out)
+
+
+@app.route('/api/company/<ticker>')
+def company(ticker):
+    """Five fiscal years and eight quarters from the company's SEC filings, with ratios."""
+    t = ticker.strip().upper()
+    if not t or len(t) > 12 or not all(c.isalnum() or c in '.-' for c in t):
+        return jsonify({'error': 'Invalid symbol'}), 400
+    key = 'co:' + t
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    try:
+        out = fundamentals.report(t)
+    except fundamentals.Unavailable as exc:
+        return jsonify({'ok': False, 'error': str(exc)}), 503
+    if not out:
+        return jsonify({'error': f'{t} has no SEC financial statements (funds, foreign issuers and '
+                                 'Israeli-listed shares do not file 10-K reports).'}), 404
+    cache_set(key, out, 6 * 3600)
     return jsonify(out)
 
 

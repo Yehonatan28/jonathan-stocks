@@ -16,7 +16,8 @@
           "storage.py",
           "provenance.py",
           "marketintel.py",
-          "scanner.py"
+          "scanner.py",
+          "fundamentals.py"
         ]
       }
     }

@@ -179,6 +179,7 @@ input, select, textarea { font-family: var(--ui); }
 .prov i, .prov-pop .pr > i { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--tx3); }
 .st-delayed i, .prov-pop i.st-delayed { background: #d6aa4f; }
 .st-eod i, .prov-pop i.st-eod { background: #7d8aa3; }
+.st-reported i, .prov-pop i.st-reported { background: var(--accent); }
 .st-live i, .prov-pop i.st-live { background: var(--up); }
 .st-unavailable i, .prov-pop i.st-unavailable { background: var(--dn); }
 .prov.st-unavailable { border-color: rgba(229, 86, 108, .45); }
@@ -294,3 +295,32 @@ input, select, textarea { font-family: var(--ui); }
   .scr-t .sticky { min-width: 110px; }
   .scr-t td.sticky small { max-width: 110px; }
 }
+
+/* ---- Company Research */
+.rs .ph { margin-bottom: 14px; } .rs .ph h1 { margin: 0 0 4px; font-size: 22px; } .rs .ph p { margin: 0; color: var(--tx2); font-size: 13.5px; }
+.rs-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
+.rs-search input { background: var(--s2); border: 1px solid var(--line); border-radius: var(--r); color: var(--tx); padding: 8px 12px; font: 600 14px var(--mono); width: 200px; text-transform: uppercase; }
+.rs-search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.rs-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-end; margin-bottom: 16px; }
+.rs-head h2 { margin: 0; font-size: 24px; } .rs-sub { color: var(--tx3); font-size: 12.5px; font-family: var(--mono); margin-top: 4px; }
+.rs-kpis { display: flex; gap: 10px; flex-wrap: wrap; }
+.rs-kpis > div { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; min-width: 150px; }
+.rs-kpis span { display: block; font-size: 11.5px; color: var(--tx3); } .rs-kpis b { display: block; font: 600 20px var(--mono); margin: 3px 0; }
+.rs-kpis small { font-size: 11px; color: var(--tx3); }
+.rs-summary { background: var(--s1); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 14px 18px; margin-bottom: 22px; }
+.rs-summary h3 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--tx3); }
+.rs-summary ul { margin: 0; padding-left: 18px; } .rs-summary li { margin: 4px 0; line-height: 1.5; }
+.rs-chart { height: 250px; padding: 12px; }
+.rs-tbl { overflow-x: auto; } .rs-tbl .mi-t { min-width: 640px; }
+.rs-tbl th small { display: block; font: 400 10.5px var(--mono); letter-spacing: 0; text-transform: none; color: var(--tx3); }
+.rs-tbl tr.em td { font-weight: 600; } .rs-tbl tr.em td.nm { color: var(--tx); }
+.rs-tbl td.nm { white-space: nowrap; }
+.tip { border-bottom: 1px dotted var(--tx3); cursor: help; }
+.rs-defs { margin-top: 8px; font-size: 12.5px; color: var(--tx2); }
+.rs-defs summary { cursor: pointer; color: var(--accent); }
+.rs-defs dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 10px 0 0; }
+.rs-defs dt { font-weight: 600; color: var(--tx); } .rs-defs dd { margin: 0; }
+.rs-src p { font-size: 13px; color: var(--tx2); } .rs-src a { color: var(--accent); }
+.rs-src pre { white-space: pre-wrap; font: 12px/1.55 var(--mono); color: var(--tx3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; overflow-wrap: anywhere; }
+@media (max-width: 760px) { .rs-search input { flex: 1; width: auto; } .rs-kpis > div { flex: 1; min-width: 0; } .rs-defs dl { grid-template-columns: 1fr; } .rs-chart { height: 210px; } }

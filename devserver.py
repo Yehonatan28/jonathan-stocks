@@ -189,5 +189,62 @@ def _fake_gap(ticker):
 
 engine.detect_gap = _fake_gap
 
+# --- SEC company facts, stubbed: six fiscal years and quarters, shaped like the real document
+import fundamentals as _fund
+
+
+def _fake_facts(ticker):
+    r = _r2.Random('sec' + ticker)
+    if ticker.upper() in ('SPY', 'QQQ', 'TEVA.TA'):
+        return None, None
+    rev0 = r.uniform(20e9, 300e9)
+    g = [r.uniform(-0.04, 0.22) for _ in range(6)]
+    years = list(range(2019, 2025))
+    rows = {}
+    rev = rev0
+    for y, gr in zip(years, g):
+        rev *= 1 + gr
+        gm, om = r.uniform(0.38, 0.7), r.uniform(0.12, 0.38)
+        ni = rev * om * 0.8
+        rows[y] = dict(rev=rev, gp=rev * gm, oi=rev * om, pre=rev * om * 0.98, tax=rev * om * 0.98 * 0.18, ni=ni,
+                       eps=ni / 15e9, cfo=ni * r.uniform(0.9, 1.35), capex=rev * r.uniform(0.03, 0.09),
+                       eq=rev * r.uniform(0.4, 0.9), debt=rev * r.uniform(0.1, 0.4), cash=rev * r.uniform(0.08, 0.3),
+                       assets=rev * r.uniform(1.2, 2.2), rnd=rev * r.uniform(0.05, 0.16), buy=ni * r.uniform(0.2, 0.8))
+    def fy(y): return (f"{y - 1}-10-01", f"{y}-09-30")
+    def e(start, end, val, form='10-K', filed=None):
+        x = {'end': end, 'val': round(val), 'form': form, 'filed': filed or end[:4] + '-11-01', 'accn': 'x'}
+        if start: x['start'] = start
+        return x
+    usd = lambda tag, f: {tag: {'units': {'USD': [e(*fy(y), f(v)) for y, v in rows.items()]}}}
+    inst = lambda tag, f: {tag: {'units': {'USD': [e(None, fy(y)[1], f(v)) for y, v in rows.items()]}}}
+    g_ = {}
+    for t_, f_ in (('RevenueFromContractWithCustomerExcludingAssessedTax', lambda v: v['rev']), ('GrossProfit', lambda v: v['gp']),
+                   ('OperatingIncomeLoss', lambda v: v['oi']), ('NetIncomeLoss', lambda v: v['ni']),
+                   ('IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest', lambda v: v['pre']),
+                   ('IncomeTaxExpenseBenefit', lambda v: v['tax']), ('ResearchAndDevelopmentExpense', lambda v: v['rnd']),
+                   ('NetCashProvidedByUsedInOperatingActivities', lambda v: v['cfo']),
+                   ('PaymentsToAcquirePropertyPlantAndEquipment', lambda v: v['capex']),
+                   ('PaymentsForRepurchaseOfCommonStock', lambda v: v['buy'])):
+        g_.update(usd(t_, f_))
+    for t_, f_ in (('StockholdersEquity', lambda v: v['eq']), ('LongTermDebt', lambda v: v['debt']),
+                   ('CashAndCashEquivalentsAtCarryingValue', lambda v: v['cash']), ('Assets', lambda v: v['assets']),
+                   ('Liabilities', lambda v: v['assets'] - v['eq'])):
+        g_.update(inst(t_, f_))
+    g_['EarningsPerShareDiluted'] = {'units': {'USD/shares': [e(*fy(y), 0) | {'val': round(v['eps'], 2)} for y, v in rows.items()]}}
+    # quarters of the last two fiscal years (Q1-Q3 filed, Q4 derived by the parser)
+    for y in (2023, 2024):
+        v = rows[y]
+        qs = [(f"{y - 1}-10-01", f"{y - 1}-12-31"), (f"{y}-01-01", f"{y}-03-31"), (f"{y}-04-01", f"{y}-06-30")]
+        for i, (s_, e_) in enumerate(qs):
+            share = (0.23, 0.24, 0.25)[i]
+            for tag, key in (('RevenueFromContractWithCustomerExcludingAssessedTax', 'rev'), ('GrossProfit', 'gp'),
+                             ('OperatingIncomeLoss', 'oi'), ('NetIncomeLoss', 'ni')):
+                g_[tag]['units']['USD'].append(e(s_, e_, v[key] * share, '10-Q', e_[:8] + '28'))
+            g_['EarningsPerShareDiluted']['units']['USD/shares'].append(e(s_, e_, 0, '10-Q', e_[:8] + '28') | {'val': round(v['eps'] * share, 2)})
+    return 1000 + r.randint(1, 9999), {'entityName': f'{ticker.upper()} Test Corp', 'facts': {'us-gaap': g_}}
+
+
+_fund.company_facts = _fake_facts
+
 if __name__ == '__main__':
     A.app.run(host='127.0.0.1', port=5055, debug=False, use_reloader=False)

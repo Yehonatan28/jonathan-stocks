@@ -44,5 +44,5 @@ def test_private_routes_carry_no_provenance():
 
 def test_sources_catalogue_is_honest():
     j = _client().get('/api/sources').get_json()
-    assert {d['status'] for d in j['datasets']} <= {'delayed', 'eod'}
+    assert {d['status'] for d in j['datasets']} <= {'delayed', 'eod', 'reported'}
     assert 'real-time' in j['note']

@@ -33,6 +33,7 @@ DATASETS = [
     ('/api/market/sectors', 'sectors', 'Sector performance', 'Yahoo Finance daily bars (SPDR sector funds)', 'eod'),
     ('/api/market/snapshot', 'snapshot', 'Cross-asset snapshot', 'Yahoo Finance', 'delayed'),
     ('/api/scan', 'scan', 'Stock scanner', 'Yahoo Finance quotes', 'delayed'),
+    ('/api/company', 'company', 'Company financials', 'SEC EDGAR filings (10-K, 10-Q)', 'reported'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]
@@ -40,6 +41,7 @@ DATASETS = [
 STATUS_TEXT = {
     'delayed': 'Delayed: quotes may lag the exchange by 15 minutes or more',
     'eod': 'End of day: computed from daily closing bars',
+    'reported': 'As reported: figures from the company\'s filings with the SEC, for the periods shown',
     'unavailable': 'Unavailable: the source did not answer; nothing is shown in its place',
 }
 
