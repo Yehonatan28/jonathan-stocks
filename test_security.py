@@ -46,9 +46,10 @@ for path in ['/api/portfolio', '/api/settings', '/api/watchlist', '/api/alerts',
 ok('anonymous PATCH is rejected', anon.patch(f'/api/portfolio/{pid}', json={'stop':1}).status_code == 401)
 
 # --- credential handling
-import sqlite3
-conn = sqlite3.connect(A.DB_PATH); conn.row_factory = sqlite3.Row
-row = dict(conn.execute("SELECT * FROM users WHERE email='jon@x.com'").fetchone())
+# read through the app's own connection: the SQLite file locally, Turso when it is configured
+conn = A.db()
+_r = conn.execute("SELECT * FROM users WHERE email='jon@x.com'").fetchone()
+row = dict(zip(_r.keys(), _r))
 stored = row['password_hash']
 print(f'\n  stored hash: {stored[:70]}...  (len {len(stored)})')
 ok('password is not stored in plaintext', 'secret123' not in stored)
@@ -68,14 +69,14 @@ ok('wrong password is rejected',
 
 # --- legacy accounts must keep working and silently upgrade
 import hashlib
-conn2 = sqlite3.connect(A.DB_PATH)
+conn2 = A.db()
 legacy = hashlib.sha256(('js-salt-' + 'oldpass123').encode()).hexdigest()
 conn2.execute("INSERT INTO users(username,email,password_hash) VALUES('old','old@x.com',?)", (legacy,))
 conn2.commit(); conn2.close()
 c = A.app.test_client()
 ok('an account created before the change can still sign in',
    c.post('/api/auth/login', json={'email':'old@x.com','password':'oldpass123'}).status_code == 200)
-conn2 = sqlite3.connect(A.DB_PATH); conn2.row_factory = sqlite3.Row
+conn2 = A.db()
 after = conn2.execute("SELECT password_hash FROM users WHERE email='old@x.com'").fetchone()[0]
 conn2.close()
 ok('and its stored hash is upgraded on that sign-in', after.startswith('pbkdf2$'), after[:40])
@@ -90,6 +91,7 @@ codes = [burst.post('/api/auth/login', json={'email':'jon@x.com','password':'bad
          for i in range(12)]
 ok('repeated failed sign-ins get throttled', 429 in codes, codes)
 
-os.unlink(A.DB_PATH)
+if os.path.exists(A.DB_PATH):
+    os.unlink(A.DB_PATH)
 print('\n' + ('ALL SECURITY CHECKS PASS' if not fails else f'{len(fails)} FAILED: ' + ', '.join(fails)))
 sys.exit(1 if fails else 0)

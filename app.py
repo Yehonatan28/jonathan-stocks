@@ -13,6 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 import engine
 import news as newsfeed
 import market
+import storage
 
 app = Flask(__name__)
 # Session cookies are signed with this key. The fallback is random per process
@@ -56,9 +57,8 @@ def cache_set(key, data, ttl=300):
 
 
 def db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Turso in production (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN), a SQLite file otherwise."""
+    return storage.connect(DB_PATH)
 
 
 def init_db():
@@ -191,6 +191,20 @@ def current_user():
 
 
 # ---------- Auth ----------
+
+@app.route('/api/health')
+def health():
+    """Which storage the deployment uses and whether it answers. No secrets, no user data."""
+    ok, err = True, None
+    try:
+        conn = db()
+        conn.execute('SELECT COUNT(*) FROM users').fetchone()
+        conn.close()
+    except Exception as exc:               # noqa: BLE001
+        ok, err = False, type(exc).__name__
+    return jsonify({'storage': storage.backend(), 'storage_ok': ok, 'error': err,
+                    'host': 'vercel' if os.environ.get('VERCEL') else 'render' if os.environ.get('RENDER') else 'local'})
+
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
