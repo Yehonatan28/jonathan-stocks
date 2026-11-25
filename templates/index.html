@@ -73,29 +73,40 @@
   <span class="chip fg" id="fgChip" onclick="go('home')" title="CNN Fear &amp; Greed Index">F&amp;G —</span>
  </div>
  <div class="hdr-actions">
+  <button type="button" class="btn btn-ghost btn-sm" id="tapeShow" hidden>Show tape</button>
   <button class="btn btn-ghost btn-sm gloss-btn" onclick="toggleGloss()">Glossary</button>
   <button class="btn btn-gold btn-sm" id="loginBtn" onclick="showAuth()">Sign in</button>
   <div class="user-pill" id="userPill" style="display:none"><div class="avatar" id="userAv">?</div><b id="userName"></b><button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button></div>
  </div>
 </header>
-<div class="tape-wrap"><div class="tape" id="tape"></div></div>
+<div class="tape-wrap" id="tapeWrap"><div class="tape" id="tape" aria-hidden="true"></div><button type="button" class="tape-ctl" id="tapePause" aria-pressed="false" aria-label="Pause the ticker tape">Pause</button><button type="button" class="tape-ctl" id="tapeHide" aria-label="Hide the ticker tape">Hide</button></div>
 <main class="content" id="content">
 <div class="pagehead wrap" id="pagehead"></div>
 
 
-<section id="v-home" class="view on"><div class="wrap">
- <div class="idx-flag">US indices · click a name for the profile, the card for a chart</div>
- <div class="idx-board" id="idxUS"></div>
- <div class="idx-flag">Tel Aviv</div>
- <div class="idx-board" id="idxIL"></div>
- <div class="bento">
-  <div class="glass"><div class="b-label">S&amp;P 500 · SPY</div><div class="b-big" id="spyPrice">—</div><div class="b-sub" id="spyChg">—</div><canvas class="spark" id="spySpark" height="52"></canvas></div>
-  <div class="glass"><div class="b-label">Fear &amp; Greed Index</div><div class="fg-wrap" id="fgWrap"><div class="spinner"></div></div></div>
-  <div class="glass"><div class="b-label">Market breadth · S&amp;P 500</div><div class="b-big" id="pulseTxt" style="font-size:23px">—</div><div class="b-sub" id="pulseSub">Loading…</div><div class="ad-bar" id="adBar" aria-hidden="true"></div></div>
- </div>
- <div class="mi-block" id="dgBox">
-  <div class="sec">Your names today <span class="tag">HOLDINGS &amp; WATCHLIST</span><span class="mi-note" id="dgNote"></span></div>
+<section id="v-home" class="view on" aria-labelledby="pageTitle"><div class="wrap home">
+ <section class="h-now" aria-labelledby="hNowT">
+  <div class="h-head"><h2 id="hNowT" class="h2">Market now</h2><p class="h-meta" id="hSession" aria-live="polite"></p></div>
+  <div class="idx-row">
+   <div class="idx-grp"><span class="idx-flag">US</span><div class="idx-board" id="idxUS"></div></div>
+   <div class="idx-grp"><span class="idx-flag">Tel Aviv</span><div class="idx-board" id="idxIL"></div></div>
+  </div>
+ </section>
+
+ <section class="h-ins" aria-labelledby="hInsT">
+  <div class="h-head"><h2 id="hInsT" class="h2">Today in brief</h2><p class="h-meta">Descriptions of today’s data, not forecasts. Open “Basis” for the numbers.</p></div>
+  <ol class="ins-list" id="hInsights"><li class="ins sk" aria-hidden="true"></li><li class="ins sk" aria-hidden="true"></li><li class="ins sk" aria-hidden="true"></li></ol>
+ </section>
+
+ <section class="mi-block h-mine" id="dgBox" aria-labelledby="hMineT">
+  <div class="h-head"><h2 id="hMineT" class="h2">Your names today</h2><p class="h-meta" id="dgNote"></p></div>
   <div class="mi-card" id="dgList"><div class="spinner"></div></div>
+ </section>
+
+ <div class="bento h-main">
+  <div class="glass h-spy"><div class="b-label">S&amp;P 500 · SPY <span class="muted">· price, delayed</span></div><div class="b-big" id="spyPrice">—</div><div class="b-sub" id="spyChg">—</div><canvas class="spark" id="spySpark" height="90" role="img" aria-label="SPY recent closes"></canvas></div>
+  <div class="glass"><div class="b-label">Market breadth · S&amp;P 500</div><div class="b-big" id="pulseTxt" style="font-size:23px">—</div><div class="b-sub" id="pulseSub">Loading…</div><div class="ad-bar" id="adBar" aria-hidden="true"></div></div>
+  <div class="glass h-fg"><div class="b-label">Fear &amp; Greed · CNN</div><div class="fg-wrap" id="fgWrap"><div class="spinner"></div></div></div>
  </div>
  <div class="mi-block">
   <div class="sec">Breadth <span class="tag">S&amp;P 500</span><span class="mi-note" id="brNote"></span></div>
@@ -117,7 +128,7 @@
   <div class="mi-block"><div class="sec">Leaders today <span class="tag">S&amp;P 500</span></div><div class="mi-card" id="leaders"></div></div>
   <div class="mi-block"><div class="sec">Laggards today <span class="tag">S&amp;P 500</span></div><div class="mi-card" id="laggards"></div></div>
  </div>
- <div class="sec">Watch board <span class="tag">TREND STATE</span><span class="mi-note">a fixed list per region, analysed on daily bars</span></div>
+ <details class="h-board"><summary><span class="sec" style="margin:0">Trend board <span class="tag">FIXED LISTS</span></span><span class="mi-note">a fixed list per region, analysed on daily bars</span></summary>
  <div class="tiles">
   <div class="glass tile"><div class="t-lab">Average RSI</div><div class="t-val" id="stAvgRsi">—</div><div class="t-sub">across scanned names</div></div>
   <div class="glass tile"><div class="t-lab">In an uptrend</div><div class="t-val up" id="stBuy">—</div><div class="t-sub">trend state</div></div>
@@ -125,13 +136,14 @@
   <div class="glass tile"><div class="t-lab">Scanned</div><div class="t-val" id="stCount">—</div><div class="t-sub">stocks</div></div>
  </div>
  <div class="filters">
-  <button class="btn btn-gold btn-sm" onclick="loadPreset('us',this)">🇺🇸 US</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadPreset('il',this)">🇮🇱 Israel</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadPreset('tech',this)">⚡ Tech</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadPreset('etf',this)">📊 ETFs</button>
-  <button class="btn btn-ghost btn-sm" onclick="loadPreset('all',this)">🌍 Mixed</button>
+  <button class="btn btn-gold btn-sm" onclick="loadPreset('us',this)">US</button>
+  <button class="btn btn-ghost btn-sm" onclick="loadPreset('il',this)">Israel</button>
+  <button class="btn btn-ghost btn-sm" onclick="loadPreset('tech',this)">Tech</button>
+  <button class="btn btn-ghost btn-sm" onclick="loadPreset('etf',this)">ETFs</button>
+  <button class="btn btn-ghost btn-sm" onclick="loadPreset('all',this)">Mixed</button>
  </div>
  <div class="grid" id="stocksGrid"></div>
+ </details>
 </div></section>
 
 <section id="v-heatmap" class="view"><div class="wrap">

@@ -21,7 +21,7 @@ const fmtCap=n=>{if(n==null)return'—';const a=Math.abs(n);
 const sign=(v,d=2)=>v==null?'—':(v>=0?'+':'')+fmt(v,d);
 const cls=v=>v==null?'':v>=0?'up':'dn';
 const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
- if(window.noteProv)window.noteProv(r);
+ if(window.noteProv)window.noteProv(r);else(window.__provQ=window.__provQ||[]).push(r);  /* answered before shell.js loaded */
  let j={};try{j=await r.json()}catch(e){j={error:'The server returned an unexpected response.'}}
  if(!r.ok){if(r.status===404&&!j.error)j.error='Endpoint not found on the server.';throw j}return j};
 function toast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
@@ -120,7 +120,7 @@ async function loadFearGreed(){
  const box=$('fgWrap');
  try{
   const d=await api('/api/feargreed');
-  if(!d.ok){box.innerHTML=`<div class="empty" style="padding:22px"><div class="e-ic">📉</div><h4>Fear &amp; Greed unavailable</h4><div style="font-size:11.5px;line-height:1.6">${esc(d.error||'')}<br>Showing nothing is better than showing a number we invented.</div></div>`;
+  if(!d.ok){box.innerHTML=`<div class="empty" style="padding:22px"><h4>Fear &amp; Greed unavailable</h4><div style="font-size:11.5px;line-height:1.6">${esc(d.error||'')}<br>Nothing is shown in its place.</div></div>`;
    $('fgChip').textContent='F&G —';return}
   S.fg=d;renderFearGreed(d);
  }catch(e){box.innerHTML='<div class="empty" style="padding:22px"><h4>Fear &amp; Greed unavailable</h4></div>'}}
@@ -147,27 +147,33 @@ function renderFearGreed(d){
   <div class="fg-num" style="color:${col}">${v}</div>
   <div class="fg-word" style="color:${col}">${esc(label)}</div>
   <div class="fg-prev">${cell('Prev close',prev.close)}${cell('1 week',prev.week)}${cell('1 month',prev.month)}${cell('1 year',prev.year)}</div>
-  ${d.components&&d.components.length?`<div class="fg-comps" style="margin-top:14px">${d.components.map(c=>`
+  ${d.components&&d.components.length?`<details class="fg-more"><summary>The ${d.components.length} components</summary><div class="fg-comps">${d.components.map(c=>`
     <div class="fg-comp" title="${esc(c.blurb||'')}">
      <span class="cl">${esc(c.label)}</span>
      <span class="cv" style="color:${fgColor(c.score)}">${c.score}</span>
      <span class="fg-bar"><i style="width:${Math.max(2,c.score)}%;background:${fgColor(c.score)}"></i></span>
-    </div>`).join('')}</div>`:''}
-  <div class="fg-src">${esc(d.source||'CNN Business')}</div>`;
+    </div>`).join('')}</div></details>`:''}
+  <div class="fg-src">${esc(d.source||'CNN Business')}${d.timestamp?' · as of '+esc(String(d.timestamp).slice(0,16).replace('T',' ')):''}. A sentiment gauge, not a signal.</div>`;
  $('fgChip').textContent=`F&G ${v} · ${label}`;
  $('fgChip').style.color=col}
 
 /* ===================== indices, tape, breadth ===================== */
-function idxCardHTML(q,name){const up=q.chg>=0;const safe=esc(name);
- return`<div class="idx-card" onclick="openChart('${esc(q.ticker)}')">
-  <div class="nm"><span onclick="event.stopPropagation();openProfile('${esc(q.ticker)}','${safe.replace(/'/g,'')}')" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(229,176,72,.3);text-underline-offset:3px">${safe}</span><small>${esc(q.ticker.replace('^',''))}</small></div>
-  <div class="vl">${q.price!=null?fmt(q.price):'—'}</div>
-  <div class="cg ${up?'up':'dn'}">${q.chg!=null?(up?'▲ +':'▼ ')+fmt(q.chg)+'%':''}</div></div>`}
+/* Colour follows meaning, not sign: a rising VIX means more expected volatility, so it is not shown
+   as good news. Every change carries its sign and a word, never colour alone. */
+const INVERSE=new Set(['^VIX']);
+function idxCardHTML(q,name){const up=q.chg>=0;const safe=esc(name);const inv=INVERSE.has(q.ticker);
+ const cls=q.chg==null||q.chg===0?'':inv?(up?'dn':'up'):(up?'up':'dn');
+ const word=q.chg==null?'':inv?(up?'volatility up':'volatility down'):(up?'up':'down');
+ return`<button type="button" class="idx-card" onclick="openChart('${esc(q.ticker)}')" aria-label="${safe} ${q.price!=null?fmt(q.price):''}, ${q.chg!=null?(up?'+':'')+fmt(q.chg)+'%':''} ${word}. Open chart">
+  <span class="nm">${safe}<small>${esc(q.ticker.replace('^',''))}</small></span>
+  <span class="vl">${q.price!=null?fmt(q.price):'—'}</span>
+  <span class="cg ${cls}">${q.chg!=null?(up?'▲ +':'▼ ')+fmt(q.chg)+'%':''}${inv&&q.chg!=null?`<small> ${word}</small>`:''}</span></button>`}
 
 async function loadIndices(){
  $('idxUS').innerHTML=skelCards(5);$('idxIL').innerHTML=skelCards(6);
  try{const all=[...IDX_US.map(x=>x[0]),...IDX_IL.map(x=>x[0])];
   const qs=await api('/api/quotes?tickers='+all.map(encodeURIComponent).join(','));
+  window.IDXQ=qs;if(window.MarketIntel&&MarketIntel.insights)MarketIntel.insights();
   const draw=(defs,elId)=>{const html=defs.map(([t,name])=>{const q=qs.find(x=>x.ticker===t.toUpperCase())||{ticker:t};
    return q.price!=null?idxCardHTML(q,name):''}).join('');
    $(elId).innerHTML=html||'<div class="empty" style="grid-column:1/-1;padding:20px">No data available right now</div>'};
@@ -1275,11 +1281,29 @@ $('chartModal').addEventListener('click',e=>{if(e.target.id==='chartModal')close
 let hmResize=null;
 window.addEventListener('resize',()=>{clearTimeout(hmResize);hmResize=setTimeout(()=>{if(S.hm&&$('v-heatmap').classList.contains('on'))renderHeatmap()},220)});
 
+/* ===================== ticker tape: optional and pausable ===================== */
+function initTape(){
+ const w=$('tapeWrap'),t=$('tape'),pb=$('tapePause'),hb=$('tapeHide');if(!w)return;
+ const get=(k,d)=>{try{const v=localStorage.getItem(k);return v==null?d:v==='1'}catch(e){return d}};
+ const set=(k,v)=>{try{localStorage.setItem(k,v?'1':'0')}catch(e){}};
+ const reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const apply=()=>{const paused=get('js.tape.paused',reduced),hidden=get('js.tape.hidden',false);
+  w.classList.toggle('paused',paused);w.hidden=hidden;pb.textContent=paused?'Play':'Pause';
+  pb.setAttribute('aria-pressed',String(paused));pb.setAttribute('aria-label',paused?'Play the ticker tape':'Pause the ticker tape');
+  const show=$('tapeShow');if(show)show.hidden=!hidden};
+ pb.addEventListener('click',()=>{set('js.tape.paused',!w.classList.contains('paused'));apply()});
+ hb.addEventListener('click',()=>{set('js.tape.hidden',true);apply();const s2=$('tapeShow');if(s2)s2.focus()});
+ const show=$('tapeShow');if(show)show.addEventListener('click',()=>{set('js.tape.hidden',false);apply();pb.focus()});
+ apply()}
+
 /* ===================== boot ===================== */
 document.addEventListener('DOMContentLoaded',()=>{
  buildGloss();tickClock();setInterval(tickClock,1000);
  checkAuth();loadIndices();loadTapeAndBento();loadFearGreed();
- loadPreset('us',document.querySelector('#v-home .filters .btn'));
+ /* the trend board analyses a dozen symbols; it loads only when opened */
+ const tb=document.querySelector('.h-board');
+ if(tb)tb.addEventListener('toggle',()=>{if(tb.open&&!tb.dataset.loaded){tb.dataset.loaded='1';loadPreset('us',document.querySelector('#v-home .filters .btn'))}});
+ initTape();
  setInterval(()=>{loadTapeAndBento();loadIndices()},60000);
  setInterval(loadFearGreed,900000);
  setInterval(()=>{if($('v-command').classList.contains('on'))loadPlan(false)},300000);

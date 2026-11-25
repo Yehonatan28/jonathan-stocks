@@ -179,7 +179,10 @@
     const at = new Date(r.headers.get('X-Data-Retrieved') || Date.now());
     PROV[id] = { source: r.headers.get('X-Data-Source') || '', status: r.headers.get('X-Data-Status') || 'delayed', at };
     renderProv();
+    document.dispatchEvent(new CustomEvent('prov', { detail: id }));
   };
+  window.provOf = (id) => PROV[id] || null;      // for screens that print a basis line
+  setTimeout(() => { (window.__provQ || []).splice(0).forEach((r) => window.noteProv(r)); }, 0);
   function renderProv() {
     const btn = $('prov'), pop = $('provPop');
     if (!btn) return;
