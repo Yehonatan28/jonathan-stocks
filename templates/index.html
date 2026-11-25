@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Personal trading terminal: portfolio risk management, technical signals, backtesting and market data.">
+<meta name="description" content="Financial intelligence and portfolio analytics: market overview, trend and risk analysis, backtesting and news, with the source and freshness of every number shown.">
 <meta name="theme-color" content="#0a0d13">
-<title>Jonathan Stocks · Terminal</title>
+<title>Jonathan Stocks · Financial intelligence</title>
 <link rel="manifest" href="/manifest.json">
 <script src="/static/vendor/lightweight-charts-4.1.3.js"></script>
 <script src="/static/vendor/chart-4.4.1.umd.js"></script>
@@ -22,7 +22,7 @@
 
 <div class="auth hidden" id="authOverlay">
  <div class="auth-card">
-  <div class="auth-logo"><div class="auth-mark">JS</div><div class="auth-title">Jonathan <b>Stocks</b></div><div class="auth-sub">Trading Terminal</div></div>
+  <div class="auth-logo"><div class="auth-mark">JS</div><div class="auth-title">Jonathan <b>Stocks</b></div><div class="auth-sub">Financial intelligence &amp; portfolio analytics</div></div>
   <div class="auth-tabs">
    <button class="auth-tab on" id="atLogin" onclick="switchAuthTab('login')">Sign in</button>
    <button class="auth-tab" id="atReg" onclick="switchAuthTab('register')">Create account</button>
@@ -34,14 +34,14 @@
    <button class="auth-go" onclick="doLogin()">Sign in</button>
   </div>
   <div id="fReg" style="display:none">
-   <div class="fld"><label for="rgUser">Username</label><input id="rgUser" type="text" placeholder="JonathanTrader" autocomplete="username"></div>
+   <div class="fld"><label for="rgUser">Username</label><input id="rgUser" type="text" placeholder="Your name" autocomplete="username"></div>
    <div class="fld"><label for="rgEmail">Email</label><input id="rgEmail" type="email" placeholder="you@email.com" autocomplete="email"></div>
-   <div class="fld"><label for="rgPass">Password · at least 6 characters</label><input id="rgPass" type="password" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
+   <div class="fld"><label for="rgPass">Password · at least 8 characters</label><input id="rgPass" type="password" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
    <div class="auth-err" id="rgErr" role="alert"></div>
    <button class="auth-go" onclick="doRegister()">Create account</button>
   </div>
   <button class="auth-guest" onclick="guestMode()">Continue as guest · data stays in this browser</button>
-  <div class="auth-note">Your positions are private to your account. Nobody else signing in to this site can see them.</div>
+  <div class="auth-note">Your positions are private to your account. Nobody else signing in to this site can see them.<br>Market data is delayed or end-of-day. Information only, not investment advice.</div>
  </div>
 </div>
 

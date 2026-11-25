@@ -100,6 +100,9 @@ ips = [r[0] for r in conn2.execute('SELECT ip FROM login_fails').fetchall()]
 conn2.close()
 ok('the address itself is not stored, only a keyed hash', ips and all('127.0.0.1' not in i and len(i) == 32 for i in ips), ips[:2])
 
+r = A.app.test_client().post('/api/auth/register', json={'username':'shorty','email':'s@x.com','password':'abc1234'})
+ok('a password under 8 characters is refused', r.status_code == 400, r.status_code)
+
 # --- response headers
 r = A.app.test_client().get('/')
 csp = r.headers.get('Content-Security-Policy', '')

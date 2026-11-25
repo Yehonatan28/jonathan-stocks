@@ -16,7 +16,24 @@ import market
 import storage
 import provenance
 
+import mimetypes
+mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
+
 app = Flask(__name__)
+
+# The Render copy times out on the heatmap and keeps a separate SQLite file, so
+# accounts made there are lost on every restart. It now forwards every visit,
+# path and query included, to the one production site, so old links keep working.
+CANONICAL = os.environ.get('CANONICAL_URL', 'https://jonathan-stocks.vercel.app')
+
+
+@app.before_request
+def _forward_retired_host():
+    if os.environ.get('RENDER') and not os.environ.get('KEEP_RENDER'):
+        from flask import redirect
+        qs = request.query_string.decode()
+        return redirect(CANONICAL + request.path + ('?' + qs if qs else ''), code=301)
+    return None
 # Session cookies are signed with this key. The fallback is random per process
 # rather than a literal: a constant checked into a public repository lets anyone
 # forge a session cookie and sign in as any user. Set SECRET_KEY in the host's
@@ -338,8 +355,8 @@ def register():
         return jsonify({'error': 'Username too short'}), 400
     if '@' not in email:
         return jsonify({'error': 'Invalid email'}), 400
-    if len(password) < 6:
-        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
     conn = db()
     try:
         cur = conn.execute(
