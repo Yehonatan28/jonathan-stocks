@@ -637,7 +637,7 @@ _CRUMB = {'value': None, 'cookies': None, 'at': 0}
 
 # What the quote feed did most recently, for /api/health: which path answered and, when the
 # full quote endpoint failed, why. No user data; only HTTP statuses and counts.
-FEED = {'v7': 0, 'spark': 0, 'v7_error': None, 'crumb_error': None, 'at': None}
+FEED = {'v7': 0, 'spark': 0, 'per_symbol': 0, 'v7_error': None, 'crumb_error': None, 'at': None}
 
 
 def _crumb():
@@ -647,6 +647,8 @@ def _crumb():
     by one and not the other."""
     if _CRUMB['value'] and time.time() - _CRUMB['at'] < 3600:
         return _CRUMB['value'], _CRUMB['cookies']
+    if time.time() < _CRUMB.get('fail_until', 0):
+        return None, None                     # refused recently; do not hammer it
     errors = []
     for cookie_url in ('https://fc.yahoo.com', 'https://finance.yahoo.com/quote/SPY/'):
         for host in ('query1', 'query2'):
@@ -663,6 +665,7 @@ def _crumb():
             except Exception as exc:          # noqa: BLE001
                 errors.append(f'{cookie_url.split("/")[2]}>{host}: {type(exc).__name__}')
     FEED['crumb_error'] = '; '.join(errors)[:300]
+    _CRUMB['fail_until'] = time.time() + 600
     return None, None
 
 
@@ -765,7 +768,9 @@ def _spark(symbols, range_):
                 got[sym] = (closes, resp.get('meta', {}) or {'previousClose': resp.get('chartPreviousClose')})
         return got
 
-    retries = 0
+    if time.time() < FEED.get('spark_down_until', 0):
+        return out                            # failed wholesale recently; skip for a while
+    retries, answered = 0, False
     for group in _chunks(list(symbols), 50):
         got = ask(group)
         if got is None and retries < 60:
@@ -777,7 +782,10 @@ def _spark(symbols, range_):
                 one = ask([sym])
                 if one:
                     got.update(one)
+        answered = answered or bool(got)
         out.update(got or {})
+    if symbols and not answered:
+        FEED['spark_down_until'] = time.time() + 600
     return out
 
 
@@ -819,9 +827,10 @@ def batch_quotes(tickers, per_ticker_fallback=None):
         with ThreadPoolExecutor(max_workers=16) as ex:
             for t, q in zip(missing, ex.map(per_ticker_fallback, missing)):
                 if q and q.get('price') is not None:
-                    out[t] = {'price': q['price'], 'chg': q.get('chg'), 'cap': None,
-                              'open': None, 'prev_close': None, 'volume': None,
-                              'name': None}
+                    # keep every field the per-symbol path computed (trend, range, volume)
+                    out[t] = {'cap': None, 'open': None, 'prev_close': None, 'volume': None, 'name': None,
+                              **{k: v for k, v in q.items() if k not in ('ticker', 'spark')}}
+        FEED['per_symbol'] = sum(1 for t in missing if t in out)
     return out
 
 
@@ -934,3 +943,30 @@ def trend_fields(tickers):
         return out
     key = 'trend:' + str(hash(tuple(sorted(tickers))))
     return _cached(key, 6 * 3600, build)
+
+
+def bars_summary(df):
+    """Quote fields from a year of daily bars (Open/High/Low/Close/Volume, oldest first):
+    last price and change, 50/200-day averages of the close, the 52-week high and low from the
+    bars' highs and lows, today's volume and the average volume of the 63 sessions before it.
+    A field the history is too short for is left out."""
+    c = [float(x) for x in df['Close']]
+    if len(c) < 2:
+        return None
+    out = {'price': round(c[-1], 2), 'prev_close': round(c[-2], 2),
+           'chg': round((c[-1] / c[-2] - 1) * 100, 2) if c[-2] else None}
+    if len(c) >= 50:
+        out['dma50'] = round(sum(c[-50:]) / 50, 2)
+    if len(c) >= 200:
+        out['dma200'] = round(sum(c[-200:]) / 200, 2)
+    if len(c) >= 240:
+        out['hi52'] = round(float(df['High'].iloc[-252:].max()), 2)
+        out['lo52'] = round(float(df['Low'].iloc[-252:].min()), 2)
+    if 'Volume' in df:
+        v = [float(x) for x in df['Volume']]
+        if v and v[-1] > 0:
+            out['volume'] = int(v[-1])
+        prior = [x for x in v[-64:-1] if x > 0]
+        if len(prior) >= 40:
+            out['avg_vol'] = int(sum(prior) / len(prior))
+    return out

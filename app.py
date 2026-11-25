@@ -672,6 +672,16 @@ def period_params(period):
     }.get(period, ('1d', '1mo'))
 
 
+def member_quote(ticker):
+    """One symbol's quote fields from a year of daily bars (the per-symbol chart endpoint answers
+    from the host when the batch endpoints are refused)."""
+    try:
+        q = market.bars_summary(yf_chart(ticker, '1d', '1y'))
+    except Exception:                        # noqa: BLE001
+        q = None
+    return q or {'price': None}
+
+
 def quick_quote(ticker):
     try:
         hist = yf_chart(ticker, '1d', '5d')
@@ -859,7 +869,7 @@ def index_quotes(index):
         return hit
     rows = market.constituents(index)
     tickers = [r['ticker'] for r in rows]
-    quotes = market.batch_quotes(tickers, per_ticker_fallback=quick_quote)
+    quotes = market.batch_quotes(tickers, per_ticker_fallback=member_quote)
     # trend fields the quote feed did not supply come from a year of daily closes
     lacking = [t for t, q in quotes.items() if q.get('dma200') is None or q.get('hi52') is None]
     if lacking:
@@ -872,7 +882,7 @@ def index_quotes(index):
                 if quotes[t].get(k) is None:
                     quotes[t][k] = v
     if quotes:
-        cache_set(key, quotes, 120)
+        cache_set(key, quotes, 300)
     return quotes
 
 
@@ -987,7 +997,7 @@ def market_snapshot():
     hit = cache_get('snapshot')
     if hit:
         return jsonify(hit)
-    quotes = market.batch_quotes([s for _g, s, _l, _k in marketintel.SNAPSHOT])
+    quotes = market.batch_quotes([s for _g, s, _l, _k in marketintel.SNAPSHOT], per_ticker_fallback=member_quote)
     rows = marketintel.snapshot(quotes)
     if not any(r['price'] is not None for r in rows):
         return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503

@@ -7,7 +7,7 @@ shows a dash; nothing is filled in or estimated.
 FIELDS = [
     ('price', 'Price', '$', 'Last price'),
     ('chg', 'Change', '%', 'Change today'),
-    ('cap', 'Market cap', '$B', 'Market capitalisation, billions of dollars'),
+    ('cap', 'Market cap', '$B', "Market capitalisation, billions of dollars: the feed's figure, or the index table's estimate when the feed has none"),
     ('pe', 'P/E', 'x', 'Price over trailing twelve-month earnings per share'),
     ('fpe', 'Fwd P/E', 'x', 'Price over the consensus estimate of next-year earnings (an estimate, not a result)'),
     ('pb', 'P/B', 'x', 'Price over book value per share'),
