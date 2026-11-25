@@ -26,6 +26,7 @@ import relative
 import pages
 import calendars
 import alertrules
+import digest
 from quant import indicators as _qi
 
 import mimetypes
@@ -1723,6 +1724,37 @@ def alerts_evaluate():
                     'label': alertrules.KINDS[kind][0], **r})
     return jsonify({'ok': True, 'results': out, 'checked_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
                     'method': alertrules.__doc__.split('Method (shown to the user as written here):')[1].strip()})
+
+
+@app.route('/api/digest', methods=['POST'])
+def digest_view():
+    """Facts worth a look today in the holdings and watchlist (account, or posted by a guest)."""
+    d = request.get_json(silent=True) or {}
+    uid = current_user()
+    if uid:
+        conn = db()
+        positions = [dict(r) for r in conn.execute('SELECT ticker, stop FROM portfolio WHERE user_id=?', (uid,))]
+        watch = [r['ticker'] for r in conn.execute('SELECT ticker FROM watchlist WHERE user_id=?', (uid,))]
+        conn.close()
+    else:
+        positions = _clean_positions(d.get('positions'))
+        watch = [str(t).strip().upper() for t in (d.get('watch') or [])[:40] if str(t).strip()]
+    holdings = {}
+    for p in positions:
+        h = holdings.setdefault(p['ticker'], {'stop': None})
+        if p.get('stop'):
+            h['stop'] = max(h['stop'] or 0, float(p['stop']))
+    symbols = list(dict.fromkeys(list(holdings) + watch))[:40]
+    if not symbols:
+        return jsonify({'ok': True, 'items': [], 'symbols': 0})
+    quotes = market.batch_quotes(symbols, per_ticker_fallback=member_quote)
+    try:
+        earn = _earnings_days(set(symbols), digest.EARN_DAYS)
+    except Exception:                        # noqa: BLE001
+        earn = {}
+    items = digest.build(symbols, quotes, holdings, earn)
+    return jsonify({'ok': True, 'items': items, 'symbols': len(symbols), 'priced': sum(1 for s in symbols if (quotes.get(s) or {}).get('price')),
+                    'method': digest.__doc__.split('Method (shown to the user as written here):')[1].strip()})
 
 
 @app.route('/api/risk/size', methods=['POST'])

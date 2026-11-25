@@ -27,7 +27,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 
 ## Phase 2 · Core financial product
 - [x] Market Intelligence: rates/FX/commodities/crypto snapshot with status per instrument (yields in bp); real breadth over all S&P 500 members (A/D, near 52w highs/lows, % above 50/200-day, cap- vs equal-weighted) with denominators; 11 sector funds over 1D/1W/1M/3M/YTD vs SPY; leaders/laggards (`marketintel.py`, tests by hand calculation). Rotation view: later
-- [ ] "Market Opportunities & Alerts" centre built from watchlist, portfolio and filters, each item explained and linked
+- [x] "Your names today" on Market Overview: big moves, unusual volume, 52-week extremes, stops near or hit, below the 200-day, earnings within five days, for holdings and watchlist; each a fact with its number, linked to the stock (`digest.py`)
 - [x] Company research: 5 fiscal years + 8 quarters from SEC XBRL company facts (restatements resolved by latest filing, derived Q4 marked), margins, growth, ROE, ROIC, FCF, cash conversion, debt/equity with formulas; charts; summary built only from reported figures; source and method shown (`fundamentals.py`). Needs `SEC_CONTACT` on the host (🔑). Valuation history and estimates vs actuals: later
 - [x] Stock scanner: S&P 500 / Nasdaq-100 / both; valuation, trend and activity fields with per-field coverage; presets, range filters, sector, sort, columns, saved screens (this browser), CSV export (`scanner.py`). Multi-factor score: later, only with sufficient inputs
 - [ ] Charting: candles/OHLC/line/area, 1D–MAX, indicators with settings, crosshair, levels, markers, interpretation panel from actual values

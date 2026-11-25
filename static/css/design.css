@@ -437,3 +437,11 @@ input, select, textarea { font-family: var(--ui); }
         --hmn1: #4e2a33; --hmn2: #6a2a37; --hmn3: #86293b; --hmn4: #a0283e; --hmn5: #b8263f; --hm0: #2b3a52; }
 .doc-body .btn[type=submit] { background: #b8263f !important; }
 .ni-num { color: var(--tx3) !important; opacity: 1 !important; }
+.dg-list { list-style: none; margin: 0; padding: 0; }
+.dg-list li { display: flex; align-items: baseline; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--line); font-size: 13.5px; cursor: pointer; }
+.dg-list li:first-child { border-top: 0; } .dg-list li:hover, .dg-list li:focus { background: var(--s2); outline: none; }
+.dg-list b { font: 600 13px var(--mono); } .dg-list small { font-size: 10.5px; color: var(--gold); border: 1px solid rgba(214,170,79,.4); border-radius: 3px; padding: 0 4px; }
+.dg-k { flex: none; width: 72px; font: 600 10.5px var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--tx3); }
+.dg-list .lv-high .dg-k { color: var(--dn); } .dg-list .lv-medium .dg-k { color: var(--gold); }
+.dg-t { color: var(--tx2); }
+@media (max-width: 760px) { .dg-list li { flex-wrap: wrap; gap: 4px 8px; } .dg-k { width: auto; } .dg-t { flex-basis: 100%; } }

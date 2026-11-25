@@ -113,7 +113,26 @@
     const tr = ev.target.closest && ev.target.closest('#leaders tr[data-t], #laggards tr[data-t]');
     if (tr && typeof openChart === 'function') openChart(tr.dataset.t);
   });
-  window.MarketIntel = { load };
+  // ---- your names today (holdings and watchlist)
+  const KIND = { stop: 'Stop', earnings: 'Earnings', move: 'Move', volume: 'Volume', range: '52-week', trend: 'Trend' };
+  async function digestLoad() {
+    const box = el('dgList');
+    if (!box) return;
+    try {
+      const signed = typeof S !== 'undefined' && S.user;
+      const body = signed ? {} : { positions: typeof store !== 'undefined' ? await store.getPf() : [], watch: typeof store !== 'undefined' ? await store.getWatch() : [] };
+      if (!signed && body.watch) body.watch = body.watch.map((w) => (typeof w === 'string' ? w : w.ticker));
+      const d = await api('/api/digest', { method: 'POST', body: JSON.stringify(body) });
+      if (!d.symbols) { box.innerHTML = '<div class="mi-empty">Add holdings or watchlist names and the day\u2019s notable facts about them appear here.</div>'; el('dgNote').textContent = ''; return; }
+      el('dgNote').textContent = `${d.symbols} names checked`;
+      box.innerHTML = d.items.length ? `<ul class="dg-list">${d.items.map((i) => `<li class="lv-${i.level}" data-t="${e(i.ticker)}" tabindex="0">
+          <span class="dg-k">${KIND[i.kind] || ''}</span><b>${e(i.ticker)}</b>${i.held ? '<small>held</small>' : ''}<span class="dg-t">${e(i.text)}</span></li>`).join('')}</ul>`
+        : '<div class="mi-empty">Nothing notable in your names today: no large move, unusual volume, 52-week extreme, stop nearby or report this week.</div>';
+    } catch (err) { box.innerHTML = '<div class="mi-empty">Unavailable right now.</div>'; }
+  }
+  document.addEventListener('click', (ev) => { const li = ev.target.closest('.dg-list li[data-t]'); if (li && typeof openChart === 'function') openChart(li.dataset.t); });
+  window.MarketIntel = { load, digest: digestLoad };
+  setTimeout(digestLoad, 400);
   if (el('v-home')) load(true);
   setInterval(() => { const v = el('v-home'); if (v && v.classList.contains('on') && !document.hidden) load(true); }, 120000);
 })();
