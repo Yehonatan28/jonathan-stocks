@@ -124,6 +124,14 @@
       options: { ...base, plugins: { legend: { display: false } }, scales: axes((v) => v + '%') } }));
   }
 
+  // a symbol carried in the address (#/lab?t=MSFT) fills the form
+  function fromHash() {
+    const m = location.hash.match(/^#\/lab\?t=([A-Za-z0-9.\-^=]+)/);
+    if (m) form.elements.ticker.value = decodeURIComponent(m[1]).toUpperCase();
+  }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     $b('labErr').textContent = '';

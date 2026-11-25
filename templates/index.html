@@ -31,8 +31,10 @@
 <body>
 <div class="stage">
 
-<div class="auth hidden" id="authOverlay">
- <div class="auth-card">
+<div class="auth hidden" id="authOverlay" inert aria-hidden="true">
+ <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <button type="button" class="x-btn auth-x" onclick="hideAuth()" aria-label="Close sign-in">✕</button>
+  <h2 id="authTitle" class="sr-only">Sign in or create an account</h2>
   <div class="auth-logo"><div class="auth-mark">JS</div><div class="auth-title">Jonathan <b>Stocks</b></div><div class="auth-sub">Financial intelligence &amp; portfolio analytics</div></div>
   <div class="auth-tabs">
    <button class="auth-tab on" id="atLogin" onclick="switchAuthTab('login')">Sign in</button>
@@ -51,7 +53,8 @@
    <div class="auth-err" id="rgErr" role="alert"></div>
    <button class="auth-go" onclick="doRegister()">Create account</button>
   </div>
-  <button class="auth-guest" onclick="guestMode()">Continue as guest · saved in this browser; sent to the server only to compute results, and not stored there</button>
+  <button class="auth-guest" onclick="guestMode()">Continue as guest</button>
+  <p class="auth-note">As a guest your entries are saved in this browser; sent to the server only to compute results, and not stored there. An account keeps them across devices.</p>
   <div class="auth-note">Your positions are private to your account. Nobody else signing in to this site can see them.<br>Market data is delayed or end-of-day. Information only, not investment advice.<br><a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a> · <a href="/methodology" target="_blank" rel="noopener">Methodology</a></div>
  </div>
 </div>
@@ -64,7 +67,7 @@
  <div class="prov-wrap"><button type="button" class="prov" id="prov" hidden aria-haspopup="true" aria-expanded="false"></button><div class="prov-pop" id="provPop" role="dialog" aria-label="Data sources"></div></div>
  <div class="spacer"></div>
  <div class="hdr-mid">
-  <button class="cmdk-btn" onclick="openCmdk()" aria-label="Search any stock"><span>🔍</span><span>Search any stock…</span><span class="cmdk-hint">Ctrl K</span></button>
+  <button type="button" class="cmdk-btn" onclick="openSearch()" aria-label="Search companies and symbols (Ctrl K)" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><span>Search company or symbol</span><span class="cmdk-hint">Ctrl K</span></button>
   <span class="chip mkt-closed" id="mktChip"><span class="dot"></span><span id="mktTxt">Market closed</span></span>
   <span class="chip clock" id="clockChip">--:--:--</span>
   <span class="chip fg" id="fgChip" onclick="go('home')" title="CNN Fear &amp; Greed Index">F&amp;G —</span>
@@ -77,6 +80,7 @@
 </header>
 <div class="tape-wrap"><div class="tape" id="tape"></div></div>
 <main class="content" id="content">
+<div class="pagehead wrap" id="pagehead"></div>
 
 
 <section id="v-home" class="view on"><div class="wrap">
@@ -185,7 +189,7 @@
 
  <div class="glass cc-brief" id="ccBrief" style="display:none"><div class="bi" id="ccBriefIc">📋</div><div style="flex:1"><h3 id="ccBriefTitle">—</h3><p id="ccBriefText">—</p></div></div>
 
- <div class="sec">What to do now <span class="tag">ACTION LIST</span></div>
+ <div class="sec">Conditions met <span class="tag">ON THE LAST CLOSE</span></div>
  <div class="sub">Each position is checked against price, the moving averages and volatility (ATR), and the system says exactly which stop to place and when to move it.</div>
  <div id="ccActions"></div>
 
@@ -195,7 +199,7 @@
   <th>Symbol</th><th>Trend</th><th>Price</th><th>Entry</th><th>P&amp;L</th><th>Stop</th><th>Type</th><th>Distance</th><th>R</th><th>Risk $</th><th>Suggested</th><th></th>
  </tr></thead><tbody id="ccRisk"></tbody></table></div>
 
- <div class="sec" style="margin-top:30px">Entry opportunities <span class="tag">ENTRY SIGNALS</span></div>
+ <div class="sec" style="margin-top:30px">Watchlist setups <span class="tag">TECHNICAL PATTERNS, NOT RECOMMENDATIONS</span></div>
  <div class="sub">Scanned from your watchlist only — add names with ★ to have them checked here. Every signal carries an entry zone, a stop, two targets and a share count sized to your risk policy.</div>
  <div class="ent-grid" id="ccEntryGrid"></div>
 </div></section>
@@ -241,6 +245,7 @@
 <section id="v-portfolio" class="view"><div class="wrap">
  <div class="sec">Holdings <span class="tag">P&amp;L AT DELAYED PRICES</span></div>
  <p class="sub">Prices are delayed quotes or the last daily close, not live. Profit and loss is before fees and taxes.</p>
+ <p class="guest-only invite">Saved in this browser only. <button type="button" class="linkbtn" onclick="showAuth()">Sign in or create an account</button> to keep your holdings across devices.</p>
  <div class="pf-layout">
   <div>
    <div class="glass tbl-wrap"><table class="tbl"><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Price</th><th>Stop</th><th>Value</th><th>P&amp;L</th><th>%</th><th></th></tr></thead><tbody id="pfBody"></tbody></table></div>
@@ -368,10 +373,16 @@
  </div>
 </div>
 
-<div class="cmdk" id="cmdk">
- <div class="cmdk-box">
-  <div class="cmdk-input-row"><span>🔍</span><input class="cmdk-input" id="cmdkInput" placeholder="Search a symbol or company — Hebrew works too" autocomplete="off" spellcheck="false"><span class="cmdk-hint">Esc</span></div>
-  <div class="cmdk-list" id="cmdkList"></div>
+<div class="gs" id="gsearch" hidden role="dialog" aria-modal="true" aria-labelledby="gsTitle">
+ <div class="gs-box">
+  <h2 id="gsTitle" class="sr-only">Search companies and symbols</h2>
+  <div class="gs-row"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+   <input id="gsInput" type="text" role="combobox" aria-expanded="false" aria-controls="gsList" aria-autocomplete="list" aria-describedby="gsHelp gsStatus" aria-label="Company or symbol" placeholder="Company or symbol, e.g. Microsoft or MSFT" autocomplete="off" spellcheck="false">
+   <button type="button" class="gs-x" id="gsClose" aria-label="Close search">Esc</button></div>
+  <p class="gs-help" id="gsHelp">↑ ↓ move · Enter opens · Esc closes</p>
+  <div class="gs-status" id="gsStatus" role="status" aria-live="polite"></div>
+  <ul class="gs-list" id="gsList" role="listbox" aria-label="Search results"></ul>
+  <div class="gs-acts" id="gsActs" role="group" hidden></div>
  </div>
 </div>
 
@@ -395,6 +406,7 @@
 <script src="{{ asset('js/calendar.js') }}"></script>
 <script src="{{ asset('js/alerts.js') }}"></script>
 <script src="{{ asset('js/assistant.js') }}"></script>
+<script src="{{ asset('js/search.js') }}"></script>
 <script src="{{ asset('js/shell.js') }}"></script>
 </body>
 </html>

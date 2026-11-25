@@ -1447,24 +1447,72 @@ def gaps():
     return jsonify(payload)
 
 
+def local_search(q, limit=8):
+    """Index members and SEC-registered names matching q: exact symbol, then symbol prefix, then
+    a word of the name. Works when the search provider refuses the host."""
+    qu, ql = q.upper(), q.lower()
+    seen, scored = set(), []
+    members = {r['ticker']: r for r in market.constituents('sp500')}
+    for r in market.constituents('ndx'):
+        members.setdefault(r['ticker'], r)
+    ndx = {r['ticker'] for r in market.constituents('ndx')}
+    for t, r in members.items():
+        name = r.get('name') or ''
+        score = 0 if t == qu else 1 if t.startswith(qu) else 2 if ql in name.lower() else None
+        if score is not None:
+            idx = 'S&P 500' if any(x['ticker'] == t for x in market.SP500) else ''
+            if t in ndx:
+                idx = (idx + ' · ' if idx else '') + 'Nasdaq-100'
+            scored.append((score, -r.get('cap', 0), {'symbol': t, 'name': name, 'exch': 'US', 'type': 'Equity',
+                                                     'sector': r.get('sector'), 'index': idx, 'source': 'index list'}))
+            seen.add(t)
+    if len(q) >= 2:
+        for t, name in fundamentals.sec_names().items():
+            if t in seen or not name:
+                continue
+            score = 0 if t == qu else 1 if t.startswith(qu) and len(q) >= 2 else 3 if len(q) >= 3 and ql in name.lower() else None
+            if score is not None:
+                scored.append((score, 0, {'symbol': t, 'name': name.title() if name.isupper() else name, 'exch': 'US (SEC filer)',
+                                          'type': 'Equity', 'source': 'SEC'}))
+                seen.add(t)
+    scored.sort(key=lambda x: (x[0], x[1]))
+    return [x[2] for x in scored[:limit]]
+
+
 @app.route('/api/search')
 def search():
-    q = request.args.get('q', '').strip()
+    """Symbols and companies. Local matches first (always available), then the provider's, which add
+    other exchanges, funds and indices. X-Search-Partial: 1 says the provider did not answer."""
+    q = request.args.get('q', '').strip()[:60]
     if not q:
         return jsonify([])
+    out = local_search(q)
+    partial = False
     try:
         r = requests.get('https://query2.finance.yahoo.com/v1/finance/search',
                          headers=HEADERS,
                          params={'q': q, 'quotesCount': 8, 'newsCount': 0},
-                         timeout=8)
+                         timeout=6)
         items = r.json().get('quotes', []) if r.ok else []
-        return jsonify([{'symbol': i.get('symbol', ''),
-                         'name': i.get('shortname') or i.get('longname') or '',
-                         'exch': i.get('exchDisp', ''),
-                         'type': i.get('typeDisp', '')}
-                        for i in items if i.get('symbol')])
-    except Exception:
-        return jsonify([])
+        partial = not r.ok
+        have = {o['symbol'] for o in out}
+        for i in items:
+            sym = i.get('symbol')
+            if not sym:
+                continue
+            if sym in have:                  # the provider knows the exchange better than the list
+                for o in out:
+                    if o['symbol'] == sym and i.get('exchDisp'):
+                        o['exch'] = i['exchDisp']
+                continue
+            out.append({'symbol': sym, 'name': i.get('shortname') or i.get('longname') or '',
+                        'exch': i.get('exchDisp', ''), 'type': i.get('typeDisp', ''), 'source': 'Yahoo Finance'})
+    except Exception:                        # noqa: BLE001
+        partial = True
+    resp = jsonify(out[:12])
+    if partial:
+        resp.headers['X-Search-Partial'] = '1'
+    return resp
 
 
 @app.route('/api/profile/<ticker>')

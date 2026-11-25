@@ -116,7 +116,8 @@ def cik_for(ticker):
         raw = _get(TICKERS_URL) or {}
         m = {v['ticker'].upper(): int(v['cik_str']) for v in raw.values()}
         if m:
-            _CIK.update(at=time.time(), map=m)
+            _CIK.update(at=time.time(), map=m,
+                        names={v['ticker'].upper(): v.get('title') or '' for v in raw.values()})
     t = ticker.upper()
     return _CIK['map'].get(t) or _CIK['map'].get(t.replace('.', '-'))
 
@@ -438,3 +439,8 @@ def shares_outstanding(today=None):
             if cik not in by_cik and v:
                 by_cik[cik] = {'shares': v, 'period': f'CY{y} Q{q}'}
     return {t: {**by_cik[c], 'cik': c} for t, c in _CIK['map'].items() if c in by_cik}
+
+
+def sec_names():
+    """{ticker: registered company name} from the SEC ticker list (empty until it has been fetched)."""
+    return _CIK.get('names') or {}

@@ -30,9 +30,15 @@ function toast(msg,type='info'){const t=document.createElement('div');t.classNam
 /* ===================== auth ===================== */
 function switchAuthTab(tab){const l=tab==='login';$('atLogin').classList.toggle('on',l);$('atReg').classList.toggle('on',!l);
  $('fLogin').style.display=l?'':'none';$('fReg').style.display=l?'none':''}
-function showAuth(){$('authOverlay').classList.remove('hidden')}
-function guestMode(){S.guest=true;$('authOverlay').classList.add('hidden');
- toast('Guest mode — your data stays in this browser only','info');loadUserData()}
+/* Sign-in is never forced: a visitor starts as a guest and the dialog opens only when asked
+   (top-bar button, or an invitation where saving across devices matters). */
+let authBack=null;
+function showAuth(){authBack=document.activeElement;const o=$('authOverlay');o.classList.remove('hidden');
+ o.removeAttribute('inert');o.setAttribute('aria-hidden','false');setTimeout(()=>{const f=$('liEmail');if(f)f.focus()},30)}
+function hideAuth(){const o=$('authOverlay');o.classList.add('hidden');o.setAttribute('inert','');o.setAttribute('aria-hidden','true');
+ if(authBack&&authBack.focus&&document.contains(authBack))authBack.focus();authBack=null}
+function guestMode(silent){S.guest=true;document.body.classList.add('is-guest');hideAuth();
+ if(!silent)toast('Guest mode: saved in this browser; sent to the server only to compute results, and not stored there','info');loadUserData()}
 async function doLogin(){$('liErr').textContent='';
  try{const j=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:$('liEmail').value,password:$('liPass').value})});onAuthed(j.username)}
  catch(e){$('liErr').textContent=e.error||'Could not sign in. Try again.'}}
@@ -40,12 +46,12 @@ async function doRegister(){$('rgErr').textContent='';
  try{const j=await api('/api/auth/register',{method:'POST',body:JSON.stringify({username:$('rgUser').value,email:$('rgEmail').value,password:$('rgPass').value})});
   onAuthed(j.username);toast('Welcome — your account is ready','ok')}
  catch(e){$('rgErr').textContent=e.error||'Could not create the account.'}}
-function onAuthed(name){S.user=name;S.guest=false;$('authOverlay').classList.add('hidden');
+function onAuthed(name){S.user=name;S.guest=false;document.body.classList.remove('is-guest');hideAuth();
  $('userPill').style.display='flex';$('userName').textContent=name;$('userAv').textContent=(name[0]||'?').toUpperCase();
  $('loginBtn').style.display='none';loadUserData()}
 async function doLogout(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}
- S.user=null;S.pf=[];S.watch=[];S.plan=null;$('userPill').style.display='none';$('loginBtn').style.display='';showAuth()}
-async function checkAuth(){try{const j=await api('/api/auth/me');onAuthed(j.username)}catch(e){showAuth()}}
+ S.user=null;S.pf=[];S.watch=[];S.plan=null;$('userPill').style.display='none';$('loginBtn').style.display='';guestMode(true);toast('Signed out. You are browsing as a guest.','info')}
+async function checkAuth(){try{const j=await api('/api/auth/me');onAuthed(j.username)}catch(e){guestMode(true)}}
 
 /* ===================== storage: server when signed in, browser as guest ===================== */
 const store={
@@ -623,9 +629,9 @@ function closeProfile(){$('proDrawer').classList.remove('open')}
 
 /* ===================== command palette ===================== */
 let cmdkTimer=null;
-function openCmdk(){$('cmdk').classList.add('open');$('cmdkInput').value='';$('cmdkList').innerHTML='';$('cmdkInput').focus()}
-function closeCmdk(){$('cmdk').classList.remove('open')}
-function pickCmdk(sym){closeCmdk();openChart(sym)}
+/* search lives in search.js; these names stay for older callers */
+function openCmdk(){if(window.openSearch)window.openSearch()}
+function closeCmdk(){if(window.closeSearch)window.closeSearch()}
 function timeAgo(ts){if(!ts)return'unknown time';
  const m=Math.floor((Date.now()/1000-ts)/60);
  if(m<1)return'just now';if(m<60)return m+'m ago';
@@ -1254,7 +1260,7 @@ function toggleShortcuts(){
 
 document.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmdk();return}
- if(e.key==='Escape'){closeCmdk();closeChart();closeProfile();const s=$('shortcuts');if(s)s.remove();return}
+ if(e.key==='Escape'){closeCmdk();closeChart();closeProfile();if(!$('authOverlay').classList.contains('hidden'))hideAuth();const s=$('shortcuts');if(s)s.remove();return}
  /* Never steal a key while the user is typing. */
  const t=e.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
@@ -1265,27 +1271,6 @@ document.addEventListener('keydown',e=>{
  else if(k==='f'&&$('chartModal').classList.contains('open')){e.preventDefault();toggleChartFull()}
  else if(e.key==='?'){e.preventDefault();toggleShortcuts()}});
 
-$('cmdkInput').addEventListener('input',e=>{
- clearTimeout(cmdkTimer);const q=e.target.value.trim();
- if(!q){$('cmdkList').innerHTML='';return}
- cmdkTimer=setTimeout(async()=>{
-  try{const res=await api('/api/search?q='+encodeURIComponent(q));
-   S.cmdkSel=0;
-   $('cmdkList').innerHTML=res.length?res.map((r,i)=>
-    `<div class="cmdk-item ${i===0?'on':''}" onclick="pickCmdk('${esc(r.symbol)}')">
-      <span class="sym">${esc(r.symbol)}</span><span class="nm">${esc(r.name)}</span><span class="ex">${esc(r.exch)}</span></div>`).join('')
-    :'<div class="cmdk-item"><span class="nm">No matches</span></div>'}
-  catch(err){}},230)});
-$('cmdkInput').addEventListener('keydown',e=>{
- const items=[...document.querySelectorAll('.cmdk-item')];
- if(!items.length){if(e.key==='Enter'&&e.target.value.trim())pickCmdk(e.target.value.trim().toUpperCase());return}
- if(e.key==='ArrowDown'){e.preventDefault();S.cmdkSel=Math.min(items.length-1,S.cmdkSel+1)}
- else if(e.key==='ArrowUp'){e.preventDefault();S.cmdkSel=Math.max(0,S.cmdkSel-1)}
- else if(e.key==='Enter'){e.preventDefault();items[S.cmdkSel]&&items[S.cmdkSel].click();return}
- else return;
- items.forEach((it,i)=>it.classList.toggle('on',i===S.cmdkSel));
- items[S.cmdkSel].scrollIntoView({block:'nearest'})});
-$('cmdk').addEventListener('click',e=>{if(e.target.id==='cmdk')closeCmdk()});
 $('chartModal').addEventListener('click',e=>{if(e.target.id==='chartModal')closeChart()});
 let hmResize=null;
 window.addEventListener('resize',()=>{clearTimeout(hmResize);hmResize=setTimeout(()=>{if(S.hm&&$('v-heatmap').classList.contains('on'))renderHeatmap()},220)});

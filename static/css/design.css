@@ -470,3 +470,60 @@ input, select, textarea { font-family: var(--ui); }
 
 /* estimate marker: visible text, not only a tooltip */
 .est{display:inline-block;margin-inline-start:4px;padding:0 4px;border:1px solid var(--line,#2a3242);border-radius:3px;font-size:11px;font-weight:600;color:var(--tx2,#b4bccb);letter-spacing:.02em;vertical-align:1px}
+
+/* ---- page header: area tabs, title, benefit sentence, one primary action (shell.js) ---- */
+.view .ph { display: none; }             /* the shell's header replaces each module's own */
+.pagehead { padding-top: 14px; padding-bottom: 0; }
+.pagehead:empty { display: none; }
+.ph-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.ph-tabs::-webkit-scrollbar { display: none; }
+.ph-tabs a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; color: var(--tx2); text-decoration: none;
+  font-size: 14px; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.ph-tabs a:hover { color: var(--tx); }
+.ph-tabs a[aria-current="page"] { color: var(--tx); border-bottom-color: var(--gold, #c9a24a); font-weight: 600; }
+.ph-tabs a:focus-visible { outline: 2px solid var(--gold, #c9a24a); outline-offset: -2px; }
+.ph-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.ph-txt h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; letter-spacing: -.01em; }
+.ph-txt p { margin: 0; color: var(--tx2); font-size: 14px; max-width: 70ch; }
+.ph-act { min-height: 40px; padding: 0 16px; }
+@media (max-width: 760px) { .ph-txt h1 { font-size: 19px; } .ph-act { width: 100%; } }
+
+/* ---- global search dialog (search.js) ---- */
+.gs { position: fixed; inset: 0; z-index: 300; background: rgba(4, 6, 10, .62); display: flex; justify-content: center; align-items: flex-start; padding: 10vh 16px 16px; }
+.gs[hidden] { display: none; }
+.gs-box { width: min(640px, 100%); background: var(--s1); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 18px 48px rgba(0,0,0,.45); overflow: hidden; }
+.gs-row { display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); color: var(--tx2); }
+.gs-row input { flex: 1; min-width: 0; height: 54px; background: none; border: 0; color: var(--tx); font: 500 16px var(--ui); outline: none; }
+.gs-x { min-height: 32px; padding: 0 10px; background: var(--s3); border: 1px solid var(--line); border-radius: 6px; color: var(--tx2); font: 500 12px var(--mono); cursor: pointer; }
+.gs-help { margin: 0; padding: 8px 16px 0; color: var(--tx3); font-size: 12.5px; }
+.gs-status { padding: 6px 16px 8px; color: var(--tx2); font-size: 13px; min-height: 1em; }
+.gs-status.err { color: var(--dn); } .gs-status.warn { color: var(--gold, #c9a24a); }
+.gs-list { list-style: none; margin: 0; padding: 0 6px 6px; max-height: 46vh; overflow-y: auto; }
+.gs-list li { display: grid; grid-template-columns: 88px 1fr auto; gap: 4px 12px; align-items: center; min-height: 44px; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.gs-list li[aria-selected="true"] { background: var(--s3); outline: 1px solid var(--line); }
+.gs-sym { font: 600 14px var(--mono); color: var(--tx); }
+.gs-nm { color: var(--tx); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-meta { color: var(--tx3); font-size: 12.5px; white-space: nowrap; }
+.gs-acts { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+.gs-acts .btn { min-height: 36px; }
+.gs-acts kbd { font: 500 11px var(--mono); color: var(--tx3); margin-inline-start: 4px; }
+body.gs-open { overflow: hidden; }
+@media (max-width: 560px) { .gs { padding-top: 12px; } .gs-list li { grid-template-columns: 70px 1fr; } .gs-meta { grid-column: 2; } }
+
+/* sign-in is a dialog on request, never a gate */
+.auth-card { position: relative; }
+.auth-x { position: absolute; top: 10px; right: 10px; }
+.invite { display: none; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--s2); color: var(--tx2); font-size: 13.5px; }
+body.is-guest .invite.guest-only { display: block; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--gold, #c9a24a); font: inherit; text-decoration: underline; cursor: pointer; }
+
+/* search keeps its label at every desktop width; the clock and the F&G chip give way first */
+.topbar .cmdk-btn { min-height: 40px; color: var(--tx2); }
+.topbar .cmdk-btn svg { flex: none; }
+@media (min-width: 861px) and (max-width: 1560px) {
+  .topbar .cmdk-btn { min-width: 240px; flex: none; }
+  .topbar .cmdk-btn span:nth-child(2) { display: inline; }
+  .topbar #clockChip { display: none; }
+}
+@media (min-width: 861px) and (max-width: 1180px) { .topbar #fgChip { display: none; } .topbar .cmdk-btn { min-width: 200px; } }
+@media (min-width: 1181px) and (max-width: 1366px) { .topbar .cmdk-btn { min-width: 0; } .topbar .cmdk-btn .cmdk-hint { display: none; } }
