@@ -50,3 +50,18 @@ def test_static_assets_are_versioned_and_cached(tmp_path, monkeypatch):
     assert 'immutable' in c.get('/static/fonts/plex-sans-400.woff2').headers['Cache-Control']
     assert c.get('/static/js/account.js').headers['Cache-Control'] == 'public, max-age=3600'
     assert c.get('/api/health').headers['Cache-Control'] == 'no-store'
+
+
+def test_unexpected_errors_are_logged_without_detail(tmp_path, monkeypatch, caplog):
+    app = setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(A.provenance, 'catalogue', lambda: 1 / 0)
+    A._log.propagate = True                 # let pytest capture the logger for this test
+    try:
+        with caplog.at_level('INFO', logger='jstocks'):
+            r = app.test_client().get('/api/sources?tickers=SECRET')
+    finally:
+        A._log.propagate = False
+    assert r.status_code == 500 and 'request_id' in r.get_json() and 'ZeroDivision' not in r.get_data(as_text=True)
+    err = caplog.text
+    assert 'ZeroDivisionError' in err and 'test_pages_account.py' in err and 'SECRET' not in err
+    assert r.headers['X-Request-Id'] in err

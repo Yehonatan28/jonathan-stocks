@@ -7,7 +7,7 @@ import hashlib
 import secrets
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 import engine
@@ -156,6 +156,56 @@ def _security_headers(resp):
 # than an exact global quota; the sign-in throttle below is the strict one.
 API_BUDGET = int(os.environ.get('API_BUDGET_PER_MIN', '240'))
 _API_HITS = {}
+
+
+# Structured request log: one JSON line per API request on stdout (the host keeps it). Path and
+# status only: no address, no user id, no body, no query values (they can hold portfolio symbols).
+import json as _json
+import logging as _logging
+import uuid as _uuid
+from flask import g as _g
+
+_log = _logging.getLogger('jstocks')
+if not _log.handlers:
+    _h = _logging.StreamHandler()
+    _h.setFormatter(_logging.Formatter('%(message)s'))
+    _log.addHandler(_h)
+    _log.setLevel(_logging.INFO)
+    _log.propagate = False
+
+
+@app.before_request
+def _start_timer():
+    _g._t0 = time.time()
+    _g._rid = _uuid.uuid4().hex[:12]
+
+
+@app.after_request
+def _log_request(resp):
+    if request.path.startswith('/api/'):
+        _log.info(_json.dumps({'t': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'rid': _g.get('_rid'),
+                               'method': request.method, 'path': request.path, 'status': resp.status_code,
+                               'ms': round((time.time() - _g.get('_t0', time.time())) * 1000),
+                               'data': resp.headers.get('X-Data-Set'), 'data_status': resp.headers.get('X-Data-Status')}))
+    resp.headers['X-Request-Id'] = _g.get('_rid', '')
+    return resp
+
+
+@app.errorhandler(Exception)
+def _unexpected(exc):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(exc, HTTPException):
+        return exc
+    rid = _g.get('_rid') or _uuid.uuid4().hex[:12]
+    tb, where = exc.__traceback__, None
+    while tb is not None:                   # the innermost frame is where it actually failed
+        where = f'{os.path.basename(tb.tb_frame.f_code.co_filename)}:{tb.tb_frame.f_code.co_name}:{tb.tb_lineno}'
+        tb = tb.tb_next
+    _log.error(_json.dumps({'t': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'rid': rid, 'path': request.path,
+                            'error': type(exc).__name__, 'where': where}))
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Something went wrong on the server. It has been logged.', 'request_id': rid}), 500
+    return Response('Something went wrong. It has been logged (' + rid + ').', status=500, mimetype='text/plain')
 
 
 @app.before_request
