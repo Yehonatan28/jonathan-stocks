@@ -20,6 +20,8 @@ const fmtCap=n=>{if(n==null)return'—';const a=Math.abs(n);
  if(a>=1e6)return '$'+fmt(n/1e6)+'M';return '$'+fmt(n)};
 const sign=(v,d=2)=>v==null?'—':(v>=0?'+':'')+fmt(v,d);
 const cls=v=>v==null?'':v>=0?'up':'dn';
+/* design tokens for canvas charts, read at draw time so both themes draw correctly */
+const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888';
 const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
  if(window.noteProv)window.noteProv(r);else(window.__provQ=window.__provQ||[]).push(r);  /* answered before shell.js loaded */
  let j={};try{j=await r.json()}catch(e){j={error:'The server returned an unexpected response.'}}
@@ -100,13 +102,11 @@ function sparkline(canvas,data,color){if(!canvas||!data||data.length<2)return;
  const min=Math.min(...data),max=Math.max(...data),rng=(max-min)||1;
  const pts=data.map((v,i)=>[i/(data.length-1)*w,h-4-((v-min)/rng)*(h-10)]);
  ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
- ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
- const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,color.replace('rgb','rgba').replace(')',',.18)'));
- g.addColorStop(1,'rgba(255,255,255,0)');ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();ctx.fillStyle=g;ctx.fill()}
+ ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke()}   /* a line, no gradient fill */
 /* ===================== Fear & Greed (CNN) ===================== */
 /* CNN's own band colours and boundaries, so a score reads the same here as
    it does on their page. */
-const FG_BANDS=[[0,25,'#e5566c','Extreme Fear'],[25,45,'#e08b45','Fear'],
+const FG_BANDS=[[0,25,tok('--dn'),'Extreme Fear'],[25,45,'#e08b45','Fear'],
  [45,55,'#c9b945','Neutral'],[55,75,'#7eb356','Greed'],[75,100,'#3f9a4e','Extreme Greed']];
 const fgColor=v=>(FG_BANDS.find(b=>v>=b[0]&&v<b[1])||FG_BANDS[4])[2];
 const fgLabel=v=>(FG_BANDS.find(b=>v>=b[0]&&v<b[1])||FG_BANDS[4])[3];
@@ -188,7 +188,7 @@ async function loadTapeAndBento(){
   if(spy){$('spyPrice').textContent='$'+fmt(spy.price);
    $('spyChg').textContent=(spy.chg>=0?'▲ +':'▼ ')+fmt(Math.abs(spy.chg))+'% today';
    $('spyChg').className='b-sub '+(spy.chg>=0?'up':'dn');
-   sparkline($('spySpark'),spy.spark||[],spy.chg>=0?'rgb(38,208,124)':'rgb(255,77,106)')}
+   sparkline($('spySpark'),spy.spark||[],spy.chg>=0?tok('--up'):tok('--dn'))}
   /* breadth: see market.js (all S&P 500 members, not the tape) */
   checkAlerts(items)}
  catch(e){}}
@@ -242,7 +242,7 @@ async function loadHeatmap(index,btn){
  $('hmSummary').innerHTML='';
  try{S.hm=await api('/api/heatmap/'+index);renderHeatmap();
   $('hmStamp').textContent=`${S.hm.stocks.length} companies · ${fmtCap(S.hm.total_cap*1e9)} total · updated ${new Date(S.hm.generated_at*1000).toLocaleTimeString('en-GB')}`}
- catch(e){$('hmBoard').innerHTML=`<div class="empty"><div class="e-ic">🗺</div><h4>${esc(e.error||'Could not load the heatmap')}</h4></div>`}}
+ catch(e){$('hmBoard').innerHTML=`<div class="empty"><div class="e-ic">${ICON('map')}</div><h4>${esc(e.error||'Could not load the heatmap')}</h4></div>`}}
 
 function renderHeatmap(){
  const d=S.hm;if(!d)return;
@@ -341,7 +341,7 @@ function hmTip(ev,ticker){
 function hmTipOff(){$('hmTip').classList.remove('on')}
 /* ===================== chart ===================== */
 const PERIODS=[['1d','1D'],['5d','5D'],['1mo','1M'],['3mo','3M'],['6mo','6M'],['1y','1Y'],['2y','2Y'],['5y','5Y']];
-const MA_COLORS={ma50:'#e5b048',ma100:'#22d3ee',ma150:'#3ea6ff',ma200:'#a78bfa'};
+const MA_COLORS={ma50:tok('--gold'),ma100:'#22d3ee',ma150:tok('--info'),ma200:'#a78bfa'};
 function buildPeriods(){$('chPeriods').innerHTML=PERIODS.map(([v,l])=>
  `<button class="p-btn ${v===S.chart.period?'on':''}" onclick="setPeriod('${v}',this)">${l}</button>`).join('')}
 function setPeriod(p,btn){S.chart.period=p;document.querySelectorAll('.p-btn').forEach(b=>b.classList.remove('on'));
@@ -433,24 +433,24 @@ function renderChart(){
  if(S.chart.lw){S.chart.lw.remove()}
  const el=$('lwChart');el.innerHTML='';
  const lw=LightweightCharts.createChart(el,{
-  layout:{background:{color:'#0e1420'},textColor:'#9aa8c0',fontFamily:"'JetBrains Mono',monospace",fontSize:11},
-  grid:{vertLines:{color:'rgba(255,255,255,.05)'},horzLines:{color:'rgba(255,255,255,.05)'}},
-  rightPriceScale:{borderColor:'rgba(255,255,255,.10)',scaleMargins:{top:.08,bottom:indOn('vol')?.22:.08},
+  layout:{background:{color:tok('--s1')},textColor:tok('--tx2'),fontFamily:"'JetBrains Mono',monospace",fontSize:11},
+  grid:{vertLines:{color:tok('--grid')},horzLines:{color:tok('--grid')}},
+  rightPriceScale:{borderColor:tok('--line2'),scaleMargins:{top:.08,bottom:indOn('vol')?.22:.08},
    mode:indOn('log')?1:0},
-  timeScale:{borderColor:'rgba(255,255,255,.10)',timeVisible:S.chart.period==='1d'||S.chart.period==='5d',secondsVisible:false},
+  timeScale:{borderColor:tok('--line2'),timeVisible:S.chart.period==='1d'||S.chart.period==='5d',secondsVisible:false},
   crosshair:{mode:1,
-   vertLine:{color:'rgba(154,168,192,.45)',width:1,style:2,labelBackgroundColor:'#222e44'},
-   horzLine:{color:'rgba(154,168,192,.45)',width:1,style:2,labelBackgroundColor:'#222e44'}},
+   vertLine:{color:'rgba(154,168,192,.45)',width:1,style:2,labelBackgroundColor:tok('--s4')},
+   horzLine:{color:'rgba(154,168,192,.45)',width:1,style:2,labelBackgroundColor:tok('--s4')}},
   handleScroll:true,handleScale:true});
  S.chart.lw=lw;
 
- const up='#26d07c',dn='#ff4d6a';
+ const up=tok('--up'),dn=tok('--dn');
  let main;
  if(S.chart.type==='line'){
-  main=lw.addLineSeries({color:'#e5b048',lineWidth:2,priceLineVisible:true});
+  main=lw.addLineSeries({color:tok('--gold'),lineWidth:2,priceLineVisible:true});
   main.setData(d.candles.map(c=>({time:c.ts,value:c.c})));
  }else if(S.chart.type==='area'){
-  main=lw.addAreaSeries({lineColor:'#e5b048',topColor:'rgba(229,176,72,.28)',bottomColor:'rgba(229,176,72,0)',lineWidth:2});
+  main=lw.addLineSeries({color:tok('--gold'),lineWidth:2});
   main.setData(d.candles.map(c=>({time:c.ts,value:c.c})));
  }else{
   main=lw.addCandlestickSeries({upColor:up,downColor:dn,borderUpColor:up,borderDownColor:dn,wickUpColor:up,wickDownColor:dn});
@@ -483,18 +483,18 @@ function renderChart(){
  if(indOn('levels')&&S.chart.levels){const L=S.chart.levels;
   const line=(price,color,title,style)=>{if(price==null)return;
    main.createPriceLine({price,color,lineWidth:1,lineStyle:style==null?2:style,axisLabelVisible:true,title})};
-  if(L.position){line(L.position.entry,'#9aa8c0','My entry',0);
-   if(L.position.stop!=null)line(L.position.stop,'#ff4d6a','My stop',0)}
-  line(L.suggested_stop,'#ff4d6a','Suggested stop');
-  line(L.trail_stop,'#ffa726','Trailing stop');
-  if(L.entry){line(L.entry.zone_low,'#26d07c','Entry zone');
-   line(L.entry.target1,'#26d07c','Target 1');line(L.entry.target2,'#26d07c','Target 2')}}
+  if(L.position){line(L.position.entry,tok('--tx2'),'My entry',0);
+   if(L.position.stop!=null)line(L.position.stop,tok('--dn'),'My stop',0)}
+  line(L.suggested_stop,tok('--dn'),'Suggested stop');
+  line(L.trail_stop,tok('--warn'),'Trailing stop');
+  if(L.entry){line(L.entry.zone_low,tok('--up'),'Entry zone');
+   line(L.entry.target1,tok('--up'),'Target 1');line(L.entry.target2,tok('--up'),'Target 2')}}
 
  if(indOn('trades')&&S.bt&&S.bt.ok&&S.bt.ticker===S.chart.tkr){
   const marks=[];
   S.bt.trades.forEach(t=>{const a=barAt(t.entry_date),b=barAt(t.exit_date);
-   if(a)marks.push({time:a,position:'belowBar',color:'#26d07c',shape:'arrowUp',text:'BUY'});
-   if(b)marks.push({time:b,position:'aboveBar',color:(t.r||0)>=0?'#3ea6ff':'#ff4d6a',shape:'arrowDown',
+   if(a)marks.push({time:a,position:'belowBar',color:tok('--up'),shape:'arrowUp',text:'BUY'});
+   if(b)marks.push({time:b,position:'aboveBar',color:(t.r||0)>=0?tok('--info'):tok('--dn'),shape:'arrowDown',
     text:(t.r!=null?(t.r>=0?'+':'')+t.r+'R':'EXIT')})});
   marks.sort((a,b)=>a.time-b.time);
   if(marks.length)main.setMarkers(marks)}
@@ -530,7 +530,7 @@ function renderChart(){
  const labels=d.candles.map(c=>c.t);
  if(S.chart.rsiC){S.chart.rsiC.destroy();S.chart.rsiC=null}
  if(S.chart.macdC){S.chart.macdC.destroy();S.chart.macdC=null}
- const ax={x:{display:false},y:{ticks:{color:'#7d8dac',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(255,255,255,.05)'}}};
+ const ax={x:{display:false},y:{ticks:{color:tok('--tx3'),font:{size:9,family:'JetBrains Mono'}},grid:{color:tok('--grid')}}};
  const common={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{enabled:false}}};
  if(indOn('rsi')&&typeof Chart!=='undefined')
   S.chart.rsiC=new Chart($('rsiC'),{type:'line',data:{labels,datasets:[{data:d.rsi,borderColor:'#a78bfa',borderWidth:1.5,pointRadius:0,tension:.2}]},
@@ -538,7 +538,7 @@ function renderChart(){
  if(indOn('macd')&&typeof Chart!=='undefined')
   S.chart.macdC=new Chart($('macdC'),{type:'line',data:{labels,datasets:[
    {data:d.macd,borderColor:'#22d3ee',borderWidth:1.5,pointRadius:0,tension:.2},
-   {data:d.signal,borderColor:'#e5b048',borderWidth:1.2,pointRadius:0,tension:.2}]},options:{...common,scales:ax}})}
+   {data:d.signal,borderColor:tok('--gold'),borderWidth:1.2,pointRadius:0,tension:.2}]},options:{...common,scales:ax}})}
 /* ===================== skeletons ===================== */
 function skelCards(n){return Array(n).fill(0).map(()=>
  '<div class="glass sk-card"><div class="sk sk-line"></div><div class="sk sk-line short"></div><div class="sk" style="height:38px;margin:12px 0;border-radius:5px"></div><div class="sk sk-line short"></div></div>').join('')}
@@ -562,7 +562,7 @@ function updateStats(stocks){if(!stocks.length)return;
  $('stBuy').textContent=stocks.filter(s=>['up','strong_up'].includes(s.regime)).length;
  $('stSell').textContent=stocks.filter(s=>['down','weak'].includes(s.regime)).length;
  $('stCount').textContent=stocks.length}
-const ringColor=c=>c>=75?'#26d07c':c>=55?'#e5b048':'#ff4d6a';
+const ringColor=c=>c>=75?tok('--up'):c>=55?tok('--gold'):tok('--dn');
 function cardHTML(s){
  const up=s.chg>=0,inW=S.watch.includes(s.ticker),ts=s.trend_score??0,rc=ringColor(ts),circ=2*Math.PI*27,dash=(ts/100)*circ;
  const rg=s.regime||'range',rgc=['up','strong_up','recovering'].includes(rg)?'up':['down','weak'].includes(rg)?'dn':'warn';
@@ -571,7 +571,7 @@ function cardHTML(s){
   <div class="c-top">
    <div class="c-mid"><div class="c-tkr" onclick="openChart('${esc(s.ticker)}')">${esc(s.ticker)}</div><div class="c-name">${name}</div></div>
    <div class="c-acts">
-    <button class="iconbtn neutral ${inW?'on':''}" onclick="toggleWatch('${esc(s.ticker)}',this)" title="Watchlist" style="color:${inW?'var(--gold)':''}">★</button>
+    <button class="iconbtn neutral ${inW?'on':''}" onclick="toggleWatch('${esc(s.ticker)}',this)" title="Watchlist" aria-label="${inW?'Remove from':'Add to'} watchlist" aria-pressed="${inW}" style="color:${inW?'var(--gold)':''}">${ICON('star')}</button>
     <button class="iconbtn neutral" onclick="quickAdd('${esc(s.ticker)}',${s.price})" title="Add to portfolio">+</button>
    </div>
    <div class="score-ring"><svg width="60" height="60"><circle cx="30" cy="30" r="27" fill="none" stroke="var(--s3)" stroke-width="5"/>
@@ -595,12 +595,12 @@ function renderCards(stocks){
   :'<div class="empty" style="grid-column:1/-1"><h4>No data returned — try again in a moment</h4></div>';
  requestAnimationFrame(()=>document.querySelectorAll('#stocksGrid canvas').forEach(c=>{
   let d=[];try{d=JSON.parse(c.dataset.s)}catch(e){}
-  if(d.length>1)sparkline(c,d,d[d.length-1]>=d[0]?'rgb(38,208,124)':'rgb(255,77,106)')}))}
+  if(d.length>1)sparkline(c,d,d[d.length-1]>=d[0]?tok('--up'):tok('--dn'))}))}
 async function toggleWatch(t,btn){
  if(S.watch.includes(t)){await store.delWatch(t).catch(()=>{});S.watch=S.watch.filter(x=>x!==t);
   if(btn){btn.style.color='';btn.classList.remove('on')}toast(t+' removed from watchlist','info')}
  else{await store.addWatch(t).catch(()=>{});S.watch.push(t);
-  if(btn){btn.style.color='var(--gold)';btn.classList.add('on')}toast(t+' added to watchlist ★','ok')}
+  if(btn){btn.style.color='var(--gold)';btn.classList.add('on')}toast(t+' added to watchlist','ok')}
  if(S.plan)loadPlan(false)}
 function quickAdd(t,price){go('portfolio');$('pfTicker').value=t;$('pfEntry').value=price;$('pfQty').focus();
  toast('Fill in the quantity and add it','info')}
@@ -626,7 +626,7 @@ async function openProfile(t,fallbackName){
    </div>
    <div style="display:flex;gap:8px;margin:14px 0">
     <button class="btn btn-gold btn-sm" style="flex:1" onclick="closeProfile();openChart('${esc(t)}')">Open chart</button>
-    <button class="btn btn-ghost btn-sm" onclick="closeProfile();btGo('${esc(t)}')">🧪 Backtest</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeProfile();btGo('${esc(t)}')">${ICON('flask')} Backtest</button>
    </div>
    ${p.summary?`<div class="pro-sum">${esc(p.summary)}</div>`:''}
    ${p.website?`<div style="margin-top:12px"><a href="${esc(p.website)}" target="_blank" rel="noopener noreferrer" style="color:var(--info);font-size:12px">${esc(p.website)}</a></div>`:''}`}
@@ -644,8 +644,8 @@ function timeAgo(ts){if(!ts)return'unknown time';
  const h=Math.floor(m/60);if(h<24)return h+'h ago';
  const dd=Math.floor(h/24);return dd===1?'yesterday':dd+'d ago'}
 /* ===================== command centre ===================== */
-const ACT_ICON={SET_STOP:'🛡',STOP_HIT:'🚨',STOP_NEAR:'⚠️',BREAKEVEN:'🔒',TRAIL_UP:'📈',
- TREND_BREAK:'📉',TAKE_PARTIAL:'💰',RISK_OVERSIZE:'⚖️',PORTFOLIO_HEAT:'🔥'};
+const ACT_ICON={SET_STOP:ICON('shield'),STOP_HIT:ICON('alert'),STOP_NEAR:ICON('alert'),BREAKEVEN:ICON('lock'),TRAIL_UP:ICON('up'),
+ TREND_BREAK:ICON('down'),TAKE_PARTIAL:ICON('target'),RISK_OVERSIZE:ICON('scale'),PORTFOLIO_HEAT:ICON('flame')};
 const SEV_EN={critical:'Critical',high:'Urgent',medium:'Review',info:'Note'};
 const today=()=>new Date().toISOString().slice(0,10);
 const actKey=a=>`${a.code}:${a.ticker}:${a.suggest||''}`;
@@ -686,7 +686,7 @@ async function loadPlan(force){
   const body=S.user?{}:{positions:S.pf,watch:S.watch,settings:S.settings||{}};
   const plan=await api('/api/engine/plan',{method:'POST',body:JSON.stringify(body)});
   S.plan=plan;renderPlan(plan);desktopNotify(plan)}
- catch(e){$('ccActions').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${esc(e.error||'Could not build the plan')}</h4></div>`}}
+ catch(e){$('ccActions').innerHTML=`<div class="empty"><div class="e-ic">${ICON('alert')}</div><h4>${esc(e.error||'Could not build the plan')}</h4></div>`}}
 
 function renderPlan(p){
  const urgent=p.actions.filter(a=>a.severity==='critical'||a.severity==='high').length;
@@ -719,7 +719,7 @@ function renderBrief(p,urgent){
  else{ic='✓';title=`${p.positions.length} position${p.positions.length>1?'s':''} checked, no rule triggered`;
   txt='Each checked position has a recorded stop and no exit rule fired on the last daily close.'+(p.entries.length?` ${p.entries.length} watchlist setup${p.entries.length>1?'s':''} below.`:'')}
  if(held&&p.positions.length&&unchecked.length)txt+=` Not checked (no prices): ${unchecked.join(', ')}.`;
- $('ccBriefIc').textContent=ic;$('ccBriefTitle').textContent=title;$('ccBriefText').textContent=txt}
+ $('ccBriefIc').innerHTML=ICON(ic==='✓'?'check':ic==='!'?'alert':'circle');$('ccBriefTitle').textContent=title;$('ccBriefText').textContent=txt}
 
 function renderActions(actions){
  const box=$('ccActions'),done=getDone();
@@ -779,11 +779,11 @@ function renderRiskTable(positions){
   <td><span class="rpill ${cls(p.r_multiple)}">${p.r_multiple!=null?sign(p.r_multiple,1)+'R':'—'}</span></td>
   <td>${p.open_risk!=null?'$'+fmt(p.open_risk,0):'—'}</td>
   <td>${sug!=null?`<button class="btn ${better?'btn-gold':'btn-ghost'} btn-sm" onclick="setStop(${p.id},${sug},'${p.stop_type==='trail'?'trail':'fixed'}')">$${fmt(sug)}</button>`:'—'}</td>
-  <td style="white-space:nowrap"><button class="iconbtn neutral" onclick="btGo('${esc(p.ticker)}')" title="Backtest">🧪</button><button class="iconbtn" onclick="delPosition(${p.id})" title="Remove">🗑</button></td></tr>`}).join('')}
+  <td style="white-space:nowrap"><button class="iconbtn neutral" onclick="btGo('${esc(p.ticker)}')" title="Backtest" aria-label="Backtest ${esc(p.ticker)}">${ICON('flask')}</button><button class="iconbtn" onclick="delPosition(${p.id})" title="Remove" aria-label="Remove ${esc(p.ticker)}">${ICON('trash')}</button></td></tr>`}).join('')}
 
 function renderEntries(entries){
  const g=$('ccEntryGrid');
- if(!entries.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="e-ic">🎯</div><h4>No entry signals right now</h4><div style="font-size:13px">Add names to your watchlist with ★ and they will be scanned after each session</div></div>';return}
+ if(!entries.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="e-ic">'+ICON('target')+'</div><h4>No entry signals right now</h4><div style="font-size:13px">Add names to your watchlist (the star on any stock) and they will be scanned after each session</div></div>';return}
  g.innerHTML=entries.map(e=>{
   const size=e.sized_qty?`By your risk policy: <b>${fmt(e.sized_qty,0)} shares</b> · risking <b>$${fmt(e.sized_qty*e.risk_per_share,0)}</b> if the stop is hit`
    :'Set your account value in Risk settings to get a suggested size';
@@ -803,7 +803,7 @@ function renderEntries(entries){
    <div class="ent-size">${size}</div>
    <div style="display:flex;gap:8px">
     <button class="btn btn-gold btn-sm" style="flex:1" onclick="entryToPortfolio('${esc(e.ticker)}',${e.price},${e.stop},${e.sized_qty||0})">Add to portfolio</button>
-    <button class="btn btn-ghost btn-sm" onclick="btGo('${esc(e.ticker)}')" title="Backtest these rules on this stock">🧪</button>
+    <button class="btn btn-ghost btn-sm" onclick="btGo('${esc(e.ticker)}')" title="Backtest these rules on this stock" aria-label="Backtest these rules on ${esc(e.ticker||'')}">${ICON('flask')}</button>
     <button class="btn btn-ghost btn-sm" onclick="openChart('${esc(e.ticker)}')">Chart</button>
    </div></div>`}).join('')}
 function entryToPortfolio(t,price,stop,qty){
@@ -833,7 +833,7 @@ async function loadPortfolio(){
    <td>${stopTxt}</td><td>${val!=null?'$'+fmt(val):'—'}</td>
    <td class="${cls(pnl)}">${pnl!=null?(pnl>=0?'+':'−')+'$'+fmt(Math.abs(pnl)):'—'}</td>
    <td class="${cls(pct)}">${pct!=null?sign(pct)+'%':'—'}</td>
-   <td><button class="iconbtn" onclick="delPosition(${p.id})" title="Remove">🗑</button></td></tr>`}).join('');
+   <td><button class="iconbtn" onclick="delPosition(${p.id})" title="Remove" aria-label="Remove ${esc(p.ticker)}">${ICON('trash')}</button></td></tr>`}).join('');
  const pnl=total-cost;
  $('pfTotal').textContent='$'+fmt(total);
  $('pfPnl').textContent=(pnl>=0?'+':'−')+'$'+fmt(Math.abs(pnl));
@@ -845,9 +845,9 @@ async function loadPortfolio(){
  const agg={};S.pf.forEach(p=>{const v=(pmap[p.ticker]||p.entry)*p.qty;agg[p.ticker]=(agg[p.ticker]||0)+v});
  if(typeof Chart!=='undefined')pfPie=new Chart($('pfPie'),{type:'doughnut',
   data:{labels:Object.keys(agg),datasets:[{data:Object.values(agg),
-   backgroundColor:['#e5b048','#3ea6ff','#26d07c','#a78bfa','#22d3ee','#ff4d6a','#ffa726','#7d8dac'],
-   borderColor:'#0e1420',borderWidth:3}]},
-  options:{plugins:{legend:{position:'bottom',labels:{color:'#9aa8c0',font:{size:11,family:'Inter'},boxWidth:10}}},cutout:'62%'}})}
+   backgroundColor:[tok('--gold'),tok('--info'),tok('--up'),'#a78bfa','#22d3ee',tok('--dn'),tok('--warn'),tok('--tx3')],
+   borderColor:tok('--s1'),borderWidth:3}]},
+  options:{plugins:{legend:{position:'bottom',labels:{color:tok('--tx2'),font:{size:11,family:'Inter'},boxWidth:10}}},cutout:'62%'}})}
 
 async function addPosition(){
  const t=$('pfTicker').value.trim().toUpperCase(),q=parseFloat($('pfQty').value),e=parseFloat($('pfEntry').value);
@@ -857,7 +857,7 @@ async function addPosition(){
  try{await store.addPf({ticker:t,qty:q,entry:e,notes:$('pfNotes').value,
    stop:st>0?st:null,init_stop:st>0?st:null,stop_type:'fixed'});
   ['pfTicker','pfQty','pfEntry','pfNotes','pfStop'].forEach(i=>$(i).value='');
-  toast(t+(st>0?' added with a stop 🛡':' added — set a stop in the command centre'),'ok');
+  toast(t+(st>0?' added with a stop':' added — set a stop in the command centre'),'ok');
   loadPortfolio();loadPlan(true)}
  catch(err){toast(err.error||'Could not add the position','err')}}
 async function delPosition(id){await store.delPf(id).catch(()=>{});loadPortfolio();loadPlan(true);toast('Position removed','info')}
@@ -865,19 +865,19 @@ async function delPosition(id){await store.delPf(id).catch(()=>{});loadPortfolio
 /* ===================== watchlist ===================== */
 async function renderWatch(){
  S.watch=await store.getWatch().catch(()=>[]);const g=$('wlGrid');
- if(!S.watch.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="e-ic">★</div><h4>Nothing on the watchlist</h4><div style="font-size:13px">Press ★ on any stock card to follow it</div></div>';return}
+ if(!S.watch.length){g.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="e-ic">'+ICON('star')+'</div><h4>Nothing on the watchlist</h4><div style="font-size:13px">Press the star on any stock card to follow it</div></div>';return}
  g.innerHTML=skelCards(Math.min(6,S.watch.length));
  let quotes=[];try{quotes=await api('/api/quotes?tickers='+S.watch.join(','))}catch(e){}
  g.innerHTML=quotes.map(q=>`<div class="glass wl-item" onclick="openChart('${esc(q.ticker)}')">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
    <b style="font-family:var(--mono);color:var(--gold)">${esc(q.ticker)}</b>
-   <button class="iconbtn" onclick="event.stopPropagation();toggleWatch('${esc(q.ticker)}');renderWatch()" title="Remove">✕</button></div>
+   <button class="iconbtn" onclick="event.stopPropagation();toggleWatch('${esc(q.ticker)}');renderWatch()" title="Remove" aria-label="Remove ${esc(q.ticker)} from watchlist">${ICON('x')}</button></div>
   <div style="font-family:var(--mono);font-size:21px;font-weight:600">${q.price!=null?'$'+fmt(q.price):'—'}</div>
   <div class="${cls(q.chg)}" style="font-family:var(--mono);font-size:13px;font-weight:600;margin-top:3px">${q.chg!=null?(q.chg>=0?'▲ +':'▼ ')+fmt(Math.abs(q.chg))+'%':''}</div>
   <canvas class="spark" data-s='${JSON.stringify(q.spark||[])}' height="38" style="margin-top:8px"></canvas></div>`).join('');
  requestAnimationFrame(()=>document.querySelectorAll('#wlGrid canvas').forEach(c=>{
   let d=[];try{d=JSON.parse(c.dataset.s)}catch(e){}
-  if(d.length>1)sparkline(c,d,d[d.length-1]>=d[0]?'rgb(38,208,124)':'rgb(255,77,106)')}))}
+  if(d.length>1)sparkline(c,d,d[d.length-1]>=d[0]?tok('--up'):tok('--dn'))}))}
 
 /* ===================== compare ===================== */
 async function runCompare(){
@@ -906,21 +906,21 @@ async function addAlert(){
  const t=$('alTicker').value.trim().toUpperCase(),c=$('alCond').value,p=parseFloat($('alPrice').value);
  if(!t||!(p>0)){toast('Fill in a symbol and a price','err');return}
  try{await store.addAlert({ticker:t,condition:c,price:p});$('alTicker').value=$('alPrice').value='';
-  S.alerts=await store.getAlerts();renderAlerts();toast('Alert created 🔔','ok')}
+  S.alerts=await store.getAlerts();renderAlerts();toast('Alert created','ok')}
  catch(e){toast(e.error||'Could not create the alert','err')}}
 async function delAlert(id){await store.delAlert(id).catch(()=>{});S.alerts=await store.getAlerts();renderAlerts()}
 function renderAlerts(){
  const box=$('alList');
- if(!S.alerts.length){box.innerHTML='<div class="empty"><div class="e-ic">🔔</div><h4>No active alerts</h4></div>';return}
+ if(!S.alerts.length){box.innerHTML='<div class="empty"><div class="e-ic">'+ICON('bell')+'</div><h4>No active alerts</h4></div>';return}
  box.innerHTML=S.alerts.map(a=>`<div class="glass al-item" id="al-${a.id}">
   <div><b style="font-family:var(--mono);color:var(--gold)">${esc(a.ticker)}</b>
    <span style="font-size:13px;color:var(--tx2);margin-left:8px">${a.condition==='above'?'rises above':'falls below'} $${fmt(a.price)}</span></div>
-  <button class="iconbtn" onclick="delAlert(${a.id})" title="Remove">🗑</button></div>`).join('')}
+  <button class="iconbtn" onclick="delAlert(${a.id})" title="Remove" aria-label="Remove alert">${ICON('trash')}</button></div>`).join('')}
 function checkAlerts(quotes){
  S.alerts.forEach(a=>{if(a.condition!=='above'&&a.condition!=='below')return;const q=quotes.find(x=>x.ticker===a.ticker);if(!q||q.price==null)return;
   const hit=a.condition==='above'?q.price>=a.price:q.price<=a.price;
   if(hit){const el=$('al-'+a.id);if(el)el.classList.add('hit');
-   if(!a._notified){a._notified=true;toast(`🔔 ${a.ticker} crossed $${fmt(a.price)} — now $${fmt(q.price)}`,'ok')}}})}
+   if(!a._notified){a._notified=true;toast(`${a.ticker} crossed $${fmt(a.price)} — now $${fmt(q.price)}`,'ok')}}})}
 /* ===================== news artwork =====================
    Most wire stories arrive without a picture. Rather than a decorative stock
    photo, each gets drawn art built from what the headline is about: the
@@ -928,15 +928,15 @@ function checkAlerts(quotes){
    logo is overlaid when one was identified. Deterministic, so the same story
    always looks the same. */
 const ART_TOPICS={
- markets:{label:'Markets',a:'#3ea6ff',b:'#1b3a63'},
+ markets:{label:'Markets',a:tok('--info'),b:'#1b3a63'},
  rates:{label:'Rates',a:'#a78bfa',b:'#2d2550'},
- inflation:{label:'Inflation',a:'#ffa726',b:'#4a3012'},
+ inflation:{label:'Inflation',a:tok('--warn'),b:'#4a3012'},
  jobs:{label:'Labour',a:'#22d3ee',b:'#143c45'},
  energy:{label:'Energy',a:'#ffb547',b:'#4a3110'},
  crypto:{label:'Crypto',a:'#f7931a',b:'#43280a'},
- chips:{label:'Semis',a:'#26d07c',b:'#10402a'},
+ chips:{label:'Semis',a:tok('--up'),b:'#10402a'},
  ai:{label:'AI',a:'#60a5fa',b:'#1c2f55'},
- deal:{label:'M&A',a:'#e5b048',b:'#423010'},
+ deal:{label:'M&A',a:tok('--gold'),b:'#423010'},
  earnings:{label:'Earnings',a:'#38bdf8',b:'#123047'},
  policy:{label:'Policy',a:'#94a3b8',b:'#26303f'},
  housing:{label:'Housing',a:'#f472b6',b:'#45162c'},
@@ -1008,7 +1008,7 @@ function artMeta(item){
  const dir=art.direction;
  /* Direction tints the accent: the art should agree with the story. */
  return{label:t.label,base:t.b,dir,ticker:art.ticker||'',topic:art.topic||'markets',
-  col:dir==='up'?'#26d07c':dir==='down'?'#ff4d6a':t.a}}
+  col:dir==='up'?tok('--up'):dir==='down'?tok('--dn'):t.a}}
 
 function newsArt(item,W,H){
  const art=item.art||{};
@@ -1054,14 +1054,14 @@ async function loadNews(scope,btn){
   const d=await api(url);
   newsCache=d.items||[];
   if(d.error&&!newsCache.length){
-   $('newsBox').innerHTML=`<div class="empty"><div class="e-ic">★</div><h4>${esc(d.error)}</h4></div>`;return}
+   $('newsBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('star')}</div><h4>${esc(d.error)}</h4></div>`;return}
   renderNews();
   $('newsStamp').textContent=`${newsCache.length} stories · ${new Date().toLocaleTimeString('en-GB')}`;
   /* Feeds move and block; name the quiet ones instead of silently thinning out. */
   if(d.failed&&d.failed.length){
    const names=[...new Set(d.failed.map(f=>f.source))];
    $('newsFailed').innerHTML=`<div class="sub" style="margin-top:14px">Sources not responding right now: ${names.map(esc).join(' · ')}. The rest loaded normally.</div>`}}
- catch(e){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${esc(e.error||'Could not load the news')}</h4></div>`}}
+ catch(e){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('alert')}</div><h4>${esc(e.error||'Could not load the news')}</h4></div>`}}
 function filterNews(){renderNews()}
 function toneTag(n){const t=n.tone;if(!t||t.tone==='neutral')return'';
  return `<span class="tone t-${t.tone}" title="Machine-labelled from wording: ${esc((t.words||[]).join(', '))}">${t.tone==='positive'?'▲ positive':'▼ negative'}</span>`}
@@ -1070,7 +1070,7 @@ function renderNews(){
  const c={positive:0,negative:0,neutral:0};newsCache.forEach(n=>{const k=(n.tone&&n.tone.tone)||'neutral';c[k]=(c[k]||0)+1});
  if($('newsToneSum'))$('newsToneSum').textContent=newsCache.length?`Wording: ${c.positive} positive · ${c.negative} negative · ${c.neutral} neutral`:'';
  const list=newsCache.filter(n=>(!q||(n.title+' '+(n.summary||'')).toLowerCase().includes(q))&&(!tf||((n.tone&&n.tone.tone)||'neutral')===tf));
- if(!list.length){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">📰</div><h4>${q?'No headlines match that filter':'No news right now'}</h4></div>`;return}
+ if(!list.length){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('news')}</div><h4>${q?'No headlines match that filter':'No news right now'}</h4></div>`;return}
  const[hero,...rest]=list;
  $('newsBox').innerHTML=`<div class="news-grid">
   <a class="glass news-hero" href="${esc(hero.link)}" target="_blank" rel="noopener noreferrer">
@@ -1099,10 +1099,10 @@ async function loadGaps(scope,btn){
   const d=await api(url);
   S.gaps=d;
   if(d.error&&!(d.gaps||[]).length){
-   $('gapBox').innerHTML=`<div class="empty"><div class="e-ic">★</div><h4>${esc(d.error)}</h4></div>`;return}
+   $('gapBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('star')}</div><h4>${esc(d.error)}</h4></div>`;return}
   renderGaps();
   $('gapStamp').textContent=`${d.scanned} scanned · ${new Date(d.generated_at*1000).toLocaleTimeString('en-GB')}`;
- }catch(e){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${esc(e.error||'Gap scan failed')}</h4></div>`}}
+ }catch(e){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('alert')}</div><h4>${esc(e.error||'Gap scan failed')}</h4></div>`}}
 
 function setGapFilter(f,btn){S.gapFilter=f;
  document.querySelectorAll('#gapScopes .seg button').forEach(b=>b.classList.toggle('on',b===btn));
@@ -1121,7 +1121,7 @@ function renderGaps(){
 
  const f=S.gapFilter||'all';
  const list=all.filter(g=>f==='all'||(f==='open'?!g.filled:g.direction===f));
- if(!list.length){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">⚡</div><h4>No gaps match this filter</h4><div style="font-size:13px">Nothing opened far enough from yesterday's close${f!=='all'?' in this category':''}</div></div>`;return}
+ if(!list.length){$('gapBox').innerHTML=`<div class="empty"><div class="e-ic">${ICON('zap')}</div><h4>No gaps match this filter</h4><div style="font-size:13px">Nothing opened far enough from yesterday's close${f!=='all'?' in this category':''}</div></div>`;return}
 
  $('gapBox').innerHTML=list.map(g=>{
   const up=g.direction==='up';
@@ -1178,10 +1178,10 @@ function renderBacktest(b){
   <div class="bt-stat"><div class="bt-k">Exposure</div><div class="bt-v">${s.exposure_pct!=null?fmt(s.exposure_pct,0)+'%':'—'}</div><div class="bt-note">of the time in a position</div></div>
  </div>
  <div class="bt-vs">
-  <div class="bt-col sys"><h4>🎯 This system</h4>
+  <div class="bt-col sys"><h4>This system</h4>
    <div class="bt-line"><span>Return</span><b class="${cls(s.system_return)}">${sign(s.system_return,1)}%</b></div>
    <div class="bt-line"><span>Max drawdown</span><b class="dn">−${fmt(s.system_dd,1)}%</b></div></div>
-  <div class="bt-col"><h4>📈 Buy and hold</h4>
+  <div class="bt-col"><h4>Buy and hold</h4>
    <div class="bt-line"><span>Return</span><b class="${cls(s.hold_return)}">${sign(s.hold_return,1)}%</b></div>
    <div class="bt-line"><span>Max drawdown</span><b class="dn">−${fmt(s.hold_dd,1)}%</b></div></div>
  </div>
@@ -1209,14 +1209,14 @@ function drawBtChart(b){
  const pick=a=>a.filter((_,i)=>i%step===0);
  btChart=new Chart($('btCanvas'),{type:'line',
   data:{labels:pick(b.dates),datasets:[
-   {label:'System',data:pick(b.curve),borderColor:'#e5b048',backgroundColor:'rgba(229,176,72,.10)',borderWidth:2,pointRadius:0,tension:.15,fill:true},
-   {label:'Buy and hold',data:pick(b.hold_curve),borderColor:'#7d8dac',borderWidth:1.5,pointRadius:0,tension:.15,borderDash:[5,4]}]},
+   {label:'System',data:pick(b.curve),borderColor:tok('--gold'),backgroundColor:'rgba(229,176,72,.10)',borderWidth:2,pointRadius:0,tension:.15,fill:true},
+   {label:'Buy and hold',data:pick(b.hold_curve),borderColor:tok('--tx3'),borderWidth:1.5,pointRadius:0,tension:.15,borderDash:[5,4]}]},
   options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
    plugins:{legend:{display:false},tooltip:{backgroundColor:'#141c2c',borderColor:'#2b3a52',borderWidth:1,
     titleFont:{family:'JetBrains Mono',size:11},bodyFont:{family:'JetBrains Mono',size:11},
     callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.parsed.y,1)}`}}},
-   scales:{x:{ticks:{color:'#7d8dac',font:{size:9,family:'JetBrains Mono'},maxTicksLimit:8},grid:{display:false}},
-    y:{ticks:{color:'#7d8dac',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(255,255,255,.05)'}}}}})}
+   scales:{x:{ticks:{color:tok('--tx3'),font:{size:9,family:'JetBrains Mono'},maxTicksLimit:8},grid:{display:false}},
+    y:{ticks:{color:tok('--tx3'),font:{size:9,family:'JetBrains Mono'}},grid:{color:tok('--grid')}}}}})}
 /* ===================== glossary: English terms, Hebrew explanations ===================== */
 const GLOSSARY=[
 ['RSI','מדד עוצמה יחסית','מודד את עוצמת שינויי המחיר האחרונים בסולם 0 עד 100 (חישוב Wilder על 14 ימים). מתחת ל־30 מקובל לכנות זאת מכירת יתר, ומעל 70 קניית יתר. זה תיאור של התנועה, לא תחזית: מניה יכולה להישאר בקניית יתר זמן רב.'],
@@ -1260,7 +1260,7 @@ function toggleShortcuts(){
  if(el){el.remove();return}
  el=document.createElement('div');el.id='shortcuts';el.className='modal open';
  el.onclick=ev=>{if(ev.target===el)el.remove()};
- el.innerHTML=`<div class="glass sc-box"><div class="sc-hdr"><h3>Keyboard shortcuts</h3><button class="x-btn" onclick="toggleShortcuts()">✕</button></div>
+ el.innerHTML=`<div class="glass sc-box"><div class="sc-hdr"><h3>Keyboard shortcuts</h3><button class="x-btn" onclick="toggleShortcuts()" aria-label="Close">${ICON('x')}</button></div>
   ${SHORTCUTS.map(([k,d])=>`<div class="sc-row"><kbd>${k}</kbd><span>${d}</span></div>`).join('')}</div>`;
  document.body.appendChild(el)}
 
@@ -1295,6 +1295,11 @@ function initTape(){
  hb.addEventListener('click',()=>{set('js.tape.hidden',true);apply();const s2=$('tapeShow');if(s2)s2.focus()});
  const show=$('tapeShow');if(show)show.addEventListener('click',()=>{set('js.tape.hidden',false);apply();pb.focus()});
  apply()}
+
+/* redraw what was painted on canvas with the previous theme's colours */
+document.addEventListener('themechange',()=>{loadTapeAndBento();if(S.fg)renderFearGreed(S.fg);
+ if(S.hm&&$('v-heatmap').classList.contains('on'))renderHeatmap();
+ if($('chartModal').classList.contains('open')&&S.chart&&S.chart.t)openChart(S.chart.t)});
 
 /* ===================== boot ===================== */
 document.addEventListener('DOMContentLoaded',()=>{

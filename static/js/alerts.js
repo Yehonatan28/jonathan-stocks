@@ -68,7 +68,7 @@
       if (r.met && was[k] === false) {
         const msg = `${r.ticker}: ${label(r.condition)} ${r.price} (${r.detail})`;
         hist.add({ at: Date.now(), ticker: r.ticker, label: label(r.condition) + ' ' + r.price, detail: r.detail });
-        if (typeof toast === 'function') toast('🔔 ' + msg, 'ok');
+        if (typeof toast === 'function') toast(msg, 'ok');
         try { if (window.Notification && Notification.permission === 'granted') new Notification('Jonathan Stocks alert', { body: msg }); } catch (_) { /* unsupported */ }
       }
       if (r.met && was[k] === undefined) hist.get().some((x) => x.ticker === r.ticker && x.label === label(r.condition) + ' ' + r.price) || hist.add({ at: Date.now(), ticker: r.ticker, label: label(r.condition) + ' ' + r.price, detail: r.detail });

@@ -579,3 +579,93 @@ body.is-guest .invite.guest-only { display: block; }
 /* one horizontal gutter (the content area's), so the page header and the screen line up */
 .content .view { padding-left: 0; padding-right: 0; }
 .tape-wrap .tape-ctl { background: var(--s1); box-shadow: -10px 0 8px var(--s1); }
+
+/* =====================================================================================
+   Design system v2 (R4). Tokens first; every rule below reads them. Dark is the default,
+   light is a full theme (not an inversion), and density changes spacing and size together.
+   ===================================================================================== */
+:root {
+  --fs-1: 12.5px; --fs-2: 13.5px; --fs-3: 14.5px; --fs-4: 16px; --fs-5: 19px; --fs-6: 24px;   /* type scale */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;            /* spacing */
+  --cell-y: 9px; --cell-x: 12px; --card-p: 16px; --ctl-h: 36px;                                 /* density */
+  --grid: rgba(255, 255, 255, .06);
+  --gold-fill: #d6aa4f; --on-gold: #12151c;
+  --focus: #e6bd66;
+  color-scheme: dark;
+}
+html[data-density="compact"] { --fs-3: 13.5px; --fs-2: 12.5px; --cell-y: 5px; --cell-x: 9px; --card-p: 11px; --ctl-h: 32px; }
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f7f9; --s1: #ffffff; --s2: #f1f3f6; --s3: #e8ecf1; --s4: #dde3ea;
+  --line: #dde2e9; --line2: #cbd2dc; --line3: #aeb8c6;
+  --tx: #141a24; --tx2: #444e5d; --tx3: #5a6474;
+  --up: #12784e; --up-bg: rgba(18, 120, 78, .09); --up-br: rgba(18, 120, 78, .30);
+  --dn: #bf2d45; --dn-bg: rgba(191, 45, 69, .08); --dn-br: rgba(191, 45, 69, .30);
+  --warn: #8f6410; --warn-bg: rgba(143, 100, 16, .09); --warn-br: rgba(143, 100, 16, .30);
+  --info: #2c5fc4; --info-bg: rgba(44, 95, 196, .08); --info-br: rgba(44, 95, 196, .30);
+  --gold: #85621a; --gold2: #6f5114; --gold-deep: #85621a; --gold-bg: rgba(133, 98, 26, .08);
+  --accent: #2c5fc4; --accent-bg: rgba(44, 95, 196, .10);
+  --gold-fill: #d9ad52; --on-gold: #1a1306; --focus: #2c5fc4;
+  --grid: rgba(0, 0, 0, .07);
+  --shadow-lg: 0 12px 32px rgba(20, 26, 36, .14), 0 1px 3px rgba(20, 26, 36, .10);
+  --hm0: #c9d0da;
+}
+body { font-size: var(--fs-3); background: var(--bg); color: var(--tx); }
+
+/* no decoration: depth comes from surface steps and hairlines */
+body::before, .aurora { display: none !important; }
+.brand-mark, .avatar, .auth-mark, .side-brand .mark { background: var(--gold-fill) !important; color: var(--on-gold) !important; }
+.act.sev-critical { background: var(--dn-bg); } .act.sev-high { background: var(--warn-bg); }
+.sk { background: var(--s2); animation: skpulse 1.4s ease-in-out infinite; }
+@keyframes skpulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .sk, .spinner { animation-duration: 0s !important; } * { scroll-behavior: auto !important; } }
+.btn-gold { background: var(--gold-fill); border-color: var(--gold-fill); color: var(--on-gold); }
+.btn-gold:hover { background: var(--gold-fill); filter: brightness(1.06); }
+
+/* readable minimums: nothing of substance below 12px; labels and table headers at 12.5px */
+th, .mi-t th, .tbl th, .risk-tbl th { font-size: var(--fs-1) !important; letter-spacing: .02em; }
+.tag { font-size: 11.5px !important; }
+.t-lab, .b-label { font-size: var(--fs-1) !important; }
+.t-sub, .mi-foot, .mi-note, .cc-stamp, .fg-src { font-size: var(--fs-1) !important; }
+td small, .nm small, .sticky small { font-size: 12px !important; }
+.chip { font-size: 12.5px !important; }
+.fg-prev i { font-size: 12px !important; }
+
+/* numbers align: tabular figures everywhere a number can sit in a column */
+td, .n, .t-val, .b-big, .vl, .cg, .num, .mono, .tp, .fg-num, .ldg td, .scr-t td { font-variant-numeric: tabular-nums; }
+
+/* controls: the period buttons were 25px tall */
+.seg button, .seg [role="tab"] { min-height: var(--ctl-h); padding: 0 12px; font-size: var(--fs-2); }
+.btn-sm { min-height: var(--ctl-h); font-size: var(--fs-2); }
+.btn { display: inline-flex; align-items: center; gap: 6px; justify-content: center; }
+.iconbtn, .x-btn { min-width: 36px; min-height: 36px; display: inline-grid; place-items: center; }
+@media (pointer: coarse) { .seg button, .btn-sm, .iconbtn, .x-btn, .chip-btn, .ph-tabs a { min-height: 44px; } .iconbtn, .x-btn { min-width: 44px; } }
+
+/* density: table cells and cards follow the tokens */
+.mi-t td, .mi-t th, .tbl td, .tbl th, .risk-tbl td, .risk-tbl th { padding: var(--cell-y) var(--cell-x); }
+.mi-card, .glass, .mi-tile { padding: var(--card-p); }
+
+/* visible focus on every interactive element */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* icons */
+.ico { flex: none; vertical-align: -3px; }
+.e-ic .ico { width: 28px; height: 28px; color: var(--tx3); }
+.act-ic .ico, .bi .ico { width: 22px; height: 22px; }
+
+/* display menu */
+.disp-wrap { position: relative; }
+.disp-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 260; width: 240px; padding: 12px; background: var(--s1); border: 1px solid var(--line2); border-radius: 8px; box-shadow: var(--shadow-lg); }
+.disp-pop fieldset { border: 0; margin: 0 0 10px; padding: 0; } .disp-pop fieldset:last-child { margin: 0; }
+.disp-pop legend { font-size: var(--fs-1); color: var(--tx3); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 4px; }
+.disp-pop label { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: var(--fs-2); color: var(--tx); cursor: pointer; }
+@media (max-width: 1180px) { #dispBtn .lbl { display: none; } }
+
+/* light theme: surfaces that terminal.css painted with fixed dark values */
+html[data-theme="light"] .tape-wrap, html[data-theme="light"] .topbar, html[data-theme="light"] .side { background: var(--s1); }
+html[data-theme="light"] .gs { background: rgba(20, 26, 36, .35); }
+html[data-theme="light"] .hm-cell, html[data-theme="light"] .hm-tile { color: #fff; }
+[hidden] { display: none !important; }
+@media (max-width: 1560px) { #dispBtn .lbl { display: none; } }
+.mi-t td, .tbl td, .risk-tbl td { font-size: var(--fs-2); }
+html[data-density="compact"] .scr-t td small { display: none; }   /* one line per row in compact */
