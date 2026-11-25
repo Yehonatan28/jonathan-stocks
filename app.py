@@ -1637,17 +1637,14 @@ def robots():
 
 @app.route('/manifest.json')
 def manifest():
-    icon = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' "
-            "viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' "
-            "fill='%23f0b429'/%3E%3Ctext x='50' y='63' font-size='38' "
-            "font-family='monospace' font-weight='bold' text-anchor='middle' "
-            "fill='%23241800'%3EJS%3C/text%3E%3C/svg%3E")
     return jsonify({
         'name': 'Jonathan Stocks', 'short_name': 'JStocks',
+        'description': 'Financial intelligence and portfolio analytics',
         'start_url': '/', 'display': 'standalone',
-        'background_color': '#f4f5fa', 'theme_color': '#f0b429',
-        'icons': [{'src': icon, 'sizes': '512x512', 'type': 'image/svg+xml',
-                   'purpose': 'any'}],
+        'background_color': '#0a0d13', 'theme_color': '#0a0d13',
+        'icons': [{'src': '/static/img/icon-512.png', 'sizes': '512x512', 'type': 'image/png', 'purpose': 'any'},
+                  {'src': '/static/img/icon-180.png', 'sizes': '180x180', 'type': 'image/png', 'purpose': 'any'},
+                  {'src': '/static/img/favicon.svg', 'sizes': 'any', 'type': 'image/svg+xml', 'purpose': 'any'}],
     })
 
 
