@@ -1,0 +1,18 @@
+PASS  1a guest lands without a sign-in gate
+PASS  1b search finds Microsoft
+PASS  1c Enter opens research
+PASS  1d symbol carried into Compare, benchmark added  (MSFT, SPY)
+PASS  1e added to the watchlist from search
+PASS  1f no script errors
+PASS  2 filters kept after opening a result and going back  (163 of 507 stocks match  / 163 of 507 stocks match )
+PASS  3a empty portfolio says nothing was checked
+PASS  3b empty risk screen is not a clean result
+PASS  3c test portfolio: missing stop reported as a condition  (3 conditions met at high or critical levelCritical means a position has no stop )
+PASS  3d risk lists limit breaches first
+PASS  3e alert created with its limitation beside it
+PASS  4 changing costs changes the result and the stated assumption
+PASS  5a provider failure: unavailable with Retry, no zeros
+PASS  5b narrow screen: no horizontal scroll
+PASS  5c Hebrew: rtl and translated header
+PASS  5d keyboard: first Tab is the skip link and it moves focus to the content
+PASS  5e search closes on Escape
