@@ -17,7 +17,8 @@
           "provenance.py",
           "marketintel.py",
           "scanner.py",
-          "fundamentals.py"
+          "fundamentals.py",
+          "ledger.py"
         ]
       }
     }

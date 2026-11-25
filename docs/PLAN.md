@@ -31,7 +31,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Company research: 5 fiscal years + 8 quarters from SEC XBRL company facts (restatements resolved by latest filing, derived Q4 marked), margins, growth, ROE, ROIC, FCF, cash conversion, debt/equity with formulas; charts; summary built only from reported figures; source and method shown (`fundamentals.py`). Needs `SEC_CONTACT` on the host (🔑). Valuation history and estimates vs actuals: later
 - [x] Stock scanner: S&P 500 / Nasdaq-100 / both; valuation, trend and activity fields with per-field coverage; presets, range filters, sector, sort, columns, saved screens (this browser), CSV export (`scanner.py`). Multi-factor score: later, only with sufficient inputs
 - [ ] Charting: candles/OHLC/line/area, 1D–MAX, indicators with settings, crosshair, levels, markers, interpretation panel from actual values
-- [ ] Portfolio accounting: transactions (buy/sell/dividend/deposit/withdrawal/fee/split), FIFO lots, realised/unrealised P&L, cash, currency; documented methodology
+- [x] Portfolio accounting: transactions (buy/sell/dividend/deposit/withdrawal/fee/split), FIFO lots, realised/unrealised P&L, cash, per-currency totals without conversion, oversell rejected, history must balance on every write and delete; account or browser-only (guest, computed statelessly); CSV import/export; method on the page (`ledger.py`)
 - [ ] Performance analytics: cumulative return, benchmark, CAGR, volatility, Sharpe, Sortino, beta, alpha, max drawdown (only with enough history)
 - [ ] Risk engine extension: long and short sizing, limits (per trade, portfolio, sector, single stock), concentration, correlation, unprotected positions, volatility-inconsistent stops
 

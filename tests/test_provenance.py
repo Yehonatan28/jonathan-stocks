@@ -13,7 +13,7 @@ def test_every_data_route_is_registered():
     data_routes = {r.rule.split('<')[0].rstrip('/') for r in A.app.url_map.iter_rules()
                    if r.rule.startswith('/api/') and not r.rule.startswith(('/api/auth', '/api/portfolio', '/api/watchlist',
                                                                             '/api/alerts', '/api/settings', '/api/pf_history',
-                                                                            '/api/health', '/api/sources'))}
+                                                                            '/api/health', '/api/sources', '/api/transactions'))}
     missing = sorted(p for p in data_routes if not P.match(p) and not P.match(p + '/x'))
     assert missing == [], missing
 

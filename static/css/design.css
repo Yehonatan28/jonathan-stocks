@@ -325,3 +325,28 @@ input, select, textarea { font-family: var(--ui); }
 .rs-src pre { white-space: pre-wrap; font: 12px/1.55 var(--mono); color: var(--tx3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .rs-search input { flex: 1; width: auto; } .rs-kpis > div { flex: 1; min-width: 0; } .rs-defs dl { grid-template-columns: 1fr; } .rs-chart { height: 210px; } }
 .flt.off { opacity: .5; } .flt.off input { cursor: not-allowed; }
+
+/* ---- Transactions & P&L */
+.ldg .ph h1 { margin: 0 0 4px; font-size: 22px; } .ldg .ph p { margin: 0 0 6px; color: var(--tx2); font-size: 13.5px; }
+.lg-where { font-size: 12.5px; color: var(--tx3); margin-bottom: 16px; }
+.lg-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 14px; }
+.lg-form label { display: grid; gap: 4px; font-size: 12px; color: var(--tx2); }
+.lg-form label[hidden] { display: none; }
+.lg-form .wide { grid-column: 1 / -1; }
+.lg-form input, .lg-form select { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; color: var(--tx); padding: 7px 9px; font: 500 13px var(--ui); min-width: 0; }
+.lg-form input[type=number], .lg-form input[name=ticker] { font-family: var(--mono); }
+.lg-form input:focus, .lg-form select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.lg-act { display: flex; align-items: center; gap: 12px; } .lg-act .auth-err { margin: 0; }
+.lg-io { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.lg-io small { color: var(--tx3); font-size: 11.5px; }
+.lg-type { font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--tx2); }
+.lg-type.t-buy, .lg-type.t-deposit, .lg-type.t-dividend { color: var(--up); } .lg-type.t-sell, .lg-type.t-withdrawal, .lg-type.t-fee { color: var(--dn); }
+.mi-t .x { background: none; border: 0; color: var(--tx3); cursor: pointer; font-size: 16px; }
+.mi-t .x:hover { color: var(--dn); }
+.lg-method pre { white-space: pre-wrap; font: 12px/1.55 var(--mono); color: var(--tx3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+@media (max-width: 760px) { .lg-form { grid-template-columns: 1fr 1fr; } }
+.lg-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.lg-form label, .lg-form input, .lg-form select { min-width: 0; width: 100%; box-sizing: border-box; }
+.mi-two > .mi-block { min-width: 0; }
+#lgSales { overflow-x: auto; }
+.ldg .mi-tiles { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }

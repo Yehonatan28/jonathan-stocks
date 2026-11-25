@@ -18,6 +18,7 @@ import provenance
 import marketintel
 import scanner
 import fundamentals
+import ledger
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -201,6 +202,21 @@ def init_db():
         equity REAL DEFAULT 0,
         risk_pct REAL DEFAULT 1.0,
         trail_mult REAL DEFAULT 3.0);
+    CREATE TABLE IF NOT EXISTS transactions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        ticker TEXT,
+        qty REAL,
+        price REAL,
+        fee REAL,
+        amount REAL,
+        ratio REAL,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        note TEXT DEFAULT '',
+        created_at TEXT);
+    CREATE INDEX IF NOT EXISTS transactions_user ON transactions(user_id, date);
     CREATE TABLE IF NOT EXISTS login_fails(
         ip TEXT NOT NULL,
         t REAL NOT NULL);
@@ -421,6 +437,109 @@ def me():
 
 
 # ---------- Portfolio ----------
+
+# ---------- Ledger: transactions and FIFO accounting ----------
+TX_FIELDS = ('type', 'date', 'ticker', 'qty', 'price', 'fee', 'amount', 'ratio', 'currency', 'note')
+LEDGER_MAX = 5000
+
+
+def _user_txs(conn, uid):
+    rows = conn.execute('SELECT * FROM transactions WHERE user_id=? ORDER BY date, id', (uid,)).fetchall()
+    return [{k: r[k] for k in ('id',) + TX_FIELDS} for r in rows]
+
+
+def _ledger_prices(txs):
+    """Last price of every symbol the transactions leave open (at most 100)."""
+    try:
+        held = [h['ticker'] for h in ledger.compute(txs)['holdings']][:100]
+    except ledger.LedgerError:
+        return {}
+    if not held:
+        return {}
+    q = market.batch_quotes(held, per_ticker_fallback=quick_quote)
+    return {t: v['price'] for t, v in q.items() if v.get('price') is not None}
+
+
+@app.route('/api/transactions', methods=['GET', 'POST'])
+def transactions():
+    uid = current_user()
+    if not uid:
+        return jsonify({'error': 'Not logged in'}), 401
+    conn = db()
+    try:
+        if request.method == 'GET':
+            return jsonify(_user_txs(conn, uid))
+        d = request.get_json(silent=True) or {}
+        items = d.get('items') if isinstance(d.get('items'), list) else [d]
+        if not items or len(items) > 1000:
+            return jsonify({'error': 'Send between 1 and 1000 transactions'}), 400
+        try:
+            cleaned = [ledger.clean(x) for x in items]
+        except ledger.LedgerError as exc:
+            return jsonify({'error': str(exc)}), 400
+        existing = _user_txs(conn, uid)
+        if len(existing) + len(cleaned) > LEDGER_MAX:
+            return jsonify({'error': f'A ledger holds at most {LEDGER_MAX} transactions'}), 400
+        try:
+            ledger.compute(existing + cleaned)          # the whole history must still balance
+        except ledger.LedgerError as exc:
+            return jsonify({'error': str(exc)}), 400
+        now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        for c in cleaned:
+            conn.execute('INSERT INTO transactions(user_id,type,date,ticker,qty,price,fee,amount,ratio,currency,note,created_at) '
+                         'VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                         (uid, c['type'], c['date'], c.get('ticker'), c.get('qty'), c.get('price'), c.get('fee'),
+                          c.get('amount'), c.get('ratio'), c['currency'], c['note'], now))
+        conn.commit()
+        return jsonify({'ok': True, 'added': len(cleaned)})
+    finally:
+        conn.close()
+
+
+@app.route('/api/transactions/<int:tx_id>', methods=['DELETE'])
+def transaction_delete(tx_id):
+    uid = current_user()
+    if not uid:
+        return jsonify({'error': 'Not logged in'}), 401
+    conn = db()
+    try:
+        rest = [t for t in _user_txs(conn, uid) if t['id'] != tx_id]
+        try:
+            ledger.compute(rest)
+        except ledger.LedgerError as exc:
+            return jsonify({'error': f'Deleting it would leave the history unbalanced ({exc}). Delete the later sale first.'}), 409
+        cur = conn.execute('DELETE FROM transactions WHERE id=? AND user_id=?', (tx_id, uid))
+        conn.commit()
+        if cur.rowcount == 0:
+            return jsonify({'error': 'Not found'}), 404
+        return jsonify({'ok': True})
+    finally:
+        conn.close()
+
+
+@app.route('/api/ledger', methods=['GET', 'POST'])
+def ledger_view():
+    """GET: the signed-in user's ledger. POST: a guest's transactions sent from the browser,
+    computed and returned without being stored or logged."""
+    if request.method == 'GET':
+        uid = current_user()
+        if not uid:
+            return jsonify({'error': 'Not logged in'}), 401
+        conn = db()
+        txs = _user_txs(conn, uid)
+        conn.close()
+    else:
+        d = request.get_json(silent=True) or {}
+        txs = d.get('transactions')
+        if not isinstance(txs, list) or len(txs) > LEDGER_MAX:
+            return jsonify({'error': f'Send a list of at most {LEDGER_MAX} transactions'}), 400
+    try:
+        out = ledger.compute(txs, _ledger_prices(txs))
+    except ledger.LedgerError as exc:
+        return jsonify({'error': str(exc)}), 400
+    out['ok'] = True
+    return jsonify(out)
+
 
 @app.route('/api/portfolio', methods=['GET', 'POST'])
 def portfolio():
