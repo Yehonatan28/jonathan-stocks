@@ -1,277 +1,94 @@
-# Jonathan Stocks · Trading Terminal
+# Jonathan Stocks · Financial intelligence & portfolio analytics
 
-A personal trading terminal: portfolio risk management, technical signals,
-backtesting, a sector heatmap and market data. The interface is in English;
-the glossary keeps its Hebrew explanations under English terms.
+**Live:** https://jonathan-stocks.vercel.app · [About](https://jonathan-stocks.vercel.app/about) ·
+[Data & methodology](https://jonathan-stocks.vercel.app/methodology)
 
-> **Your positions are private.** Every stored row is scoped to your account,
-> and `test_security.py` proves it: a second signed-in user sees an empty
-> portfolio, cannot read your settings, and cannot read, edit or delete your
-> positions by guessing their id. Anonymous requests to those routes are
-> rejected outright.
+Market context, company research, portfolio accounting and risk tools in one workstation, built around
+three rules: **every number shows its source and freshness**, **nothing is invented** (a figure without
+its inputs is a dash, never a guess), and **information, not advice** (no buy or sell calls).
 
----
+## Workspaces
 
-## Command centre (🎯)
-
-The heart of the system. On every load it scans your positions and watchlist
-and produces a plan.
-
-### 1. What to do now
-Actions are ranked by severity, worst first:
-
-| Code | Fires when | Severity |
-|---|---|---|
-| `STOP_HIT` | Price fell below the stop you set | Critical |
-| `SET_STOP` | A position has no stop at all | Urgent |
-| `STOP_NEAR` | Less than 2% left to the stop | Urgent |
-| `BREAKEVEN` | Profit passed 1R — the risk can be removed | Urgent |
-| `TREND_BREAK` | Price closed under the 50-day and the trend broke | Urgent |
-| `TRAIL_UP` | The trailing stop has risen — lock in more | Review |
-| `TAKE_PARTIAL` | Over 3R with a stretched RSI | Review |
-| `RISK_OVERSIZE` | Position risk exceeds your policy | Review |
-| `PORTFOLIO_HEAT` | Total open risk passed 8% of the account | Urgent |
-
-Each carries a one-click **Set stop $X** and a **Mark done** that hides it for
-the day once the order is live with your broker.
-
-### 2. Positions
-Edit stops inline, switch between **fixed** and **trailing**, and read:
-**Distance** to the stop, **R** (profit in units of the risk taken), **Risk $**,
-and the level the engine currently suggests.
-
-### 3. Entry opportunities
-Scanned from the watchlist only. Each signal carries an entry zone, a stop, two
-targets and a share count sized to your risk policy.
-
----
-
-## Heatmap (🗺)
-
-A squarified treemap of the **full S&P 500 (507 names) or the Nasdaq 100**:
-block size is market cap, colour is today's move, blocks are grouped by sector.
-Hovering a block gives price, today's change, market cap, sector — and the
-**pre-market or after-hours print with its own percentage**, kept as a separate
-row because an extended-hours move is measured against the last regular close,
-not folded into the day's change. A name with no extended-hours print simply
-has no row; nothing is invented to fill it.
-
-Quotes come from Yahoo's batch endpoints — 500 names cannot each have their own
-request — with a crumb-authenticated call first, the spark endpoint next, and
-per-ticker only for whatever those miss. Market caps are taken live where the
-feed provides them, falling back to a stored estimate.
-
-Squarified rather than slice-and-dice because slivers cannot be read or
-clicked. What a block draws depends on what fits: large blocks get logo, symbol,
-company name and percentage; small ones fall back to the **company logo**, which
-still identifies the company where no label would fit. A logo that fails to load
-is removed and the symbol shows instead, so a block is never blank.
-
----
-
-## Gap detector (⚡)
-
-A gap is the distance between today's open and yesterday's close — price that
-never traded. The scanner reports every gap above a threshold across the
-largest S&P names or your own, and ranks them by size.
-
-What it shows beyond the percentage:
-
-- **Filled or unfilled.** An unfilled gap leaves an untested level behind; a
-  filled one has already been rejected intraday. The bar on each row is how
-  much of the gap price has taken back.
-- **Size in ATR**, because 2% is routine in one stock and a shock in another.
-- **Held or faded** — whether the close stayed on the gap's side of the open.
-- Volume relative to the 20-day average, and the exact price that fills it.
-
-## Fear & Greed (CNN)
-
-Read from the same JSON CNN's own page uses, with the dial, needle, rating,
-previous close/week/month/year and all seven component indicators. When CNN
-cannot be reached the panel says so — **a sentiment number invented locally
-would be worse than an empty panel.**
-
----
-
-## Backtest (🧪)
-
-Replays **exactly the rules the command centre gives you today** over the
-stock's history. `analyze()` and `backtest()` share one `_snapshot()` builder,
-so the test exercises the live rules rather than a second implementation.
-
-**No lookahead:** a signal at a close is entered at the next session's open, and
-every stop decision uses only bars up to that point. There is a test for this —
-appending future bars must not change a single trade that already closed.
-
-Reports trades, win rate, expectancy in R, worst trade and exposure against
-buy-and-hold, including each one's maximum drawdown. The drawdown comparison is
-usually the interesting one: that is where stops earn their keep.
-
----
-
-## Charts
-
-Candles, line or area; **MA50 / MA100 / MA150 / MA200**; Bollinger bands;
-volume; RSI and MACD panes; log scale; fullscreen. A crosshair legend tracks the cursor with OHLC,
-change, volume and the moving averages under it.
-
-The chart also draws what the system is telling you to do: suggested and
-trailing stops, entry zone and targets, your own entry and stop when the name is
-held, and the backtest's fills.
-
----
-
-## News (📰)
-
-RSS rather than Yahoo's search endpoint, which rate-limits and answers with an
-empty list instead of an error. Sources: CNBC, MarketWatch, Investing.com,
-Yahoo Finance, FT, plus Globes, Calcalist, TheMarker and Bizportal — a portfolio
-holding TASE names is barely covered in the English press.
-
-Every feed is fetched independently and a failure is returned rather than
-raised, so one dead outlet cannot empty the page; the UI names the quiet ones.
-`GET /api/news/sources` reports which feeds actually answer from your
-deployment.
-
-### Every headline gets a picture
-
-Where a feed carries real article art it is used: Media RSS thumbnails (widest
-wins), `media:content`, enclosures, channel images, and the first usable `<img>`
-in the description — tracking pixels and sub-120px images rejected.
-
-Most wire stories carry none, so the rest are **drawn from what the story is
-about** rather than filled with a decorative stock photo. `classify()` reads the
-headline for three things — topic (rates, inflation, jobs, energy, crypto,
-semis, AI, M&A, earnings, policy, housing, health, or markets), direction from
-the verb, and the company, matched by symbol or by name since "Nvidia beats"
-never contains NVDA — and the browser draws from that: policy stories get a
-stepped rate curve, earnings get bars, semis get circuit traces, energy gets
-flow bands, and anything else gets candles. Direction tints the accent green or
-red, the caption names the topic and the company, and the motif's weight and
-detail follow the size of the box, so a 96px thumbnail and the hero panel are
-each drawn for their own shape.
-
-The classification is returned as data and tested without a browser; the drawing
-lives in the UI. A real photo is layered over the art, so a photo that never
-loads leaves the drawing rather than a broken image.
-
----
-
-## How the stops are calculated
-
-The regime also checks the **trend template** — the 50-day above the 150-day
-above the 200-day — which is a stronger statement about trend health than the
-50/200 golden cross alone.
-
-**Initial stop** — the lower of a structural level (the 10-day swing low less a
-quarter ATR) and a volatility level (price less 2×ATR), capped at 3.5×ATR of
-risk and floored at 0.8×ATR so it does not sit inside the noise.
-
-**Trailing stop** (Chandelier Exit) — the 22-day high less 2.5–3×ATR by trend
-strength. It **only ever rises**.
-
-**Position size** — `(account × risk%) ÷ (entry − stop)`, capped at a third of
-the account in one name.
-
----
-
-## Security
-
-| Concern | How it is handled |
+| Workspace | Modules |
 |---|---|
-| Account isolation | Every query scoped by `user_id`; verified by test |
-| Password storage | PBKDF2-HMAC-SHA256, per-user salt, 240k rounds; legacy hashes upgrade silently on next sign-in |
-| Session cookies | HttpOnly, SameSite=Lax, Secure on any real deployment |
-| Brute force | Failed sign-ins throttled per source address |
-| Session key | Never a checked-in constant — set `SECRET_KEY` in the environment |
+| **Market Intelligence** | Market Overview: breadth over all S&P 500 members (advance/decline, % above 50/200-day, near 52-week highs/lows, cap- vs equal-weighted move), 11 sector funds vs SPY over 1D–YTD, rates/FX/commodities/crypto, leaders and laggards, CNN Fear & Greed. Market Heatmap (sector treemap). |
+| **Equity Research** | Company Research: five fiscal years and eight quarters from SEC XBRL filings with ratios and formulas. Stock Screener over the S&P 500 and Nasdaq-100 with presets, saved screens and CSV export. Compare & Correlate: up to eight symbols, indexed performance, volatility, drawdown, beta, correlation matrix and rolling correlation, filed fundamentals side by side. |
+| **Portfolio** | Holdings and watchlist. Transactions & P&L: buys, sells, dividends, cash, fees and splits with FIFO lots, realised and unrealised gains per currency, and time-weighted performance against SPY with Sharpe, Sortino, beta, alpha and drawdown (each only with enough history). |
+| **Quant & Risk** | Risk Engine (daily action plan for stops). Portfolio Risk: weights, open risk to the stops, sector limits, stop distance in ATR, correlation, position sizing for long and short. Strategy Lab: user-defined rules backtested with next-open fills, costs and no look-ahead. Gap detection, engine replay, price alerts. |
+| **Intelligence** | Market news from US and Israeli publishers (RSS), deduplicated, with per-symbol feeds. |
 
----
+Every screen has an address (`#/research?t=MSFT`, `#/relative?s=AAPL,MSFT`), works at phone, tablet and
+desktop widths, and shows a provenance badge: source, *Delayed / End of day / As filed*, and retrieval time.
 
-## Running locally
+## Architecture
 
-```bash
-pip install -r requirements.txt
-python app.py            # http://localhost:5000
+```
+Browser (vanilla JS, no framework)          Flask service (Vercel serverless)            Sources
+  shell.js   navigation, provenance   ──►    app.py         routes, security, cache  ──►  Yahoo Finance (per-symbol daily bars)
+  market.js  screener.js research.js         provenance.py  X-Data-* headers              SEC EDGAR XBRL company facts
+  ledger.js  risk.js lab.js relative.js      quant/         one indicator library         CNN Fear & Greed
+  app.js     legacy modules                  marketintel scanner fundamentals             Publisher RSS (CNBC, FT, Globes, ...)
+                                             ledger performance riskx strategylab relative
+                                             storage.py     Turso (libSQL over HTTP) / SQLite
 ```
 
-## Hosting
+- **One indicator library** (`quant/indicators.py`): SMA, EMA, Wilder RSI and ATR, ADX, MACD, Bollinger,
+  OBV, VWAP, stochastic. Causal by construction and tested against hand calculations.
+- **Pure calculation modules** (no I/O) for breadth, screening, SEC parsing, the ledger, performance,
+  risk, backtests and comparison; the routes only fetch and pass data in. Each module's method text is the
+  one shown on its screen and on the methodology page.
+- **Provenance**: every data answer carries `X-Data-Set`, `X-Data-Source`, `X-Data-Status` and
+  `X-Data-Retrieved`; a cached answer reports the time of the original fetch (`provenance.py`).
+- **Resilient quotes**: when Yahoo refuses the batch endpoints from the host (HTTP 429 on the crumb), a
+  per-symbol path derives price, 50/200-day averages, the 52-week range and relative volume from a year of
+  daily bars; failing paths are skipped for ten minutes; `/api/health` reports which path answered.
 
-Signed-in users are stored in SQLite on the server. Guest mode keeps everything
-in the browser. Both drive the same engine.
+## Security and privacy
 
-**Render** — `render.yaml` targets the free plan, no card needed:
-`New` → `Blueprint` → pick the repo → `Apply`. The free plan has a writable
-filesystem so accounts work, but the container is rebuilt on each deploy and
-after it sleeps, and each rebuild starts from an empty database. For durable
-accounts set `plan: starter` and uncomment the `disk:` block and `DB_PATH`.
-
-**Vercel** — `vercel.json` and `api/index.py` run Flask as a serverless
-function. There is no persistent disk: the database lives in `/tmp` and is wiped
-on every cold start, so **registered accounts do not survive there**. Guest mode
-is unaffected.
-
-### Environment variables
-
-| Variable | Purpose |
-|---|---|
-| `SECRET_KEY` | Signs session cookies. Required in production — without it a random key is generated and every restart signs everyone out |
-| `DB_PATH` | Where the SQLite file lives. On Render point it at the persistent disk |
-
----
+- Passwords hashed with PBKDF2; signed, HttpOnly, Secure, SameSite=Lax session cookie; session key stable
+  across serverless instances.
+- Content-Security-Policy, frame, MIME and referrer headers, HSTS, `no-store` on API answers.
+- Sign-in throttle shared through the database (keyed hash of the address, never the address); per-address
+  API budget.
+- Per-user isolation tested (another user cannot read, change or delete your rows); guest mode keeps data in
+  the browser and guest calculations are computed in memory and not stored; account deletion with password.
+- No analytics, no ads, no tracking cookies. See `/privacy`.
 
 ## Tests
 
-```bash
-python3 test_engine.py      # indicators, regimes, stops, setups, backtest  (no network)
-python3 test_news.py        # RSS/Atom parsing against sample feeds         (no network)
-python3 test_security.py    # account isolation, hashing, cookies           (no network)
-
-python3 devserver.py &      # the app with every upstream stubbed
-node test_ui.js             # language, gauge, heatmap geometry, chart
-node test_flows.js          # portfolio, command centre, backtest, news, guest mode
+```
+python test_engine.py      # trend engine (36)
+python test_news.py        # news aggregation (22)
+python test_security.py    # auth, isolation, throttles, headers (28 checks)
+python -m pytest -q tests  # indicators, storage (Turso protocol), provenance, breadth, screener, SEC parser,
+                           # ledger + API, performance, risk, Strategy Lab (incl. no-look-ahead), comparison,
+                           # public pages and account deletion (78)
 ```
 
-Every upstream the app uses is blocked from the sandbox this was built in, so
-the suites stub them and exercise the logic instead. The browser tests stub the
-charting library and assert on what the chart asks to draw.
+Calculations are checked against numbers worked out by hand (RSI 70.4641, FIFO gains, time-weighted returns
+that ignore deposits, beta 2.0 for a doubled series, gap fills at the open, and more).
 
----
+## Run locally
 
-## Layout
+```
+pip install -r requirements.txt
+python devserver.py        # the real app with synthetic market data, http://127.0.0.1:5055
+python app.py              # the real app against live sources
+```
 
-| File | Role |
-|---|---|
-| `engine.py` | Indicators, regime, setups, stop management, portfolio risk, backtest |
-| `market.py` | Index constituents with sector and market cap; CNN Fear & Greed |
-| `news.py` | RSS sources, resilient fetch, parsing, merge |
-| `app.py` | Flask: auth, portfolio, watchlist, alerts, market data, engine routes |
-| `templates/index.html` | The entire interface |
-| `devserver.py` | Local run with stubbed upstreams, for the browser tests |
+Environment (production): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (accounts), `SEC_CONTACT` (an email the
+SEC requires in the User-Agent), optional `SECRET_KEY`. Nothing secret lives in the code.
 
-### Engine API
+## Known limitations
 
-- `GET /api/engine/analyze/<ticker>` — full technical picture
-- `POST /api/engine/plan` — the action plan. Signed in: read from the database. Guest: posted in the body
-- `GET /api/engine/backtest/<ticker>?years=3` — the rules replayed over history
-- `GET /api/chart/<ticker>?period=6mo` — candles plus moving averages, RSI and MACD
-- `GET /api/heatmap/<index>` — constituents with sector, cap and change
-- `GET /api/gaps?scope=sp100|mine&min=1` — opening gaps, largest first
-- `GET /api/feargreed` — CNN's index
-- `GET /api/news?scope=all|us|il|mine` — headlines
-- `GET /api/news/sources` — which feeds are alive from this deployment
-- `PATCH /api/portfolio/<id>` — stop, stop type, target, quantity
-- `GET|POST /api/settings` — risk policy
+See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: quotes are delayed; valuation multiples (P/E,
+yield) are unavailable while Yahoo refuses the batch quote endpoint to the host; Tel Aviv listings have no SEC
+filings; performance is measured one currency at a time; backtests are long-only with full allocation.
 
----
+## Documents
 
-## Design
-
-A dark terminal: layered surfaces and 1px borders instead of blur, tabular
-figures so number columns align, and colour reserved for facts about money.
-Nothing depends on colour alone — severities carry a word, price moves carry an
-arrow — and every text-on-surface pair meets WCAG AA.
-
----
-
-> This is an analysis and trading-discipline tool, not investment advice.
-> Prices come from Yahoo Finance and news from RSS feeds; both can lag.
+- [docs/AUDIT.md](docs/AUDIT.md): the audit the transformation started from
+- [docs/PLAN.md](docs/PLAN.md): the phased plan and what is done
+- [docs/RISK_ENGINE.md](docs/RISK_ENGINE.md): the command centre's rules in detail
+- [docs/LIMITATIONS.md](docs/LIMITATIONS.md): what it does not do, and why
+- [docs/CV.md](docs/CV.md): project descriptions for a CV and LinkedIn

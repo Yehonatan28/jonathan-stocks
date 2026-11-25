@@ -54,4 +54,4 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Metadata: favicon (SVG + PNG), app icons, social preview image (1200x630), Open Graph and Twitter tags, canonical URLs, robots rules (API not indexed), dark manifest
 - [ ] Performance (bundle, caching, chart rendering), accessibility (WCAG 2.2 AA targets), structured logging
 - [ ] Full test pass (financial, security, responsive, failure states), production deploy, rollback procedure
-- [ ] Final reports: features, data documentation, testing, known limitations, CV/LinkedIn description
+- [x] Final reports: README (features, architecture, security, tests, run), docs/LIMITATIONS.md, docs/CV.md (CV, LinkedIn, Hebrew); methodology page for data documentation
