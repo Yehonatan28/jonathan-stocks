@@ -103,7 +103,7 @@
   // headers (see provenance.py). Each screen lists the datasets it loaded while it was open.
   const PROV = {};          // dataset id -> {source, status, at}
   // which datasets each screen shows; a dataset appears once this browser has loaded it
-  const VIEW_DATA = { home: ['quotes', 'feargreed', 'chart'], heatmap: ['heatmap', 'treemap'],
+  const VIEW_DATA = { home: ['quotes', 'feargreed', 'breadth', 'sectors', 'snapshot'], heatmap: ['heatmap', 'treemap'],
     compare: ['stock', 'quotes', 'chart', 'profile'], portfolio: ['quotes'], watchlist: ['quotes'],
     command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'] };
   let curView = 'home';
@@ -111,7 +111,8 @@
   const RANK = { unavailable: 0, delayed: 1, eod: 2, live: 3 };
   const NAMES = { quotes: 'Quotes', heatmap: 'Heatmap', treemap: 'Sector map', gaps: 'Gap scan', chart: 'Price history',
     stock: 'Trend analysis', engine: 'Risk engine', feargreed: 'Fear & Greed', earnings: 'Earnings',
-    analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search' };
+    analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search',
+    breadth: 'Market breadth', sectors: 'Sector performance', snapshot: 'Rates, FX, commodities', scan: 'Stock scanner' };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const hhmm = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   function age(d) {

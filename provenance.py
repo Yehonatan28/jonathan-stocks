@@ -29,6 +29,10 @@ DATASETS = [
     ('/api/earnings', 'earnings', 'Earnings', 'Yahoo Finance', 'eod'),
     ('/api/analyst', 'analyst', 'Analyst estimates', 'Yahoo Finance', 'eod'),
     ('/api/profile', 'profile', 'Company profile', 'Yahoo Finance', 'eod'),
+    ('/api/market/breadth', 'breadth', 'Market breadth', 'Yahoo Finance quotes', 'delayed'),
+    ('/api/market/sectors', 'sectors', 'Sector performance', 'Yahoo Finance daily bars (SPDR sector funds)', 'eod'),
+    ('/api/market/snapshot', 'snapshot', 'Cross-asset snapshot', 'Yahoo Finance', 'delayed'),
+    ('/api/scan', 'scan', 'Stock scanner', 'Yahoo Finance quotes', 'delayed'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]

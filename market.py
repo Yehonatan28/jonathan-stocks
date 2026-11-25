@@ -694,6 +694,22 @@ def _quotes_v7(tickers):
                     'pre_chg': _r('preMarketChangePercent'),
                     'post_price': _r('postMarketPrice'),
                     'post_chg': _r('postMarketChangePercent'),
+                    # trend and valuation fields, for breadth and the scanner; any may be absent
+                    'dma50': _r('fiftyDayAverage'),
+                    'dma200': _r('twoHundredDayAverage'),
+                    'hi52': _r('fiftyTwoWeekHigh'),
+                    'lo52': _r('fiftyTwoWeekLow'),
+                    'pe': _r('trailingPE'),
+                    'fpe': _r('forwardPE'),
+                    'eps': _r('epsTrailingTwelveMonths'),
+                    'pb': _r('priceToBook'),
+                    # trailing yield is a fraction in this feed; stored as a percentage
+                    'div_yield': (round(float(q['trailingAnnualDividendYield']) * 100, 2)
+                                  if q.get('trailingAnnualDividendYield') is not None else None),
+                    'avg_vol': q.get('averageDailyVolume3Month'),
+                    'currency': q.get('currency'),
+                    'exchange_tz': q.get('exchangeTimezoneShortName'),
+                    'market_time': q.get('regularMarketTime'),
                 }
         except Exception:
             continue

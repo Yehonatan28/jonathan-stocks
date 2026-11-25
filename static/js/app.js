@@ -177,11 +177,7 @@ async function loadTapeAndBento(){
    $('spyChg').textContent=(spy.chg>=0?'▲ +':'▼ ')+fmt(Math.abs(spy.chg))+'% today';
    $('spyChg').className='b-sub '+(spy.chg>=0?'up':'dn');
    sparkline($('spySpark'),spy.spark||[],spy.chg>=0?'rgb(38,208,124)':'rgb(255,77,106)')}
-  const ups=items.filter(q=>q.chg>0).length,breadth=items.length?ups/items.length:0.5;
-  $('pulseTxt').textContent=breadth>0.66?'Risk on':breadth>0.4?'Mixed':'Risk off';
-  $('pulseTxt').className='b-big '+(breadth>0.66?'up':breadth>0.4?'':'dn');
-  $('pulseSub').textContent=`${ups} of ${items.length} advancing · ${Math.round(breadth*100)}% breadth`;
-  sparkline($('breadthSpark'),items.map(q=>q.chg||0),breadth>=0.5?'rgb(38,208,124)':'rgb(255,77,106)');
+  /* breadth: see market.js (all S&P 500 members, not the tape) */
   checkAlerts(items)}
  catch(e){}}
 /* ===================== heatmap ===================== */

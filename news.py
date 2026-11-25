@@ -38,8 +38,8 @@ GLOBAL_FEEDS = [
     ('marketwatch', 'MarketWatch', 'https://feeds.content.dowjones.io/public/rss/mw_topstories', 'en', 'us'),
     ('investing', 'Investing.com', 'https://www.investing.com/rss/news_25.rss', 'en', 'us'),
     # Yahoo's market-wide RSS (finance.yahoo.com/news/rssindex) answers 404 since 2026; its
-    # per-symbol headline feed below still works.
-    ('marketwatch-pulse', 'MarketWatch', 'https://feeds.content.dowjones.io/public/rss/mw_marketpulse', 'en', 'us'),
+    # per-symbol headline feed below still works. MarketWatch's "market pulse" feed still answers
+    # but stopped updating in July 2025, so it is not used.
     ('nasdaq-markets', 'Nasdaq', 'https://www.nasdaq.com/feed/rssoutbound?category=Markets', 'en', 'us'),
     ('sa-currents', 'Seeking Alpha', 'https://seekingalpha.com/market_currents.xml', 'en', 'us'),
     ('ft-markets', 'Financial Times', 'https://www.ft.com/markets?format=rss', 'en', 'us'),
@@ -50,13 +50,13 @@ GLOBAL_FEEDS = [
 ISRAEL_FEEDS = [
     # Checked from a US data centre (where production runs) on 2026-11-25. Globes needs the
     # /FeederNode path; without it the service answers with its WSDL page, not a feed.
-    # Calcalist refuses automated clients (403) and Bizportal has no RSS any more, so both are out.
+    # Calcalist refuses automated clients (403), Bizportal has no RSS any more, and ice's feed does
+    # not parse from production, so all three are out.
     ('globes-capital', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2', 'he', 'il'),
     ('globes-main', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=1725', 'he', 'il'),
     ('themarker', 'TheMarker', 'https://www.themarker.com/srv/tm-markets', 'he', 'il'),
     ('ynet-economy', 'Ynet', 'https://www.ynet.co.il/Integration/StoryRss6.xml', 'he', 'il'),
     ('maariv-business', 'Maariv', 'https://www.maariv.co.il/Rss/RssFeedsKalkalaBeArez', 'he', 'il'),
-    ('ice', 'ice', 'https://www.ice.co.il/rss', 'he', 'il'),
 ]
 
 ALL_FEEDS = GLOBAL_FEEDS + ISRAEL_FEEDS

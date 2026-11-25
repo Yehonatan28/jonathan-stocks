@@ -15,6 +15,7 @@ import news as newsfeed
 import market
 import storage
 import provenance
+import marketintel
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -845,6 +846,87 @@ def feargreed():
     return jsonify(market.fear_greed())
 
 
+def index_quotes(index):
+    """Batch quotes for every member of an index, shared by the heatmap, breadth and the
+    scanner so one page load does not fetch the same 500 quotes three times."""
+    key = 'iq:' + index.lower()
+    hit = cache_get(key)
+    if hit is not None:
+        return hit
+    rows = market.constituents(index)
+    quotes = market.batch_quotes([r['ticker'] for r in rows], per_ticker_fallback=quick_quote)
+    if quotes:
+        cache_set(key, quotes, 120)
+    return quotes
+
+
+def index_rows(index):
+    """Members merged with their quotes; a member without a price is left out."""
+    quotes = index_quotes(index)
+    out = []
+    for r in market.constituents(index):
+        q = quotes.get(r['ticker'])
+        if not q or q.get('price') is None:
+            continue
+        out.append({**r, **{k: v for k, v in q.items() if v is not None}, 'cap': q.get('cap') or r['cap']})
+    return out
+
+
+@app.route('/api/market/breadth')
+def market_breadth():
+    index = request.args.get('index', 'sp500').lower()
+    if index not in ('sp500', 'ndx', 'nasdaq100'):
+        return jsonify({'error': 'Unknown index'}), 400
+    key = 'br:' + index
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    rows = index_rows(index)
+    if not rows:
+        return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503
+    out = {'ok': True, 'index': index, **marketintel.breadth(rows)}
+    cache_set(key, out, 120)
+    return jsonify(out)
+
+
+@app.route('/api/market/sectors')
+def market_sectors():
+    hit = cache_get('sectors')
+    if hit:
+        return jsonify(hit)
+    syms = [s for _n, s in marketintel.SECTOR_ETFS] + [marketintel.BENCHMARK]
+
+    def pull(sym):
+        try:
+            return sym, marketintel.to_points(yf_chart(sym, '1d', '2y'))
+        except Exception:                # noqa: BLE001
+            return sym, []
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        series = dict(ex.map(pull, syms))
+    if not series.get(marketintel.BENCHMARK):
+        return jsonify({'ok': False, 'error': 'Benchmark history unavailable'}), 503
+    out = {'ok': True, **marketintel.sector_table(series),
+           'method': 'Sector = its SPDR fund. 1D/1W/1M/3M count 1/5/21/63 trading sessions back; '
+                     'YTD from the last close of the previous year. "vs S&P 500" is the difference in '
+                     'percentage points against SPY over the same period.'}
+    cache_set('sectors', out, 1800)
+    return jsonify(out)
+
+
+@app.route('/api/market/snapshot')
+def market_snapshot():
+    hit = cache_get('snapshot')
+    if hit:
+        return jsonify(hit)
+    quotes = market.batch_quotes([s for _g, s, _l, _k in marketintel.SNAPSHOT])
+    rows = marketintel.snapshot(quotes)
+    if not any(r['price'] is not None for r in rows):
+        return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503
+    out = {'ok': True, 'instruments': rows}
+    cache_set('snapshot', out, 60)
+    return jsonify(out)
+
+
 @app.route('/api/heatmap/<index>')
 def heatmap(index):
     """Constituents with sector, market cap and live change, for the treemap.
@@ -857,8 +939,7 @@ def heatmap(index):
     if hit:
         return jsonify(hit)
     rows = market.constituents(index)
-    quotes = market.batch_quotes([r['ticker'] for r in rows],
-                                 per_ticker_fallback=quick_quote)
+    quotes = index_quotes(index)
     out = []
     for r in rows:
         q = quotes.get(r['ticker'])

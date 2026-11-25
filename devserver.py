@@ -150,7 +150,16 @@ def _fake_batch(tickers, per_ticker_fallback=None):
                   'pre_price': round(px * (1 + r.gauss(0, .009)), 2) if has_ext and pre else None,
                   'pre_chg': round(r.gauss(0, .9), 2) if has_ext and pre else None,
                   'post_price': round(px * (1 + r.gauss(0, .009)), 2) if has_ext and not pre else None,
-                  'post_chg': round(r.gauss(0, .9), 2) if has_ext and not pre else None}
+                  'post_chg': round(r.gauss(0, .9), 2) if has_ext and not pre else None,
+                  'prev_close': round(px / (1 + r.gauss(0.2, 2.4) / 100), 2),
+                  'dma50': round(px * r.uniform(0.9, 1.08), 2), 'dma200': round(px * r.uniform(0.82, 1.1), 2),
+                  'hi52': round(px * r.uniform(1.0, 1.4), 2), 'lo52': round(px * r.uniform(0.55, 0.98), 2),
+                  'pe': round(r.uniform(8, 60), 1) if r.random() > .1 else None,
+                  'fpe': round(r.uniform(7, 45), 1) if r.random() > .15 else None,
+                  'pb': round(r.uniform(0.8, 18), 2), 'eps': round(px / r.uniform(10, 40), 2),
+                  'div_yield': round(r.uniform(0, 4.5), 2) if r.random() > .3 else None,
+                  'volume': int(r.uniform(1e6, 4e7)), 'avg_vol': int(r.uniform(1e6, 3e7)),
+                  'cap': round(r.uniform(15, 3000), 1), 'market_time': int(engine.time.time()) - 900}
     return out
 
 

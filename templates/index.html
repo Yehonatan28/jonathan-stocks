@@ -76,15 +76,35 @@
  <div class="bento">
   <div class="glass"><div class="b-label">S&amp;P 500 · SPY</div><div class="b-big" id="spyPrice">—</div><div class="b-sub" id="spyChg">—</div><canvas class="spark" id="spySpark" height="52"></canvas></div>
   <div class="glass"><div class="b-label">Fear &amp; Greed Index</div><div class="fg-wrap" id="fgWrap"><div class="spinner"></div></div></div>
-  <div class="glass"><div class="b-label"><span class="live"></span>Market breadth</div><div class="b-big" id="pulseTxt" style="font-size:23px">—</div><div class="b-sub" id="pulseSub">Scanning…</div><canvas class="spark" id="breadthSpark" height="52"></canvas></div>
+  <div class="glass"><div class="b-label">Market breadth · S&amp;P 500</div><div class="b-big" id="pulseTxt" style="font-size:23px">—</div><div class="b-sub" id="pulseSub">Loading…</div><div class="ad-bar" id="adBar" aria-hidden="true"></div></div>
  </div>
+ <div class="mi-block">
+  <div class="sec">Breadth <span class="tag">S&amp;P 500</span><span class="mi-note" id="brNote"></span></div>
+  <div class="mi-tiles" id="brTiles"><div class="spinner"></div></div>
+ </div>
+ <div class="mi-two">
+  <div class="mi-block">
+   <div class="sec">Sectors vs the S&amp;P 500 <span class="tag">SPDR FUNDS</span></div>
+   <div class="seg" id="secPeriods" role="tablist" aria-label="Period"></div>
+   <div class="mi-card" id="secTable"><div class="spinner"></div></div>
+   <div class="mi-foot" id="secFoot"></div>
+  </div>
+  <div class="mi-block">
+   <div class="sec">Beyond equities <span class="tag">RATES · FX · COMMODITIES</span></div>
+   <div class="mi-card" id="snapTable"><div class="spinner"></div></div>
+  </div>
+ </div>
+ <div class="mi-two">
+  <div class="mi-block"><div class="sec">Leaders today <span class="tag">S&amp;P 500</span></div><div class="mi-card" id="leaders"></div></div>
+  <div class="mi-block"><div class="sec">Laggards today <span class="tag">S&amp;P 500</span></div><div class="mi-card" id="laggards"></div></div>
+ </div>
+ <div class="sec">Watch board <span class="tag">TREND STATE</span><span class="mi-note">a fixed list per region, analysed on daily bars</span></div>
  <div class="tiles">
   <div class="glass tile"><div class="t-lab">Average RSI</div><div class="t-val" id="stAvgRsi">—</div><div class="t-sub">across scanned names</div></div>
   <div class="glass tile"><div class="t-lab">In an uptrend</div><div class="t-val up" id="stBuy">—</div><div class="t-sub">trend state</div></div>
   <div class="glass tile"><div class="t-lab">In a downtrend</div><div class="t-val dn" id="stSell">—</div><div class="t-sub">trend state</div></div>
   <div class="glass tile"><div class="t-lab">Scanned</div><div class="t-val" id="stCount">—</div><div class="t-sub">stocks</div></div>
  </div>
- <div class="sec">Stock scanner <span class="tag">LIVE SCORE</span></div>
  <div class="filters">
   <button class="btn btn-gold btn-sm" onclick="loadPreset('us',this)">🇺🇸 US</button>
   <button class="btn btn-ghost btn-sm" onclick="loadPreset('il',this)">🇮🇱 Israel</button>
@@ -336,6 +356,7 @@
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 </div>
 <script src="/static/js/app.js"></script>
+<script src="/static/js/market.js"></script>
 <script src="/static/js/shell.js"></script>
 </body>
 </html>

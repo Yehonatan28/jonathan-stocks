@@ -197,3 +197,55 @@ input, select, textarea { font-family: var(--ui); }
   .prov { padding: 0 8px; } .prov b { display: none; }
   .prov-pop { position: fixed; top: 56px; left: 14px; right: 14px; width: auto; }
 }
+
+/* ---- Market Intelligence (Market Overview) */
+.ad-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 14px; background: var(--s3); }
+.ad-bar i { display: block; } .ad-bar .a { background: var(--up); } .ad-bar .d { background: var(--dn); } .ad-bar .u { background: var(--tx3); }
+.mi-block { margin-bottom: 22px; min-width: 0; }
+.mi-note { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--tx3); }
+.mi-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.mi-tile { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+.mi-tile .t-val { font: 600 24px var(--mono); margin: 6px 0 4px; }
+.mi-tile .sl { color: var(--tx3); font-weight: 400; }
+.mi-tile .t-sub b { font-weight: 600; }
+.meter { height: 4px; border-radius: 2px; background: var(--s3); margin: 8px 0 6px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.mi-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.mi-card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.mi-foot { margin-top: 8px; font-size: 11.5px; line-height: 1.5; color: var(--tx3); }
+.mi-empty { padding: 18px; color: var(--tx3); font-size: 13px; }
+.mi-t { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mi-t th, .mi-t td { padding: 8px 12px; border-top: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.mi-t thead th { border-top: 0; font: 600 10.5px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--tx3); }
+.mi-t tbody tr:first-child td, .mi-t tbody tr:first-child th { border-top: 0; }
+.mi-t thead + tbody tr:first-child td { border-top: 1px solid var(--line); }
+.mi-t .n { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.mi-t .nm small { display: block; font-size: 11px; color: var(--tx3); margin-top: 1px; }
+.mi-t .sym { font: 600 13px var(--mono); width: 64px; }
+.mi-t .muted { color: var(--tx3); font-family: var(--ui); }
+.mi-t tr.grp th { background: var(--s2); font: 600 10.5px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--tx3); padding: 6px 12px; }
+.mi-t tr[data-t] { cursor: pointer; } .mi-t tr[data-t]:hover, .mi-t tr[data-t]:focus { background: var(--s2); outline: none; }
+.mi-t tfoot td { background: var(--s2); }
+.mi-t .bar-h { width: 46%; }
+.mi-t .bar-c { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.mi-t .bar-c span { min-width: 70px; text-align: right; }
+.rel { position: relative; flex: 1; height: 8px; background: var(--s3); border-radius: 2px; }
+.rel::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line2); }
+.rel i { position: absolute; top: 0; bottom: 0; border-radius: 2px; }
+.rel i.pos { background: var(--up); } .rel i.neg { background: var(--dn); }
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--s2); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 10px; }
+.seg button { background: none; border: 0; color: var(--tx2); font: 600 12px var(--mono); padding: 5px 11px; border-radius: 4px; cursor: pointer; }
+.seg button.on { background: var(--s3); color: var(--tx); }
+@media (max-width: 1100px) { .mi-two { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+  .mi-note { display: none; }
+  .mi-tiles { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mi-tiles .mi-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .mi-tile { padding: 11px 12px; }
+  .mi-tile .t-lab { font-size: 11.5px; }
+  .mi-tile .t-val { font-size: 19px; }
+  .mi-tile .t-sub { font-size: 11px; }
+  .mi-t th, .mi-t td { padding: 8px 10px; }
+  .mi-t .bar-h { width: auto; }
+  .rel { display: none; }
+}
