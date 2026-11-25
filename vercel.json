@@ -13,7 +13,8 @@
           "engine.py",
           "market.py",
           "news.py",
-          "storage.py"
+          "storage.py",
+          "provenance.py"
         ]
       }
     }

@@ -21,6 +21,7 @@ const fmtCap=n=>{if(n==null)return'—';const a=Math.abs(n);
 const sign=(v,d=2)=>v==null?'—':(v>=0?'+':'')+fmt(v,d);
 const cls=v=>v==null?'':v>=0?'up':'dn';
 const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
+ if(window.noteProv)window.noteProv(r);
  let j={};try{j=await r.json()}catch(e){j={error:'The server returned an unexpected response.'}}
  if(!r.ok){if(r.status===404&&!j.error)j.error='Endpoint not found on the server.';throw j}return j};
 function toast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;

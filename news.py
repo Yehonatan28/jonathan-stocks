@@ -17,6 +17,7 @@ without a network.
 import html
 import re
 import time
+import provenance
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -307,6 +308,7 @@ def fetch_feed(feed, timeout=9):
     key, source, url, lang, scope = feed
     hit = _CACHE.get(key)
     if hit and hit[0] > time.time():
+        provenance.note(hit[0] - FEED_TTL)
         return hit[1], None
     try:
         r = requests.get(url, headers=HEADERS, timeout=timeout)

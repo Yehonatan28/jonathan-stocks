@@ -11,6 +11,7 @@ Three things the per-ticker technical engine does not provide:
 
 import json
 import time
+import provenance
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -27,6 +28,7 @@ _CACHE = {}
 def _cached(key, ttl, build):
     hit = _CACHE.get(key)
     if hit and hit[0] > time.time():
+        provenance.note(hit[0] - ttl)
         return hit[1]
     value = build()
     _CACHE[key] = (time.time() + ttl, value)

@@ -14,6 +14,7 @@ import engine
 import news as newsfeed
 import market
 import storage
+import provenance
 
 app = Flask(__name__)
 # Session cookies are signed with this key. The fallback is random per process
@@ -88,6 +89,9 @@ def _security_headers(resp):
         resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
     if request.path.startswith('/api/'):
         resp.headers.setdefault('Cache-Control', 'no-store')
+        if resp.is_json:
+            for k, v in provenance.headers(request.path, resp.status_code, resp.get_json(silent=True)).items():
+                resp.headers[k] = v
     return resp
 
 
@@ -124,12 +128,13 @@ _CACHE = {}
 def cache_get(key):
     v = _CACHE.get(key)
     if v and v[0] > time.time():
+        provenance.note(v[2])
         return v[1]
     return None
 
 
 def cache_set(key, data, ttl=300):
-    _CACHE[key] = (time.time() + ttl, data)
+    _CACHE[key] = (time.time() + ttl, data, time.time())
 
 
 def db():
@@ -313,6 +318,14 @@ def health():
     return jsonify({'storage': storage.backend(), 'storage_ok': ok, 'error': err,
                     'session_key': SESSION_KEY_SOURCE,
                     'host': 'vercel' if os.environ.get('VERCEL') else 'render' if os.environ.get('RENDER') else 'local'})
+
+
+@app.route('/api/sources')
+def sources():
+    """Every dataset the site shows: who publishes it and how fresh it is."""
+    return jsonify({'datasets': provenance.catalogue(),
+                    'note': 'No dataset here is a real-time exchange feed. Retrieval times are per answer, '
+                            'in the X-Data-Retrieved header.'})
 
 
 @app.route('/api/auth/register', methods=['POST'])

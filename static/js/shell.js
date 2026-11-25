@@ -77,6 +77,7 @@
     const c = $('crumbs');
     if (c && hit) c.innerHTML = `<span>${hit.ws.name}</span><i>/</i><b>${hit.mod.name}</b>`;
     if (hit) document.title = `${hit.mod.name} · Jonathan Stocks`;
+    if (hit) { curView = v; renderProv(); }
   }
 
   // The existing modules switch with go(view). Route every switch through the address bar, and
@@ -98,7 +99,67 @@
   window.addEventListener('hashchange', route);
   window.addEventListener('popstate', route);
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  // ---- data provenance: every data answer carries its source, status and retrieval time in
+  // headers (see provenance.py). Each screen lists the datasets it loaded while it was open.
+  const PROV = {};          // dataset id -> {source, status, at}
+  // which datasets each screen shows; a dataset appears once this browser has loaded it
+  const VIEW_DATA = { home: ['quotes', 'feargreed', 'chart'], heatmap: ['heatmap', 'treemap'],
+    compare: ['stock', 'quotes', 'chart', 'profile'], portfolio: ['quotes'], watchlist: ['quotes'],
+    command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'] };
+  let curView = 'home';
+  const STATUS = { delayed: 'Delayed', eod: 'End of day', unavailable: 'Unavailable', live: 'Live' };
+  const RANK = { unavailable: 0, delayed: 1, eod: 2, live: 3 };
+  const NAMES = { quotes: 'Quotes', heatmap: 'Heatmap', treemap: 'Sector map', gaps: 'Gap scan', chart: 'Price history',
+    stock: 'Trend analysis', engine: 'Risk engine', feargreed: 'Fear & Greed', earnings: 'Earnings',
+    analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search' };
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hhmm = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  function age(d) {
+    const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.round(s / 60) + ' min ago';
+    if (s < 86400) return Math.round(s / 3600) + ' h ago';
+    return Math.round(s / 86400) + ' d ago';
+  }
+  window.noteProv = function (r) {
+    const id = r.headers.get('X-Data-Set');
+    if (!id || id === 'search') return;
+    const at = new Date(r.headers.get('X-Data-Retrieved') || Date.now());
+    PROV[id] = { source: r.headers.get('X-Data-Source') || '', status: r.headers.get('X-Data-Status') || 'delayed', at };
+    renderProv();
+  };
+  function renderProv() {
+    const btn = $('prov'), pop = $('provPop');
+    if (!btn) return;
+    const ids = (VIEW_DATA[curView] || []).filter((id) => PROV[id]);
+    if (!ids.length) { btn.hidden = true; pop.classList.remove('open'); return; }
+    const rows = ids.map((id) => ({ id, ...PROV[id] })).sort((a, b) => RANK[a.status] - RANK[b.status]);
+    const worst = rows[0].status;
+    const oldest = rows.reduce((m, r) => (r.at < m ? r.at : m), rows[0].at);
+    const sources = Array.from(new Set(rows.map((r) => r.source.replace(/ (quotes|daily bars)$/, ''))));
+    btn.hidden = false;
+    btn.className = 'prov st-' + worst;
+    btn.innerHTML = `<i></i><b>${STATUS[worst] || worst}</b><span>${hhmm(oldest)}</span>`;
+    btn.title = `${STATUS[worst] || worst} · ${sources.join(', ')} · click for details`;
+    btn.setAttribute('aria-label', `Data status: ${STATUS[worst] || worst}, from ${sources.join(', ')}. Show details`);
+    pop.innerHTML = '<h5>Data on this screen</h5>' + rows.map((r) =>
+      `<div class="pr"><i class="st-${r.status}"></i><div><b>${NAMES[r.id] || esc(r.id)}</b><small>${esc(r.source)}</small></div>` +
+      `<div class="pr-r"><span>${STATUS[r.status] || esc(r.status)}</span><small>retrieved ${hhmm(r.at)} · ${age(r.at)}</small></div></div>`).join('') +
+      '<p>Nothing on this site is a real-time exchange feed. Delayed quotes may lag by 15 minutes or more; ' +
+      'end-of-day figures are computed from daily closing bars. Information only, not investment advice.</p>';
+  }
+  function toggleProv(open) {
+    const pop = $('provPop'), btn = $('prov');
+    const on = open === undefined ? !pop.classList.contains('open') : open;
+    pop.classList.toggle('open', on);
+    btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    if (on) renderProv();
+  }
+  if ($('prov')) $('prov').addEventListener('click', (e) => { e.stopPropagation(); toggleProv(); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.prov-wrap')) toggleProv(false); });
+  setInterval(() => { if ($('provPop') && $('provPop').classList.contains('open')) renderProv(); }, 30000);
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSheet(); toggleProv(false); } });
   document.addEventListener('click', (e) => {
     const sh = $('sheet');
     if (sh && sh.classList.contains('open') && !sh.contains(e.target) && !e.target.closest('.tabbar')) closeSheet();
