@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>{{ rep.ticker }} report · Jonathan Stocks</title>
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{ asset('css/report.css') }}">
+</head>
+<body>
+<div class="bar no-print"><a href="/#/research?t={{ rep.ticker }}">← Back to Company Research</a>
+  <button type="button" id="printBtn">Save as PDF</button></div>
+<main class="page">
+<header>
+  <div class="brand"><span class="mark">JS</span> Jonathan Stocks · Company report</div>
+  <h1>{{ rep.name }} <span class="tk">{{ rep.ticker }}</span></h1>
+  <p class="meta">SEC CIK {{ rep.cik }} · generated {{ generated }} UTC · figures in US dollars as reported</p>
+</header>
+<section class="kpis">
+  <div><span>Price (delayed)</span><b>{{ '%.2f'|format(price) if price else '—' }}</b><small>{% if chg is not none %}{{ '%+.2f'|format(chg) }}% on the day{% endif %}</small></div>
+  <div><span>P/E on FY{{ labels[-1][2:] if labels else '' }} EPS</span><b>{{ '%.1f×'|format(pe) if pe else '—' }}</b><small>price / last annual diluted EPS</small></div>
+  <div><span>52-week range</span><b>{{ '%.2f'|format(lo52) if lo52 else '—' }} – {{ '%.2f'|format(hi52) if hi52 else '—' }}</b><small>daily highs and lows</small></div>
+  <div><span>vs 50 / 200-day</span><b>{% if price and dma50 %}{{ '%+.1f'|format((price / dma50 - 1) * 100) }}%{% else %}—{% endif %} / {% if price and dma200 %}{{ '%+.1f'|format((price / dma200 - 1) * 100) }}%{% else %}—{% endif %}</b><small>distance from the averages</small></div>
+</section>
+<section>
+  <h2>From the filings</h2>
+  {% if rep.summary %}<ul class="summary">{% for s in rep.summary %}<li>{{ s }}</li>{% endfor %}</ul>{% else %}<p>Not enough reported figures for a summary.</p>{% endif %}
+</section>
+<section class="charts">
+  <figure><figcaption>Revenue, net income and free cash flow</figcaption>{{ chart_money|safe }}
+    <div class="legend"><i style="background:#3b6fd8"></i>Revenue <i style="background:#1f9d63"></i>Net income <i style="background:#7a68c8"></i>Free cash flow</div></figure>
+  <figure><figcaption>Margins</figcaption>{{ chart_margins|safe }}
+    <div class="legend"><i style="background:#3b6fd8"></i>Gross <i style="background:#1f9d63"></i>Operating <i style="background:#c08a1e"></i>Net</div></figure>
+</section>
+{% macro table(title, rows, note='') %}
+<section><h2>{{ title }}</h2><table><thead><tr><th>{{ note }}</th>{% for l in labels %}<th>{{ l }}</th>{% endfor %}</tr></thead>
+<tbody>{% for lab, vals in rows %}<tr><td>{{ lab }}</td>{% for v in vals %}<td>{{ v }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></section>
+{% endmacro %}
+{{ table('Key ratios', ratios, 'Computed from filings') }}
+{{ table('Income statement', income) }}
+{{ table('Balance sheet', balance, 'At fiscal year end') }}
+{{ table('Cash flow', cash) }}
+<section class="src">
+  <h2>Sources and method</h2>
+  <p>{{ rep.source }}: {{ rep.source_url }}. Price data: Yahoo Finance daily bars, delayed. Ratio formulas and the extraction method are
+  listed at jonathan-stocks.vercel.app/methodology. A figure missing from the filings is shown as a dash, never estimated.</p>
+  <p class="disc">Information only, not investment advice. Jonathan Stocks is not a broker or a licensed investment adviser. Past results do not predict future ones.</p>
+</section>
+</main>
+<script src="{{ asset('js/report.js') }}"></script>
+</body>
+</html>

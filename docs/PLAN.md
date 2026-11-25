@@ -45,7 +45,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 
 ## Phase 4 · Intelligence layer
 - [x] Research assistant (Gemini) grounded only in platform data: server-chosen context with source ids, citations, estimates kept apart, no recommendations, every number checked against the context and unverified ones marked, holdings only with per-question consent, 10 questions per 10 minutes (`assistant.py`)
-- [ ] Research report generator with PDF export
+- [x] Printable company report (`/report/<ticker>`): A4 layout, server-drawn SVG charts, ratios and statements, sources and disclaimer; saved as PDF from the browser's print dialog (`report.py`)
 - [x] News: per company feeds, deduplication, machine-labelled tone from finance word lists (English and Hebrew, negation aware) with the deciding words shown, tone filter and counts (`tone.py`)
 
 ## Phase 5 · Launch quality

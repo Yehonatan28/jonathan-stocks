@@ -110,7 +110,8 @@
     const pe = q && q.price && last.eps_diluted > 0 ? q.price / last.eps_diluted : null;
     body.innerHTML = `
       <div class="rs-head">
-        <div><h2>${e(d.name)}</h2><div class="rs-sub">${e(d.ticker)} · SEC CIK ${e(d.cik)} · fiscal year ends ${e((last.period_end || '').slice(5))}</div></div>
+        <div><h2>${e(d.name)}</h2><div class="rs-sub">${e(d.ticker)} · SEC CIK ${e(d.cik)} · fiscal year ends ${e((last.period_end || '').slice(5))}</div>
+          <a class="btn btn-ghost btn-sm rs-pdf" href="/report/${encodeURIComponent(d.ticker)}" target="_blank" rel="noopener">Printable report (PDF)</a></div>
         <div class="rs-kpis">
           <div><span>Price</span><b>${q ? q.price.toFixed(2) : '—'}</b><small class="${tone(q && q.chg)}">${q ? sgn(q.chg) : ''} · delayed</small></div>
           <div><span>P/E on FY${e(last.fiscal_year)} EPS</span><b>${pe ? pe.toFixed(1) + '×' : '—'}</b><small>price / last annual diluted EPS</small></div>

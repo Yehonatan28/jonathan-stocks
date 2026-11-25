@@ -466,3 +466,4 @@ input, select, textarea { font-family: var(--ui); }
 .tone { font: 600 10.5px var(--ui); padding: 1px 6px; border-radius: 3px; margin-right: 6px; white-space: nowrap; }
 .tone.t-positive { color: var(--up); background: rgba(47,182,124,.12); } .tone.t-negative { color: var(--dn); background: rgba(229,86,108,.12); }
 .tone-sum { font-size: 12px; color: var(--tx3); align-self: center; }
+.rs-pdf { margin-top: 8px; display: inline-block; text-decoration: none; }

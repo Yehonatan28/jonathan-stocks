@@ -29,6 +29,7 @@ import alertrules
 import digest
 import assistant
 import tone
+import report as report_mod
 from quant import indicators as _qi
 
 import mimetypes
@@ -1951,9 +1952,28 @@ def methodology_page():
                 'Where every number on Jonathan Stocks comes from and how each one is computed.')
 
 
+@app.route('/report/<ticker>')
+def company_report(ticker):
+    """Printable company report (A4). The browser's print dialog saves it as a PDF."""
+    t = ticker.strip().upper()
+    if not t or len(t) > 12 or not all(c.isalnum() or c in '.-' for c in t):
+        return Response('Invalid symbol', status=400, mimetype='text/plain')
+    try:
+        rep = fundamentals.report(t)
+    except fundamentals.Unavailable as exc:
+        return Response(f'Company data is unavailable right now ({exc}).', status=503, mimetype='text/plain')
+    if not rep:
+        return Response(f'{t} has no SEC financial statements (funds, foreign issuers and Israeli-listed shares do not file 10-K reports).',
+                        status=404, mimetype='text/plain')
+    q = member_quote(t)
+    ctx = report_mod.context(rep, q if q.get('price') is not None else None,
+                             datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M'))
+    return render_template('report.html', **ctx)
+
+
 @app.route('/robots.txt')
 def robots():
-    return Response('User-agent: *\nAllow: /\nAllow: /about\nAllow: /methodology\nDisallow: /api/\n', mimetype='text/plain')
+    return Response('User-agent: *\nAllow: /\nAllow: /about\nAllow: /methodology\nDisallow: /api/\nDisallow: /report/\n', mimetype='text/plain')
 
 
 @app.route('/manifest.json')

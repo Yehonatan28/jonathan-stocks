@@ -28,7 +28,8 @@
           "alertrules.py",
           "digest.py",
           "assistant.py",
-          "tone.py"
+          "tone.py",
+          "report.py"
         ]
       }
     }
