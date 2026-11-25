@@ -425,3 +425,9 @@ input, select, textarea { font-family: var(--ui); }
 .cal-filters label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .cal-filters select { background: var(--bg); color: var(--tx); border: 1px solid var(--line); border-radius: 4px; font: 500 12px var(--ui); }
 .mi-t tr.mine td { background: rgba(214, 170, 79, .08); } .mi-t tr.mine td.sticky { box-shadow: inset 3px 0 0 var(--gold); }
+.alw .ph h1 { margin: 0 0 4px; font-size: 22px; } .alw .ph p { margin: 0 0 14px; color: var(--tx2); font-size: 13.5px; }
+.al-form { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr) auto; align-items: end; margin-bottom: 18px; }
+.al-form .lg-act { grid-column: auto; }
+.al-on { color: var(--gold); font-weight: 600; } .al-off { color: var(--tx3); }
+.alw .sec .btn { margin-left: 6px; }
+@media (max-width: 760px) { .al-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .al-form .lg-act { grid-column: 1 / -1; } }

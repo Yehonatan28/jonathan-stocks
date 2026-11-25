@@ -24,7 +24,8 @@
           "strategylab.py",
           "relative.py",
           "pages.py",
-          "calendars.py"
+          "calendars.py",
+          "alertrules.py"
         ]
       }
     }

@@ -25,6 +25,7 @@ import strategylab
 import relative
 import pages
 import calendars
+import alertrules
 from quant import indicators as _qi
 
 import mimetypes
@@ -813,7 +814,12 @@ def alerts():
         except (TypeError, ValueError):
             conn.close()
             return jsonify({'error': 'Invalid price'}), 400
-        if not ticker or cond not in ('above', 'below'):
+        try:
+            alertrules.parse(cond, price)
+        except alertrules.RuleError as exc:
+            conn.close()
+            return jsonify({'error': str(exc)}), 400
+        if not ticker or len(ticker) > 15:
             conn.close()
             return jsonify({'error': 'Invalid data'}), 400
         cur = conn.execute(
@@ -1553,6 +1559,93 @@ def calendar_view():
            'method': calendars.__doc__.split('Method (shown to the user as written here):')[1].strip()}
     cache_set(key, out, 6 * 3600)
     return jsonify(out)
+
+
+def _earnings_days(symbols, horizon):
+    """{symbol: trading days until its next report} within the horizon, from the calendar."""
+    out = {}
+    today = datetime.utcnow().date()
+    for i, day in enumerate(calendars.trading_days(today, min(15, horizon + 1))):
+        key = f'cal:earnings:{day.isoformat()}'
+        hit = cache_get(key)
+        if hit is None:
+            try:
+                hit = {'rows': calendars.fetch('earnings', day)}
+                cache_set(key, {'ok': True, 'kind': 'earnings', 'date': day.isoformat(), **hit,
+                                'method': calendars.__doc__.split('Method (shown to the user as written here):')[1].strip()}, 6 * 3600)
+            except calendars.Unavailable:
+                continue
+        for r in hit.get('rows', []):
+            if r['symbol'] in symbols and r['symbol'] not in out:
+                out[r['symbol']] = i
+    return out
+
+
+@app.route('/api/alerts/evaluate', methods=['POST'])
+def alerts_evaluate():
+    """Check alerts against current data. Signed in, alerts and stops come from the account;
+    a guest posts them."""
+    d = request.get_json(silent=True) or {}
+    uid = current_user()
+    if uid:
+        conn = db()
+        alerts_ = [dict(r) for r in conn.execute('SELECT * FROM alerts WHERE user_id=?', (uid,))]
+        positions = [dict(r) for r in conn.execute('SELECT ticker, stop FROM portfolio WHERE user_id=?', (uid,))]
+        conn.close()
+    else:
+        alerts_ = [a for a in (d.get('alerts') or [])[:60] if isinstance(a, dict)]
+        positions = _clean_positions(d.get('positions'))
+    stops = {}
+    for p in positions:
+        if p.get('stop'):
+            stops[p['ticker']] = max(stops.get(p['ticker'], 0), float(p['stop']))
+    valid = []
+    for a in alerts_:
+        try:
+            kind, param, v = alertrules.parse(a.get('condition'), a.get('price'))
+        except alertrules.RuleError:
+            continue
+        a['ticker'] = str(a.get('ticker') or '').upper()[:15]
+        if a['ticker']:
+            valid.append((a, kind, param, v))
+    tickers = sorted({a['ticker'] for a, *_ in valid})[:30]
+    periods = {}
+    for a, kind, param, _v in valid:
+        if param:
+            periods.setdefault(a['ticker'], set()).add(param)
+
+    def pull(t):
+        try:
+            df = yf_chart(t, '1d', '1y')
+        except Exception:                    # noqa: BLE001
+            return t, None
+        if df is None or len(df) < 2:
+            return t, None
+        c = df['Close']
+        q = market.bars_summary(df) or {}
+        info = {'price': q.get('price'), 'chg': q.get('chg'), 'closes': [float(c.iloc[-2]), float(c.iloc[-1])],
+                'rel_vol': round(q['volume'] / q['avg_vol'], 2) if q.get('volume') and q.get('avg_vol') else None, 'ma': {}}
+        if len(df) >= 15:
+            info['rsi'] = float(_qi.rsi(c, 14).iloc[-1])
+        for p in periods.get(t, ()):
+            if len(df) > p:
+                m = _qi.sma(c, p)
+                info['ma'][p] = [float(m.iloc[-2]), float(m.iloc[-1])]
+        return t, info
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        data = dict(ex.map(pull, tickers))
+    horizon = max([int(v) for a, k, p, v in valid if k == 'earnings_within'] or [0])
+    earn = _earnings_days(set(tickers), horizon) if horizon else {}
+    out = []
+    for a, kind, param, v in valid:
+        info = dict(data.get(a['ticker']) or {})
+        info['earnings_in_days'] = earn.get(a['ticker'])
+        info['stop'] = stops.get(a['ticker'])
+        r = alertrules.evaluate(a, info)
+        out.append({'id': a.get('id'), 'ticker': a['ticker'], 'condition': a['condition'], 'price': a['price'],
+                    'label': alertrules.KINDS[kind][0], **r})
+    return jsonify({'ok': True, 'results': out, 'checked_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'method': alertrules.__doc__.split('Method (shown to the user as written here):')[1].strip()})
 
 
 @app.route('/api/risk/size', methods=['POST'])

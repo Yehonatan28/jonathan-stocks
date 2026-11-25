@@ -41,7 +41,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [ ] ETF research (holdings, sectors, expense ratio where available)
 - [x] Correlation: matrix of daily returns, 60-day rolling correlation for any pair, drawdown comparison (in Compare & Correlate)
 - [x] Economic, earnings and dividend calendars from Nasdaq's public calendar (no key), ten trading days, holdings and watchlist marked, estimates labelled (`calendars.py`)
-- [ ] Alerts: price, %, RSI, MA cross, volume, earnings, stop proximity; history; server-side monitoring only if a scheduler is available, otherwise stated as "while open"
+- [x] Alerts: price, day change, RSI, MA cross, relative volume, earnings within N days, distance to stop; evaluated by the server on daily bars while the app is open (stated), history and optional browser notifications (`alertrules.py`)
 
 ## Phase 4 · Intelligence layer
 - [ ] AI research assistant grounded in platform data, with sources, periods, facts vs estimates, a number validator, explicit consent before any private portfolio data leaves the server (🔑)

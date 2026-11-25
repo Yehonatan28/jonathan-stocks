@@ -40,6 +40,7 @@ DATASETS = [
     ('/api/lab', 'lab', 'Strategy backtest', 'Yahoo Finance daily bars', 'eod'),
     ('/api/relative', 'relative', 'Comparison', 'Yahoo Finance daily closes', 'eod'),
     ('/api/calendar', 'calendar', 'Calendar', 'Nasdaq calendars', 'delayed'),
+    ('/api/alerts/evaluate', 'alerts', 'Alerts', 'Yahoo Finance daily bars, Nasdaq earnings calendar', 'delayed'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]

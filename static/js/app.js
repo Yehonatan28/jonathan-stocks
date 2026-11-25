@@ -897,7 +897,7 @@ function renderAlerts(){
    <span style="font-size:13px;color:var(--tx2);margin-left:8px">${a.condition==='above'?'rises above':'falls below'} $${fmt(a.price)}</span></div>
   <button class="iconbtn" onclick="delAlert(${a.id})" title="Remove">🗑</button></div>`).join('')}
 function checkAlerts(quotes){
- S.alerts.forEach(a=>{const q=quotes.find(x=>x.ticker===a.ticker);if(!q||q.price==null)return;
+ S.alerts.forEach(a=>{if(a.condition!=='above'&&a.condition!=='below')return;const q=quotes.find(x=>x.ticker===a.ticker);if(!q||q.price==null)return;
   const hit=a.condition==='above'?q.price>=a.price:q.price<=a.price;
   if(hit){const el=$('al-'+a.id);if(el)el.classList.add('hit');
    if(!a._notified){a._notified=true;toast(`🔔 ${a.ticker} crossed $${fmt(a.price)} — now $${fmt(q.price)}`,'ok')}}})}
