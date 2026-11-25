@@ -133,12 +133,12 @@
   <div class="sec" style="margin:0;flex:1">Market heatmap <span class="tag">BY SECTOR</span></div>
   <span class="cc-stamp" id="hmStamp"></span>
  </div>
- <div class="sub">Every block is a company. <b>Size is market capitalisation</b>, <b>colour is today's move</b>, and blocks are grouped into sectors — so one glance shows both what moved and how much of the index it actually represents. Small blocks show the company logo where a label would not fit; larger ones add the name and the percentage.</div>
+ <div class="sub">Every block is a company. <b>Size is market capitalisation</b>, <b>colour is today's move</b>, and blocks are grouped into sectors — so one glance shows both what moved and how much of the index it actually represents. Larger blocks add the change; hover or tap any block for its name and price. Darker colour means a smaller move, brighter a larger one; the scale sets where the brightest shade starts.</div>
  <div class="hm-bar">
   <button class="btn btn-gold btn-sm" data-idx="sp500" onclick="loadHeatmap('sp500',this)">S&amp;P 500</button>
   <button class="btn btn-ghost btn-sm" data-idx="ndx" onclick="loadHeatmap('ndx',this)">Nasdaq 100</button>
   <span style="flex:1"></span>
-  <select class="inp" id="hmScale" style="max-width:150px" onchange="renderHeatmap()">
+  <select class="inp" id="hmScale" aria-label="Colour scale" style="max-width:150px" onchange="renderHeatmap()">
    <option value="3">Scale ±3%</option><option value="5" selected>Scale ±5%</option><option value="8">Scale ±8%</option>
   </select>
  </div>
@@ -207,7 +207,7 @@
  <div class="filters" id="gapScopes">
   <button class="btn btn-gold btn-sm" data-scope="sp100" onclick="loadGaps('sp100',this)">S&amp;P 100 largest</button>
   <button class="btn btn-ghost btn-sm" data-scope="mine" onclick="loadGaps('mine',this)">★ My stocks</button>
-  <select class="inp" id="gapMin" style="max-width:150px" onchange="loadGaps(S.gapScope)">
+  <select class="inp" id="gapMin" aria-label="Smallest gap" style="max-width:150px" onchange="loadGaps(S.gapScope)">
    <option value="0.75">Over 0.75%</option><option value="1" selected>Over 1%</option>
    <option value="2">Over 2%</option><option value="3">Over 3%</option><option value="5">Over 5%</option>
   </select>
@@ -227,7 +227,7 @@
  <div class="sub">The engine replays <b>exactly the rules it gives you today</b> — the same entry signals, the same initial stop, the same move to breakeven and the same trailing stop — bar by bar over the stock's history. No lookahead: a signal detected at a close is entered at the next session's open.</div>
  <div class="bt-bar">
   <input class="inp" id="btTicker" placeholder="Symbol · AAPL" style="max-width:190px" onkeydown="if(event.key==='Enter')runBacktest()">
-  <select class="inp" id="btYears" style="max-width:160px">
+  <select class="inp" id="btYears" aria-label="Years to test" style="max-width:160px">
    <option value="2">Last 2 years</option><option value="3" selected>Last 3 years</option><option value="5">Last 5 years</option>
   </select>
   <button class="btn btn-gold" onclick="runBacktest()">Run backtest</button>
@@ -305,7 +305,7 @@
  <div class="sec">Price alerts <span class="tag">ALERTS</span></div>
  <div class="sub">Alerts fire while this page is open. For stops you actually want executed, place the order with your broker.</div>
  <div class="glass pf-card" style="max-width:660px;margin-bottom:18px">
-  <div class="form-grid"><input class="inp" id="alTicker" placeholder="Symbol"><select class="inp" id="alCond"><option value="above">Rises above</option><option value="below">Falls below</option></select><input class="inp" id="alPrice" type="number" placeholder="Target price" step="any"></div>
+  <div class="form-grid"><input class="inp" id="alTicker" placeholder="Symbol" aria-label="Symbol"><select class="inp" id="alCond"><option value="above">Rises above</option><option value="below">Falls below</option></select><input class="inp" id="alPrice" type="number" placeholder="Target price" step="any"></div>
   <button class="btn btn-gold" onclick="addAlert()">Create alert</button>
  </div>
  <div id="alList"></div>

@@ -15,7 +15,7 @@
   /* surfaces: each step is a layer, depth comes from value, never from glow */
   --bg: #0a0d13; --s1: #10141c; --s2: #151a24; --s3: #1b212d; --s4: #232a38;
   --line: #1f2633; --line2: #2a3242; --line3: #3a4457;
-  --tx: #e4e8ef; --tx2: #a3acbb; --tx3: #7c8698;
+  --tx: #e4e8ef; --tx2: #a3acbb; --tx3: #8691a4;
   /* money: restrained, readable on dark; the only saturated colours on screen */
   --up: #2fb67c; --up-bg: rgba(47, 182, 124, .10); --up-br: rgba(47, 182, 124, .32);
   --dn: #e5566c; --dn-bg: rgba(229, 86, 108, .10); --dn-br: rgba(229, 86, 108, .32);
@@ -431,3 +431,9 @@ input, select, textarea { font-family: var(--ui); }
 .al-on { color: var(--gold); font-weight: 600; } .al-off { color: var(--tx3); }
 .alw .sec .btn { margin-left: 6px; }
 @media (max-width: 760px) { .al-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .al-form .lg-act { grid-column: 1 / -1; } }
+
+/* Heatmap scale: every step holds white text at 4.5:1 or better (WCAG AA), darker = smaller move */
+:root { --hm1: #24473a; --hm2: #1e5a40; --hm3: #176a45; --hm4: #11774a; --hm5: #0b8048;
+        --hmn1: #4e2a33; --hmn2: #6a2a37; --hmn3: #86293b; --hmn4: #a0283e; --hmn5: #b8263f; --hm0: #2b3a52; }
+.doc-body .btn[type=submit] { background: #b8263f !important; }
+.ni-num { color: var(--tx3) !important; opacity: 1 !important; }

@@ -100,7 +100,7 @@ function sparkline(canvas,data,color){if(!canvas||!data||data.length<2)return;
 /* ===================== Fear & Greed (CNN) ===================== */
 /* CNN's own band colours and boundaries, so a score reads the same here as
    it does on their page. */
-const FG_BANDS=[[0,25,'#d64545','Extreme Fear'],[25,45,'#e08b45','Fear'],
+const FG_BANDS=[[0,25,'#e5566c','Extreme Fear'],[25,45,'#e08b45','Fear'],
  [45,55,'#c9b945','Neutral'],[55,75,'#7eb356','Greed'],[75,100,'#3f9a4e','Extreme Greed']];
 const fgColor=v=>(FG_BANDS.find(b=>v>=b[0]&&v<b[1])||FG_BANDS[4])[2];
 const fgLabel=v=>(FG_BANDS.find(b=>v>=b[0]&&v<b[1])||FG_BANDS[4])[3];

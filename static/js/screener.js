@@ -40,7 +40,7 @@
     <div class="ph"><h1>Stock Screener</h1><p>Filter the S&amp;P 500 and Nasdaq-100 by valuation, trend and activity. Every filter shows how many names have the field.</p></div>
     <div class="scr-bar">
       <div class="seg" id="scrUni" role="tablist" aria-label="Universe">
-        <button data-u="sp500">S&amp;P 500</button><button data-u="ndx">Nasdaq-100</button><button data-u="all">Both</button></div>
+        <button role="tab" data-u="sp500">S&amp;P 500</button><button role="tab" data-u="ndx">Nasdaq-100</button><button role="tab" data-u="all">Both</button></div>
       <select id="scrSector" aria-label="Sector"><option value="">All sectors</option></select>
       <div class="spacer"></div>
       <button class="btn btn-ghost btn-sm" id="scrColsBtn" aria-expanded="false">Columns</button>
@@ -95,7 +95,7 @@
   }
 
   function renderControls() {
-    root.querySelectorAll('#scrUni button').forEach((b) => b.classList.toggle('on', b.dataset.u === st.universe));
+    root.querySelectorAll('#scrUni button').forEach((b) => { b.classList.toggle('on', b.dataset.u === st.universe); b.setAttribute('aria-selected', String(b.dataset.u === st.universe)); });
     $s('scrPresets').innerHTML = PRESETS.map((p) => `<button class="chip-btn ${p.id === st.preset ? 'on' : ''}" data-p="${p.id}">${e(p.name)}</button>`).join('');
     const saved = store.get('js.scr.saved', []);
     $s('scrSaved').innerHTML = saved.length ? '<span>Saved:</span>' + saved.map((s, i) =>
