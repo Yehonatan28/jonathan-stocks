@@ -70,9 +70,10 @@
       <div class="mi-block"><div class="mi-card scr-table"><table class="mi-t scr-t"><thead><tr><th class="sticky">Symbol</th><th class="n">1M</th><th class="n">3M</th><th class="n">6M</th><th class="n">1Y</th><th class="n">YTD</th>
         <th class="n">Volatility</th><th class="n">Max drawdown</th><th class="n">Beta to SPY</th></tr></thead><tbody>
         ${syms.map((s, i) => { const t = d.stats[s]; return `<tr data-t="${e(s)}" tabindex="0"><td class="sticky"><b style="color:${color(i)}">${e(s)}</b></td>
-          ${['1M', '3M', '6M', '1Y', 'YTD'].map((k) => `<td class="n ${tone(t.returns[k])}">${pc(t.returns[k])}</td>`).join('')}
+          ${['1M', '3M', '6M', '1Y', 'YTD'].map((k) => { const w = (t.windows || {})[k]; const tip = w ? (w.from ? `From ${w.from} · ${w.sessions} sessions` : w.reason) : ''; return `<td class="n ${tone(t.returns[k])}"${tip ? ` title="${e(tip)}"` : ''}>${pc(t.returns[k])}${t.returns[k] == null && w && w.reason ? `<span class="sr-only"> (${e(w.reason)})</span>` : ''}</td>`; }).join('')}
           <td class="n">${t.volatility == null ? '—' : n2(t.volatility) + '%'}</td><td class="n dn">${n2(t.max_drawdown)}%</td><td class="n">${t.beta == null ? '—' : n2(t.beta)}</td></tr>`; }).join('')}
-      </tbody></table></div></div>
+      </tbody></table></div>
+        <p class="mi-foot">Price return on shared trading days; dividends are not included. ${(() => { const w = (d.stats[syms[0]].windows || {})['1Y']; return w && w.from ? `1Y runs from ${e(w.from)} (${w.sessions} sessions).` : w ? `1Y: ${e(w.reason)}.` : ''; })()} A dash means the shared history is too short for that window.</p></div>
       <div class="mi-two">
         <div class="mi-block"><div class="sec">Drawdown from peak</div><div class="mi-card rs-chart"><canvas id="relDd" role="img" aria-label="Drawdown from peak"></canvas></div></div>
         <div class="mi-block"><div class="sec">Correlation of daily returns</div><div class="mi-card scr-table"><table class="mi-t rk-corr"><thead><tr><th></th>${syms.map((s) => `<th class="n">${e(s)}</th>`).join('')}</tr></thead><tbody>

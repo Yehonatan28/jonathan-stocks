@@ -3,8 +3,11 @@
 Method (shown to the user as written here):
 - Series are aligned on the dates every symbol traded; a day missing for any of them is dropped,
   so every figure compares the same days.
-- Performance is indexed to 100 on the first shared date. Period returns count 21, 63, 126 and
-  252 shared sessions back; year-to-date runs from the last close of the previous year.
+- Performance is indexed to 100 on the first shared date and is price return: dividends are not
+  reinvested. Period returns count 21, 63, 126 and 252 shared sessions back; a window up to three
+  sessions short (holidays, one year of daily data holding 252 closes) is used and its start date
+  shown; a shorter history shows a dash with the reason. Year-to-date runs from the last close of
+  the previous year.
 - Volatility is the standard deviation of daily returns x sqrt(252). Maximum drawdown is the
   largest fall from a running peak. Beta is the slope of the symbol's daily returns on the
   benchmark's (SPY) over the same days.
@@ -63,8 +66,18 @@ def compare(series, benchmark='SPY'):
     stats = {}
     for s in syms:
         c = px[s]
-        per = {lab: (round((c[-1] / c[-1 - n] - 1) * 100, 2) if len(c) > n else None)
-               for lab, n in (('1M', 21), ('3M', 63), ('6M', 126), ('1Y', 252))}
+        per, win = {}, {}
+        for lab, n in (('1M', 21), ('3M', 63), ('6M', 126), ('1Y', 252)):
+            # n sessions back needs n + 1 closes. A year of daily data holds about 252 closes,
+            # i.e. 251 sessions of change, so up to 3 sessions short of the target (holidays,
+            # a listing gap) still counts, and the sessions actually used are reported.
+            k = min(n, len(c) - 1)
+            if k >= n - 3:
+                per[lab] = round((c[-1] / c[-1 - k] - 1) * 100, 2)
+                win[lab] = {'from': dates[-1 - k].isoformat(), 'sessions': k}
+            else:
+                per[lab] = None
+                win[lab] = {'from': None, 'sessions': k, 'reason': f'needs {n} sessions of shared history, {k} available'}
         per['YTD'] = round((c[-1] / c[prior] - 1) * 100, 2) if prior is not None else None
         peak, mdd, dd = c[0], 0.0, []
         for v in c:
@@ -72,10 +85,11 @@ def compare(series, benchmark='SPY'):
             mdd = min(mdd, v / peak - 1)
             dd.append(round((v / peak - 1) * 100, 2))
         r = rets[s]
-        stats[s] = {'returns': per, 'total': round((c[-1] / c[0] - 1) * 100, 2),
+        stats[s] = {'returns': per, 'windows': win, 'total': round((c[-1] / c[0] - 1) * 100, 2),
                     'volatility': round(_std(r) * math.sqrt(252) * 100, 2) if len(r) > 20 else None,
                     'max_drawdown': round(mdd * 100, 2),
-                    'beta': round(_beta(r, rets[benchmark]), 2) if benchmark in rets and s != benchmark else None,
+                    'beta': (lambda b: round(b, 2) if b is not None else None)(_beta(r, rets[benchmark]))
+                            if benchmark in rets and s != benchmark else None,
                     'drawdown': dd}
     out['stats'] = stats
     out['benchmark'] = benchmark if benchmark in px else None

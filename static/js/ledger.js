@@ -73,7 +73,7 @@
   async function refresh() {
     $l('lgWhere').innerHTML = signedIn()
       ? 'Saved in your account. Only you can see it.'
-      : 'Guest mode: saved in this browser only. It is sent to the server to be computed and is not stored there.';
+      : 'Guest mode: saved in this browser; sent to the server only to compute results, and not stored there.';
     let list, led;
     try {
       list = await txs();

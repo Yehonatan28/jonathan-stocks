@@ -113,3 +113,10 @@ def test_annual_per_share_falls_back_a_year(monkeypatch):
     assert out['AAA'] == {'eps': 2.0, 'eps_year': 2025, 'dps': 0.8, 'dps_year': 2025}
     assert out['BBB'] == {'eps': -0.4, 'eps_year': 2024} and 'CCC' not in out
     F._CIK.update(at=0, map={})
+
+
+def test_quarters_back_crosses_the_year():
+    from datetime import date
+    import fundamentals as F
+    assert F._quarters_back(date(2026, 2, 10), 3) == [(2025, 4), (2025, 3), (2025, 2)]
+    assert F._quarters_back(date(2026, 11, 25), 2) == [(2026, 3), (2026, 2)]

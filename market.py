@@ -55,6 +55,10 @@ SECTOR_ORDER = ['Technology', 'Financials', 'Health Care',
                 'Industrials', 'Consumer Staples', 'Energy', 'Utilities',
                 'Materials', 'Real Estate']
 
+# The index table's market values are a static estimate compiled when the table was built. They
+# are used only when no filed share count is available, and every use is labelled as an estimate.
+CAP_ESTIMATE_LABEL = 'Estimate: static index table, Oct 2026'
+
 _SP500_RAW = """\
 NVDA|NVIDIA|TECH|4400|nvidia.com
 MSFT|Microsoft|TECH|3800|microsoft.com

@@ -23,7 +23,7 @@ with the source and freshness of every number shown beside it.</p></div>
 <li><strong>Provenance on every screen.</strong> Each dataset carries its source, whether it is delayed, end-of-day or as filed, and when it was retrieved.</li>
 <li><strong>No invented numbers.</strong> A figure whose inputs are missing is shown as a dash, never estimated or filled with zero. Statistics that need history (Sharpe, beta, annualised return) appear only once there is enough of it.</li>
 <li><strong>Information, not advice.</strong> There are no buy or sell calls. The tools describe trends, risk and history; decisions are yours.</li>
-<li><strong>Privacy by default.</strong> Guest mode keeps everything in your browser. Accounts store only what you enter, and you can delete the account and all of it at any time.</li>
+<li><strong>Privacy by default.</strong> Guest mode: your entries are saved in this browser; sent to the server only to compute results, and not stored there. Accounts store only what you enter, and you can delete the account and all of it at any time.</li>
 </ul>
 <h2>How it is built</h2>
 <p>A Python (Flask) service with a dependency-free JavaScript interface, deployed on Vercel with a Turso (libSQL) database.
@@ -33,7 +33,7 @@ checked against hand calculations. See <a href="/methodology">Data &amp; methodo
 """
 
 PRIVACY = """
-<p class="doc-note">Short version: no advertising, no analytics, no tracking cookies. Guest mode keeps your data in your browser.
+<p class="doc-note">Short version: no advertising, no analytics, no tracking cookies. Guest mode: your entries are saved in this browser; sent to the server only to compute results, and not stored there.
 An account stores what you enter and nothing else, and you can delete it with everything in it.</p>
 <h2>What is stored, and where</h2>
 <table><thead><tr><th>Data</th><th>Where</th><th>Why</th></tr></thead><tbody>
@@ -60,7 +60,7 @@ API apply to what is sent. Do not type personal information into questions.</li>
 <p>There is no advertising, no analytics service and no sale of data. Data leaves the service only as listed above.</p>
 <h2>Your choices</h2>
 <ul>
-<li>Use guest mode and nothing about you is stored on the server.</li>
+<li>Use guest mode: your entries are saved in this browser; sent to the server only to compute results, and not stored there.</li>
 <li>Delete your account below: your holdings, transactions, watchlist, alerts, settings and the account itself are erased immediately.</li>
 <li>Clear guest data by clearing this site's data in your browser.</li>
 </ul>

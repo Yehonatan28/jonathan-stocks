@@ -364,19 +364,19 @@ def report(ticker):
 
 
 # ------------------------------------------------------------ cross-company frames
-FRAMES_URL = 'https://data.sec.gov/api/xbrl/frames/us-gaap/{tag}/{unit}/{period}.json'
+FRAMES_URL = 'https://data.sec.gov/api/xbrl/frames/{tax}/{tag}/{unit}/{period}.json'
 _FRAMES = {}
 
 
-def frame(tag, unit, period):
+def frame(tag, unit, period, tax='us-gaap'):
     """{cik: value} for one fact across every filer, from the SEC's frames service: the value
     from each company's filing that best fits the calendar period (e.g. CY2025 for a year).
     Cached for a day. Raises Unavailable."""
-    key = (tag, unit, period)
+    key = (tax, tag, unit, period)
     hit = _FRAMES.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
-    data = _get(FRAMES_URL.format(tag=tag, unit=unit, period=period), timeout=25) or {}
+    data = _get(FRAMES_URL.format(tax=tax, tag=tag, unit=unit, period=period), timeout=25) or {}
     out = {int(r['cik']): r['val'] for r in data.get('data', []) if r.get('cik') and r.get('val') is not None}
     _FRAMES[key] = (time.time() + 86400, out)
     return out
@@ -405,3 +405,36 @@ def annual_per_share(today=None):
         if cik in by_cik:
             out[t] = by_cik[cik]
     return out
+
+
+def _quarters_back(today, n):
+    """The n calendar quarters before the one containing today, newest first: [(year, q)]."""
+    y, q = today.year, (today.month - 1) // 3 + 1
+    out = []
+    for _ in range(n):
+        q -= 1
+        if q == 0:
+            y, q = y - 1, 4
+        out.append((y, q))
+    return out
+
+
+def shares_outstanding(today=None):
+    """Common shares outstanding by ticker, from the cover page of each company's latest 10-Q or
+    10-K (dei:EntityCommonStockSharesOutstanding through the SEC frames service), with the
+    calendar quarter it was read from. Companies with several share classes report them
+    separately and are not in the frame. Each row carries the filer's CIK so the caller can leave
+    out two listed classes of one filer and never count a company twice."""
+    from datetime import date as _date
+    if not _CIK['map']:
+        cik_for('AAPL')
+    by_cik = {}
+    for y, q in _quarters_back(today or _date.today(), 3):
+        try:
+            vals = frame('EntityCommonStockSharesOutstanding', 'shares', f'CY{y}Q{q}I', tax='dei')
+        except Unavailable:
+            continue
+        for cik, v in vals.items():
+            if cik not in by_cik and v:
+                by_cik[cik] = {'shares': v, 'period': f'CY{y} Q{q}'}
+    return {t: {**by_cik[c], 'cik': c} for t, c in _CIK['map'].items() if c in by_cik}

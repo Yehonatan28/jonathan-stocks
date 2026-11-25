@@ -55,3 +55,19 @@ def test_correlation_matrix_and_rolling():
 
 def test_short_overlap_is_refused():
     assert R.compare({'A': pts([1.0] * 10), 'SPY': pts([1.0] * 10)})['ok'] is False
+
+
+def test_one_year_with_252_shared_days_is_not_a_dash():
+    # a year of daily data holds 252 closes = 251 sessions of change; that is a 1Y figure, with its start shown
+    c = walk(252, lambda i: 0.001)
+    out = R.compare({'AAA': pts(c), 'SPY': pts(walk(252, lambda i: 0.0005))})
+    st = out['stats']['AAA']
+    assert st['returns']['1Y'] == round((c[-1] / c[0] - 1) * 100, 2)
+    assert st['windows']['1Y']['sessions'] == 251 and st['windows']['1Y']['from'] == out['start']
+
+
+def test_window_too_short_gives_a_reason():
+    out = R.compare({'AAA': pts(walk(200, lambda i: 0.001)), 'SPY': pts(walk(200, lambda i: 0.0))})
+    st = out['stats']['AAA']
+    assert st['returns']['1Y'] is None and '252' in st['windows']['1Y']['reason']
+    assert st['returns']['6M'] is not None and st['windows']['6M']['sessions'] == 126

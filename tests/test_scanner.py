@@ -28,3 +28,12 @@ def test_rows_skip_unpriced_and_coverage_counts():
     assert [r['ticker'] for r in rs] == ['ABC']
     cov = S.coverage(rs)
     assert cov['pe'] == 1 and cov['vs200'] == 0 and cov['price'] == 1
+
+
+def test_market_cap_estimate_is_flagged():
+    import scanner
+    m = {'ticker': 'X', 'name': 'X', 'sector': 'Technology', 'cap': 50.0}
+    est = scanner.row(m, {'price': 10})
+    assert est['cap'] == 50.0 and est['cap_est'] is True and 'estimate' in est['cap_basis']
+    filed = scanner.row(m, {'price': 10, 'cap': 42.0, 'cap_basis': 'price x shares outstanding (CY2026 Q3 filing, SEC)'})
+    assert filed['cap'] == 42.0 and filed['cap_est'] is False and 'SEC' in filed['cap_basis']

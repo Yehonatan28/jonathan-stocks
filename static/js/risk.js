@@ -50,10 +50,13 @@
         ${tile('Invested', t.invested_pct == null ? '—' : n2(t.invested_pct, 1) + '%', n2(t.value) + ' in positions')}
         ${tile('Open risk to stops', t.open_risk_pct == null ? '—' : n2(t.open_risk_pct) + '%', n2(t.open_risk) + ' · limit ' + d.limits.max_portfolio_risk_pct + '%', over(t.open_risk_pct, d.limits.max_portfolio_risk_pct))}
         ${tile('Largest position', t.largest_weight == null ? '—' : n2(t.largest_weight, 1) + '%', 'limit ' + d.limits.max_position_pct + '%', over(t.largest_weight, d.limits.max_position_pct))}
-        ${tile('Without a stop', String(t.unprotected), t.unprotected ? 'loss not defined' : 'every position has one', t.unprotected ? 'dn' : 'up')}
+        ${tile('Without a stop', String(t.unprotected), t.unprotected ? 'loss not defined' : d.positions.length ? 'every priced position has one' : 'no positions', t.unprotected ? 'dn' : '')}
       </div>
       <div class="mi-block"><div class="sec">Findings <span class="tag">${d.warnings.length}</span></div>
-        <div class="mi-card">${d.warnings.length ? `<ul class="rk-warn">${d.warnings.map((w) => `<li class="lv-${w.level}"><span>${LV[w.level]}</span>${e(w.message)}</li>`).join('')}</ul>` : '<div class="mi-empty">Nothing outside your limits.</div>'}</div></div>
+        <div class="mi-card">${d.warnings.length ? `<ul class="rk-warn">${d.warnings.map((w) => `<li class="lv-${w.level}"><span>${LV[w.level]}</span>${e(w.message)}</li>`).join('')}</ul>` : (() => { const n = d.positions.length, un = d.positions.filter((p) => p.price == null).length;
+          if (!n) return '<div class="mi-empty">No positions to check. Nothing was evaluated.</div>';
+          if (un === n) return '<div class="mi-empty">Could not check: no current price for any position. This is not a clean result.</div>';
+          return `<div class="mi-empty">Checked ${n - un} of ${n} positions against your limits: none outside them.${un ? ' ' + un + ' not checked (no price).' : ''}</div>`; })()}</div></div>
       <div class="rk-grid">
         <div class="mi-block"><div class="sec">Positions</div><div class="mi-card scr-table"><table class="mi-t scr-t"><thead><tr><th class="sticky">Symbol</th><th class="n">Weight</th><th class="n">Price</th><th class="n">Stop</th><th class="n">Open risk</th><th class="n">Stop in ATR</th></tr></thead><tbody>
           ${d.positions.map((p) => `<tr data-t="${e(p.ticker)}" tabindex="0"><td class="sticky"><b>${e(p.ticker)}</b><small>${e(p.sector)}</small></td>

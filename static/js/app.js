@@ -684,30 +684,38 @@ function renderPlan(p){
  $('ccHeatSub').textContent=p.risk.open_risk!=null?'$'+fmt(p.risk.open_risk,0)+' at risk':'distance to stops';
  $('ccUnprot').textContent=p.risk.unprotected;
  $('ccUnprot').className='t-val '+(p.risk.unprotected?'dn':'up');
+ /* with nothing checked a green zero would read as "all clear": show a neutral dash instead */
+ if(!p.positions.length){['ccUrgent','ccUnprot'].forEach(id=>{$(id).textContent='—';$(id).className='t-val'})}
  $('ccEntries').textContent=p.entries.length;
  $('ccStamp').textContent='Updated '+new Date(p.generated_at*1000).toLocaleTimeString('en-GB');
  renderBrief(p,urgent);renderActions(p.actions);renderRiskTable(p.positions);renderEntries(p.entries)}
 
 function renderBrief(p,urgent){
+ /* Three different situations, never merged: nothing to check, checked with no rule triggered,
+    and could not check (prices unavailable). "No findings" is only said about what was checked. */
  const b=$('ccBrief');b.style.display='';
- let ic='✅',title='Everything is under control',txt='No open actions. Every position has a stop and the trends are intact.';
- if(!p.positions.length){ic='💼';title='Your portfolio is empty';
-  txt='Add positions in the Portfolio tab and the engine will start monitoring them for stops and exits.'}
- else if(urgent){ic='🚨';title=`${urgent} action${urgent>1?'s':''} need attention`;
-  txt='Start with anything marked Critical — those are positions where the risk is undefined or the stop has already been breached.'}
- else if(p.risk.unprotected){ic='🛡';title=`${p.risk.unprotected} position${p.risk.unprotected>1?'s':''} without a stop`;
-  txt='Every position needs a predefined stop. It is the one decision that caps your maximum loss.'}
- else if(p.entries.length){ic='🎯';title=`${p.entries.length} entry signal${p.entries.length>1?'s':''} on your watchlist`;
-  txt='The portfolio is protected. Scroll down for the technical setups found on the names you follow.'}
+ const unchecked=p.unchecked||[],held=p.held!=null?p.held:p.positions.length;
+ let ic='○',title,txt;
+ if(!held){ic='○';title='No positions to check';
+  txt='There are no open positions, so no stop or exit rule was evaluated. Add a position in Portfolio, Holdings to have it monitored.'}
+ else if(!p.positions.length&&unchecked.length){ic='!';title='Could not check your positions';
+  txt=`Prices for ${unchecked.join(', ')} could not be read right now, so no rule was evaluated. This is not a clean result. Try again in a few minutes.`}
+ else if(urgent){ic='!';title=`${urgent} condition${urgent>1?'s':''} met at high or critical level`;
+  txt='Critical means a position has no stop or the last close is below its stop. The rule describes a condition; what to do about it is your decision.'}
+ else if(p.risk.unprotected){ic='!';title=`${p.risk.unprotected} position${p.risk.unprotected>1?'s':''} without a recorded stop`;
+  txt='Without a stop the engine cannot measure the risk to that position. A stop is an order or a plan; it does not guarantee the exit price (gaps, slippage).'}
+ else{ic='✓';title=`${p.positions.length} position${p.positions.length>1?'s':''} checked, no rule triggered`;
+  txt='Each checked position has a recorded stop and no exit rule fired on the last daily close.'+(p.entries.length?` ${p.entries.length} watchlist setup${p.entries.length>1?'s':''} below.`:'')}
+ if(held&&p.positions.length&&unchecked.length)txt+=` Not checked (no prices): ${unchecked.join(', ')}.`;
  $('ccBriefIc').textContent=ic;$('ccBriefTitle').textContent=title;$('ccBriefText').textContent=txt}
 
 function renderActions(actions){
  const box=$('ccActions'),done=getDone();
  const live=actions.filter(a=>!done[actKey(a)]);
- if(!live.length){box.innerHTML='<div class="glass" style="padding:34px;text-align:center;color:var(--tx2)"><div style="font-size:34px;margin-bottom:10px">✅</div><b style="font-size:15px">No open actions</b><div style="font-size:13px;color:var(--tx3);margin-top:5px">Every position is protected and up to date</div></div>';return}
+ if(!live.length){box.innerHTML='<div class="glass" style="padding:34px;text-align:center;color:var(--tx2)"><b style="font-size:15px">'+(S.plan&&(S.plan.held||0)===0?'No positions to check':S.plan&&!S.plan.positions.length?'Nothing was checked':'No rule triggered on the checked positions')+'</b><div style="font-size:13px;color:var(--tx3);margin-top:5px">'+(S.plan&&(S.plan.unchecked||[]).length?'Not checked (no prices): '+esc(S.plan.unchecked.join(', ')):'Based on the last daily close')+'</div></div>';return}
  box.innerHTML=live.map(a=>{
   const k=actKey(a).replace(/'/g,'');
-  const apply=a.suggest?`<button class="btn btn-gold btn-sm" onclick="applySuggested('${esc(a.ticker)}','${a.code}',${a.suggest},'${a.stop_type||'fixed'}')">Set stop $${fmt(a.suggest)}</button>`:'';
+  const apply=a.suggest?`<button class="btn btn-gold btn-sm" onclick="applySuggested('${esc(a.ticker)}','${a.code}',${a.suggest},'${a.stop_type||'fixed'}')">Record stop $${fmt(a.suggest)}</button>`:'';
   return`<div class="glass act sev-${a.severity}">
    <div class="act-ic">${ACT_ICON[a.code]||'•'}</div>
    <div><span class="act-tkr" onclick="openChart('${esc(a.ticker)}')">${esc(a.ticker)}</span>
@@ -1199,34 +1207,34 @@ function drawBtChart(b){
     y:{ticks:{color:'#7d8dac',font:{size:9,family:'JetBrains Mono'}},grid:{color:'rgba(255,255,255,.05)'}}}}})}
 /* ===================== glossary: English terms, Hebrew explanations ===================== */
 const GLOSSARY=[
-['RSI','מדד עוצמה יחסית','מודד מהירות שינויי מחיר בין 0 ל־100. מתחת ל־30 המניה נחשבת במכירת יתר (הזדמנות אפשרית), מעל 70 בקניית יתר (זהירות).'],
-['MACD','התכנסות/התבדרות ממוצעים','ההפרש בין ממוצע נע 12 ל־26. כשקו ה־MACD חוצה את קו האיתות כלפי מעלה — מומנטום חיובי.'],
+['RSI','מדד עוצמה יחסית','מודד את עוצמת שינויי המחיר האחרונים בסולם 0 עד 100 (חישוב Wilder על 14 ימים). מתחת ל־30 מקובל לכנות זאת מכירת יתר, ומעל 70 קניית יתר. זה תיאור של התנועה, לא תחזית: מניה יכולה להישאר בקניית יתר זמן רב.'],
+['MACD','התכנסות/התבדרות ממוצעים','ההפרש בין ממוצע נע מעריכי של 12 ימים לזה של 26. חציה של קו ה־MACD מעל קו האיתות (ממוצע 9 שלו) מתארת האצה של המומנטום כלפי מעלה; לבדה היא אינה מנבאת את ההמשך.'],
 ['ATR','טווח אמיתי ממוצע','מודד תנודתיות. ATR גבוה = תנועות מחיר חדות. משמש לקביעת סטופ־לוס מרוחק מרעשי שוק.'],
 ['ADX','עוצמת מגמה','מודד כמה המגמה חזקה (לא לאיזה כיוון). מעל 25 = מגמה ברורה; מתחת ל־20 = דשדוש שבו איתותי מגמה נוטים להיכשל.'],
-['Bollinger Bands','רצועות בולינגר','ממוצע נע ± שתי סטיות תקן. מחיר בקצה הרצועה התחתונה עשוי לרמז על מכירת יתר.'],
-['Support','תמיכה','רמת מחיר שבה ביקוש עצר ירידות בעבר. שבירה שלה — איתות שלילי.'],
-['Resistance','התנגדות','רמת מחיר שבה היצע עצר עליות בעבר. פריצה שלה — איתות חיובי.'],
-['Stop Loss','סטופ לוס','פקודת מכירה אוטומטית להגבלת הפסד. במערכת מחושב מתחת לשפל האחרון ועל פי מכפלת ATR.'],
+['Bollinger Bands','רצועות בולינגר','ממוצע נע של 20 ימים ועוד או פחות שתי סטיות תקן. מחיר ליד הרצועה התחתונה רחוק מהממוצע כלפי מטה ביחס לתנודתיות הרגילה שלו.'],
+['Support','תמיכה','רמת מחיר שבה ירידות נעצרו בעבר. זו פרשנות של היסטוריית המחיר, לא רמה שמובטח שתחזיק.'],
+['Resistance','התנגדות','רמת מחיר שבה עליות נעצרו בעבר. זו פרשנות של היסטוריית המחיר, לא רמה שמובטח שתעצור.'],
+['Stop Loss','סטופ לוס','מחיר שבו מתכננים לצאת מפוזיציה כדי להגביל הפסד. האתר רק רושם ומחשב אותו; הוא לא שולח פקודות לברוקר. גם פקודת סטופ אמיתית אינה מבטיחה את המחיר: בפער פתיחה (gap) או בשוק דליל הביצוע יכול להיות נמוך יותר.'],
 ['Trailing Stop','סטופ נגרר','סטופ שמטפס אוטומטית עם עליית המחיר ולעולם לא יורד. מחושב בשיטת Chandelier: השיא של 22 הימים האחרונים פחות מכפלת ATR.'],
 ['Chandelier Exit','יציאת נברשת','שיטת הטריילינג סטופ שבה המערכת משתמשת: הסטופ "תלוי" מהשיא האחרון כמו נברשת מהתקרה, במרחק 2.5–3 ATR.'],
 ['R Multiple','מכפיל R','הרווח הנוכחי ביחידות הסיכון המקורי. אם סיכנת $2 למניה והמחיר עלה $6 — זה 3R. הכלי החשוב ביותר: הוא מנטרל את גודל הפוזיציה ומשווה עסקאות על אותו סרגל.'],
-['Breakeven Stop','סטופ בנקודת איזון','העלאת הסטופ למחיר הכניסה אחרי שהעסקה הרוויחה לפחות 1R. מרגע זה העסקה אינה יכולה להפוך להפסד.'],
-['Portfolio Heat','חום התיק','סך הכסף שתפסיד אם כל הסטופים בתיק ייפגעו יחד, כאחוז משווי התיק. מקובל לשמור מתחת ל־6%.'],
-['Position Sizing','גודל פוזיציה','כמה מניות לקנות. מחושב מהסיכון: (שווי תיק × אחוז סיכון) ÷ (מחיר כניסה − סטופ). כך ההפסד המקסימלי זהה בכל עסקה.'],
-['Max Drawdown','ירידה מקסימלית','הירידה העמוקה ביותר משיא לשפל. המספר שקובע אם תצליח להישאר בתוכנית כשקשה — לרוב חשוב יותר מהתשואה.'],
-['Expectancy','תוחלת','הרווח הממוצע לעסקה ביחידות R. תוחלת חיובית אומרת שהשיטה משתלמת לאורך מספיק עסקאות.'],
-['MA200','ממוצע נע 200','ממוצע מחיר הסגירה של 200 ימי המסחר האחרונים — קו הגבול בין מגמה ראשית עולה ליורדת.'],
-['Golden Cross','צלב זהב','ממוצע 50 חוצה מעל ממוצע 200 — איתות קלאסי לשינוי מגמה ארוך־טווח. ההפך, Death Cross, מסמן היחלשות.'],
-['Volume Ratio','נפח יחסי','נפח המסחר היום מול הממוצע. מעל ×1.4 = עניין חריג במניה.'],
-['Dividend Yield','תשואת דיבידנד','אחוז החלוקה השנתית מהמחיר. Ex-Date הוא היום הקובע לזכאות.'],
-['Fear & Greed','מדד פחד ותאווה','מדד הסנטימנט של CNN בין 0 (פחד קיצוני) ל־100 (תאווה קיצונית), המשוקלל משבעה מדדי שוק. קיצוניות היא לרוב איתות מנוגד.'],
-['Market Cap','שווי שוק','שווי כל מניות החברה יחד: מחיר × מספר מניות. מודד את גודל החברה, וקובע את גודל הריבוע במפת החום.'],
+['Breakeven Stop','סטופ בנקודת איזון','העלאת הסטופ למחיר הכניסה אחרי שהעסקה הרוויחה לפחות 1R. זה מקטין את ההפסד הצפוי אם הסטופ יופעל, אבל לא מונע הפסד: פער פתיחה מתחת לסטופ, החלקה (slippage), עמלות ומסים יכולים להביא לתוצאה שלילית.'],
+['Portfolio Heat','חום התיק','סך המרחק מהמחיר הנוכחי לסטופ בכל הפוזיציות, כאחוז משווי התיק: הערכה של ההפסד אם כל הסטופים יופעלו במחיר הסטופ. בפועל ההפסד יכול להיות גדול יותר (פערים, החלקה). כלל אצבע נפוץ הוא פחות מ־6%; זו מוסכמה, לא סף בטיחות.'],
+['Position Sizing','גודל פוזיציה','מספר מניות שמחושב מהסיכון שבוחרים: (שווי תיק × אחוז סיכון) ÷ (מחיר כניסה − סטופ). כך ההפסד המתוכנן ביציאה בסטופ דומה בכל עסקה. זה לא הפסד מקסימלי מובטח: פער מתחת לסטופ, החלקה ועמלות יכולים להגדיל אותו.'],
+['Max Drawdown','ירידה מקסימלית','הירידה העמוקה ביותר משיא לשפל בתקופה הנבדקת. מראה כמה כואבת הייתה הדרך, לא רק איפה היא הסתיימה. ירידה עתידית יכולה להיות עמוקה יותר.'],
+['Expectancy','תוחלת','הרווח הממוצע לעסקה ביחידות R במדגם שנבדק. תוחלת חיובית בעבר אינה מבטיחה תוחלת חיובית בעתיד, במיוחד במדגם קטן.'],
+['MA200','ממוצע נע 200','ממוצע מחיר הסגירה של 200 ימי המסחר האחרונים. מקובל לראות במחיר מעליו מגמה ארוכה עולה ומתחתיו יורדת; זו מוסכמה, לא גבול מדויק.'],
+['Golden Cross','צלב זהב','ממוצע 50 חוצה מעל ממוצע 200. מתאר שינוי שכבר קרה במגמה (אינדיקטור מאחר); ההפך נקרא Death Cross.'],
+['Volume Ratio','נפח יחסי','נפח המסחר היום מול הממוצע היומי של שלושת החודשים האחרונים. מוקדם ביום המסחר זה יום חלקי ולכן היחס נמוך מהסופי.'],
+['Dividend Yield','תשואת דיבידנד','דיבידנד למניה בשנה מחולק במחיר. כאן הוא מחושב מהדיבידנדים שהוכרזו בשנה המלאה האחרונה לפי דיווחי SEC, לא מתחזית. Ex-Date הוא היום הראשון שבו קונה המניה כבר לא זכאי לדיבידנד הקרוב; באותו יום המחיר נוטה לרדת בערך בגובה הדיבידנד.'],
+['Fear & Greed','מדד פחד ותאווה','מדד הסנטימנט של CNN בין 0 (פחד קיצוני) ל־100 (תאווה קיצונית), המשוקלל משבעה מדדי שוק. יש מי שמפרשים קיצוניות כסימן מנוגד; זו פרשנות, לא כלל שמתקיים תמיד.'],
+['Market Cap','שווי שוק','מחיר × מספר המניות במחזור. כאן מספר המניות נלקח מעמוד השער של הדוח האחרון ל־SEC; כשאין נתון כזה (כמה סוגי מניות, חברה זרה) מוצגת הערכה סטטית שמסומנת est. זה גם גודל הריבוע במפת החום, ואינו משקל רשמי במדד.'],
 ['Gap','גאפ · פער פתיחה','ההפרש בין מחיר הפתיחה היום למחיר הסגירה אתמול — טווח מחירים שבו לא נסחרה אף מניה. גאפ אפ נפתח מעל, גאפ דאון מתחת.'],
-['Gap Fill','סגירת גאפ','מצב שבו המחיר חוזר במהלך היום לרמת הסגירה של אתמול ו"ממלא" את הפער. גאפ שלא נסגר משאיר אחריו רמת מחיר שלא נבחנה; גאפ שנסגר כבר נדחה על ידי השוק.'],
+['Gap Fill','סגירת גאפ','מצב שבו המחיר חוזר במהלך היום לרמת הסגירה של אתמול ו"ממלא" את הפער. זה תיאור של מה שקרה; אין בו מידע ודאי על ההמשך.'],
 ['Gap in ATR','גאפ ביחידות ATR','גודל הגאפ ביחס לתנועה היומית הרגילה של המניה. 2% הם שגרה במניה אחת וזעזוע באחרת — ולכן המדידה הזו משמעותית יותר מהאחוז לבדו.'],
-['Trend Template','תבנית מגמה','מבנה שבו ממוצע 50 מעל 150 מעל 200 וכולם עולים. נחשב לסימן המובהק למגמת עלייה בריאה, ומשמש במערכת לסיווג "מגמת עלייה חזקה".'],
+['Trend Template','תבנית מגמה','מבנה שבו ממוצע 50 מעל 150 מעל 200 וכולם עולים. משמש במערכת לסיווג "מגמת עלייה חזקה"; זה תיאור של המגמה עד היום.'],
 ['Backtest','בדיקה היסטורית','הרצת כללי המסחר על נתוני עבר כדי לראות מה הם היו עושים. חשוב: תוצאות עבר אינן מבטיחות דבר.'],
-['Lookahead Bias','הטיית הצצה קדימה','טעות נפוצה בבדיקות היסטוריות: שימוש במידע שלא היה זמין באותו רגע. המערכת נמנעת מזה — איתות בסגירה נכנס בפתיחה שלמחרת.'],
+['Lookahead Bias','הטיית הצצה קדימה','טעות נפוצה בבדיקות היסטוריות: שימוש במידע שלא היה זמין באותו רגע. המערכת נמנעת ממנה: איתות בסגירה מבוצע בפתיחה שלמחרת. היא לא מתקנת הטיית שרידות: רשימת המדד היא של היום, לא של אז.'],
 ];
 function buildGloss(){$('glBody').innerHTML=GLOSSARY.map(([t,he,def])=>
  `<div class="gl-item"><div class="gl-term">${t}</div><div class="gl-he">${he}</div><div class="gl-def">${def}</div></div>`).join('')}

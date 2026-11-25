@@ -1195,6 +1195,32 @@ def index_quotes(index):
                 q['pe'], q['pe_basis'] = round(px / f['eps'], 1), f'FY{f["eps_year"]} EPS (SEC)'
             if px and q.get('div_yield') is None and f.get('dps') is not None:
                 q['div_yield'], q['dy_basis'] = round(f['dps'] / px * 100, 2), f'FY{f["dps_year"]} dividends (SEC)'
+    # market value: price x common shares outstanding from the latest filing's cover page. Without
+    # that figure the index table's estimate stays, marked as an estimate with its date.
+    if '@' in os.environ.get('SEC_CONTACT', ''):
+        try:
+            so = fundamentals.shares_outstanding()
+        except Exception:                    # noqa: BLE001
+            so = {}
+        ciks = {}
+        for t in quotes:
+            c = (so.get(t) or so.get(t.replace('.', '-')) or {}).get('cik')
+            if c:
+                ciks[c] = ciks.get(c, 0) + 1
+        est = {r['ticker']: r['cap'] for r in rows}
+        for t, q in quotes.items():
+            f = so.get(t) or so.get(t.replace('.', '-')) or {}
+            px = q.get('price')
+            if q.get('cap') is not None or not px or not f.get('shares') or ciks.get(f['cik'], 0) > 1:
+                continue
+            cap = px * f['shares'] / 1e9
+            # a cover figure for one share class only would understate a multi-class company
+            if est.get(t) and not 0.4 < cap / est[t] < 2.5:
+                continue
+            q['cap'], q['cap_basis'] = round(cap, 1), f"price x shares outstanding ({f['period']} filing, SEC)"
+    for q in quotes.values():
+        if q.get('cap') is not None and not q.get('cap_basis'):
+            q['cap_basis'] = 'quote feed'
     if quotes:
         cache_set(key, quotes, 300)
     return quotes
@@ -1208,7 +1234,8 @@ def index_rows(index):
         q = quotes.get(r['ticker'])
         if not q or q.get('price') is None:
             continue
-        out.append({**r, **{k: v for k, v in q.items() if v is not None}, 'cap': q.get('cap') or r['cap']})
+        out.append({**r, **{k: v for k, v in q.items() if v is not None}, 'cap': q.get('cap') or r['cap'],
+                    'cap_est': q.get('cap') is None})
     return out
 
 
@@ -1341,8 +1368,9 @@ def heatmap(index):
         out.append({**r,
                     'price': q['price'],
                     'chg': q.get('chg'),
-                    # live cap when the feed gave one, the static estimate otherwise
+                    # price x filed shares when available, the static estimate otherwise (flagged)
                     'cap': q.get('cap') or r['cap'],
+                    'cap_est': q.get('cap') is None,
                     'state': q.get('state'),
                     'pre_price': q.get('pre_price'), 'pre_chg': q.get('pre_chg'),
                     'post_price': q.get('post_price'), 'post_chg': q.get('post_chg')})
@@ -1365,6 +1393,9 @@ def heatmap(index):
                  if s['sector'] in market.SECTOR_ORDER else 99)
     payload = {'index': index.upper(), 'stocks': out, 'sectors': summary,
                'total_cap': total, 'covered': len(out), 'listed': len(rows),
+               'cap_estimated': sum(1 for r in out if r['cap_est']),
+               'cap_note': 'Block size is market value computed here (price x filed shares outstanding, or a '
+                           'marked static estimate), not the official index weight.',
                'generated_at': int(time.time())}
     cache_set(key, payload, 120)
     return jsonify(payload)

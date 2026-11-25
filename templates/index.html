@@ -51,7 +51,7 @@
    <div class="auth-err" id="rgErr" role="alert"></div>
    <button class="auth-go" onclick="doRegister()">Create account</button>
   </div>
-  <button class="auth-guest" onclick="guestMode()">Continue as guest · data stays in this browser</button>
+  <button class="auth-guest" onclick="guestMode()">Continue as guest · saved in this browser; sent to the server only to compute results, and not stored there</button>
   <div class="auth-note">Your positions are private to your account. Nobody else signing in to this site can see them.<br>Market data is delayed or end-of-day. Information only, not investment advice.<br><a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a> · <a href="/methodology" target="_blank" rel="noopener">Methodology</a></div>
  </div>
 </div>
@@ -177,10 +177,10 @@
  </div>
 
  <div class="tiles">
-  <div class="glass tile"><div class="t-lab">Urgent actions</div><div class="t-val dn" id="ccUrgent">—</div><div class="t-sub">need attention today</div></div>
+  <div class="glass tile"><div class="t-lab">High or critical conditions</div><div class="t-val dn" id="ccUrgent">—</div><div class="t-sub">rules met on the last close</div></div>
   <div class="glass tile"><div class="t-lab">Open risk</div><div class="t-val" id="ccHeat">—</div><div class="t-sub" id="ccHeatSub">distance to stops</div></div>
-  <div class="glass tile"><div class="t-lab">Unprotected</div><div class="t-val" id="ccUnprot">—</div><div class="t-sub">positions with no stop</div></div>
-  <div class="glass tile"><div class="t-lab">Entry signals</div><div class="t-val up" id="ccEntries">—</div><div class="t-sub">from your watchlist</div></div>
+  <div class="glass tile"><div class="t-lab">Without a stop</div><div class="t-val" id="ccUnprot">—</div><div class="t-sub">positions with no recorded stop</div></div>
+  <div class="glass tile"><div class="t-lab">Watchlist setups</div><div class="t-val" id="ccEntries">—</div><div class="t-sub">technical patterns, not recommendations</div></div>
  </div>
 
  <div class="glass cc-brief" id="ccBrief" style="display:none"><div class="bi" id="ccBriefIc">📋</div><div style="flex:1"><h3 id="ccBriefTitle">—</h3><p id="ccBriefText">—</p></div></div>
@@ -239,7 +239,8 @@
 </div></section>
 
 <section id="v-portfolio" class="view"><div class="wrap">
- <div class="sec">Portfolio <span class="tag">LIVE P&amp;L</span></div>
+ <div class="sec">Holdings <span class="tag">P&amp;L AT DELAYED PRICES</span></div>
+ <p class="sub">Prices are delayed quotes or the last daily close, not live. Profit and loss is before fees and taxes.</p>
  <div class="pf-layout">
   <div>
    <div class="glass tbl-wrap"><table class="tbl"><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Price</th><th>Stop</th><th>Value</th><th>P&amp;L</th><th>%</th><th></th></tr></thead><tbody id="pfBody"></tbody></table></div>

@@ -7,7 +7,7 @@ shows a dash; nothing is filled in or estimated.
 FIELDS = [
     ('price', 'Price', '$', 'Last price'),
     ('chg', 'Change', '%', 'Change today'),
-    ('cap', 'Market cap', '$B', "Market capitalisation, billions of dollars: the feed's figure, or the index table's estimate when the feed has none"),
+    ('cap', 'Market cap', '$B', "Market value, billions of dollars: last price x common shares outstanding from the latest filing's cover page (SEC). Where that figure is missing (several share classes, foreign filers) the static index-table estimate is shown, marked est."),
     ('pe', 'P/E', 'x', "Price over earnings per share: the feed's trailing figure, or the last full year's diluted EPS reported to the SEC"),
     ('fpe', 'Fwd P/E', 'x', 'Price over the consensus estimate of next-year earnings (an estimate, not a result)'),
     ('pb', 'P/B', 'x', 'Price over book value per share'),
@@ -34,6 +34,9 @@ def row(member, q):
         'ticker': member['ticker'], 'name': q.get('name') or member.get('name'), 'sector': member.get('sector'),
         'price': price, 'chg': q.get('chg'),
         'cap': round(q.get('cap') or member.get('cap') or 0, 1) or None,
+        # 'filed' when computed from a filed share count (or the feed), 'est' for the static table
+        'cap_est': q.get('cap') is None and bool(member.get('cap')),
+        'cap_basis': q.get('cap_basis') if q.get('cap') is not None else 'static index-table estimate (Oct 2026)',
         # a negative trailing P/E means losses; it is not a cheap stock, so it is not reported as a P/E
         'pe': round(pe, 1) if pe is not None and pe > 0 else None,
         'fpe': round(q['fpe'], 1) if q.get('fpe') is not None and q['fpe'] > 0 else None,

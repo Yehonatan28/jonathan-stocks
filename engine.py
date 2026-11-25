@@ -485,63 +485,64 @@ def manage_position(pos, an, settings):
         actions.append(_action(
             'SET_STOP', 'high', ticker,
             'No stop set on this position',
-            f'The position is exposed to any decline. The suggested stop is '
-            f'${suggested_initial} — below the recent swing low and 2x ATR from price, '
-            f'which risks {_f((price / suggested_initial - 1) * 100)}% from here.',
+            f'No stop is recorded, so the risk to this position is not defined. A stop by the '
+            f'site\'s rule would sit at ${suggested_initial}, below the recent swing low and 2x ATR from price, '
+            f'{_f((price / suggested_initial - 1) * 100)}% from here.',
             suggest=suggested_initial, stop_type='fixed'))
     else:
         # --- the stop has already been breached
         if price <= stop:
             actions.append(_action(
                 'STOP_HIT', 'critical', ticker,
-                'Stop breached — time to exit',
-                f'Price ${price} is below the stop you set at ${_f(stop)}. '
-                f'This is the point you decided in advance to exit — follow the plan, not the feeling.',
+                'Last close is below the recorded stop',
+                f'Price ${price} is below the stop you recorded at ${_f(stop)}: the exit condition '
+                f'you set in advance is met. The site places no orders; a broker stop, if you have one, '
+                f'may have filled at a different price.',
                 suggest=None))
         elif price <= stop * 1.02:
             actions.append(_action(
                 'STOP_NEAR', 'high', ticker,
                 'Price is very close to the stop',
                 f'Only {_f((price / stop - 1) * 100)}% is left to the stop at ${_f(stop)}. '
-                f'Check the order is actually live with your broker.',
+                f'The site does not see broker orders; whether a stop order exists is only known at your broker.',
                 suggest=None))
 
         # --- profit is real: move the stop to entry and remove the risk
         if r_multiple is not None and r_multiple >= 1 and stop < entry and price > entry:
             actions.append(_action(
                 'BREAKEVEN', 'high', ticker,
-                'Move the stop to breakeven',
-                f'Open profit is {r_multiple}R — more than the risk you took. '
-                f'Raising the stop to ${_f(entry)} makes this trade risk-free.',
+                'Open profit exceeds 1R: breakeven-stop rule met',
+                f'Open profit is {r_multiple}R, more than the initial risk. Under this rule the stop '
+                f'would move to the entry, ${_f(entry)}. That lowers the planned loss to about zero but '
+                f'does not remove risk: a gap below the stop, slippage and costs can still produce a loss.',
                 suggest=_f(entry), stop_type='fixed'))
         # --- trend still running: ratchet the trailing stop up
         elif trail and stop is not None and trail > stop * 1.005 and price > entry:
             actions.append(_action(
                 'TRAIL_UP', 'medium', ticker,
-                'Raise the trailing stop',
+                'Trailing stop level is above the recorded stop',
                 f'The chandelier trail has risen to ${trail}, anchored to the 22-day high '
                 f'(${an["levels"]["high22"]}) less an ATR multiple. '
-                f'Your current stop at ${_f(stop)} is further away than it needs to be — lock in more.',
+                f'Your recorded stop at ${_f(stop)} is below that level.',
                 suggest=trail, stop_type='trail'))
 
     # --- the thesis itself is breaking down
     if an['ma']['dist50'] is not None and an['ma']['dist50'] < 0 and an['regime'] in ('weak', 'down'):
         actions.append(_action(
             'TREND_BREAK', 'high', ticker,
-            'Trend break — price is below the 50-day average',
+            'Close below the 50-day average with a weak trend',
             f'Price ${price} closed below the 50-day average (${an["ma"]["sma50"]}) '
             f'and the trend now reads as {an["regime_he"].lower()}. '
-            f'Consider trimming the position or tightening the stop.',
+            f'This is a description of the trend, not a forecast.',
             suggest=trail))
 
     # --- extended move: take something off the table
     if r_multiple is not None and r_multiple >= 3 and (an['rsi'] or 0) >= 72:
         actions.append(_action(
             'TAKE_PARTIAL', 'medium', ticker,
-            'Consider taking partial profit',
-            f'{r_multiple}R of profit with RSI at {an["rsi"]} — the move is extended. '
-            f'Selling a third to a half and trailing the rest banks profit without '
-            f'giving up the trend if it continues.',
+            'Profit above 3R with RSI above 72',
+            f'{r_multiple}R of open profit with RSI at {an["rsi"]}: the move is extended by both '
+            f'measures. Extended moves can continue; the rule only flags the condition.',
             suggest=trail, stop_type='trail'))
 
     # --- position size is out of line with the risk budget
@@ -553,7 +554,7 @@ def manage_position(pos, an, settings):
             'Position risk exceeds your policy',
             f'Open risk of ${open_risk} is {_f(open_risk / equity * 100)}% of the account, '
             f'against your policy of {risk_pct}% per trade. '
-            f'Reduce the size or tighten the stop.',
+            f'The condition is met; any change is your decision.',
             suggest=None))
 
     return actions, metrics
@@ -576,6 +577,7 @@ def build_plan(positions, watch, settings=None):
     if not tickers:
         return {'actions': [], 'positions': [], 'entries': [],
                 'risk': _risk_summary([], settings), 'settings': settings,
+                'missing': [], 'unchecked': [], 'held': 0,
                 'generated_at': int(time.time())}
 
     with ThreadPoolExecutor(max_workers=10) as ex:
@@ -598,7 +600,7 @@ def build_plan(positions, watch, settings=None):
             'Total open risk is high',
             f'Open risk across the portfolio — the distance to every stop — is '
             f'{risk["heat_pct"]}% of the account. Keeping that under 6% is the usual '
-            f'guidance. Tighten stops or reduce position sizes.'))
+            f'rule of thumb; it is a convention, not a safety limit.'))
 
     # Entry candidates: watchlist names that are not already held. A ticker can
     # fire several setups at once; show its strongest one and list the rest as
@@ -626,6 +628,9 @@ def build_plan(positions, watch, settings=None):
         'risk': risk,
         'settings': settings,
         'missing': [t for t in tickers if t not in amap],
+        # held positions whose prices could not be read: their rules were NOT checked
+        'unchecked': sorted(t for t in held if t and t not in amap),
+        'held': len(positions),
         'generated_at': int(time.time()),
     }
 
