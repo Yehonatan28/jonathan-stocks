@@ -24,6 +24,7 @@ import riskx
 import strategylab
 import relative
 import pages
+import calendars
 from quant import indicators as _qi
 
 import mimetypes
@@ -1514,6 +1515,30 @@ def relative_view():
     pair = [s.strip().upper() for s in (request.args.get('pair') or '').split(',')][:2]
     if out.get('ok') and len(pair) == 2 and all(p in series for p in pair) and pair[0] != pair[1]:
         out['rolling'] = {'pair': pair, 'window': relative.ROLL, 'points': relative.rolling(series, *pair)}
+    return jsonify(out)
+
+
+@app.route('/api/calendar')
+def calendar_view():
+    """One day of one calendar: earnings, economicevents or dividends."""
+    kind = request.args.get('kind', 'earnings')
+    if kind not in calendars.KINDS:
+        return jsonify({'error': 'Unknown calendar'}), 400
+    try:
+        day = datetime.strptime(request.args.get('date', ''), '%Y-%m-%d').date()
+    except ValueError:
+        day = datetime.utcnow().date()
+    key = f'cal:{kind}:{day.isoformat()}'
+    hit = cache_get(key)
+    if hit is not None:
+        return jsonify(hit)
+    try:
+        rows = calendars.fetch(kind, day)
+    except calendars.Unavailable as exc:
+        return jsonify({'ok': False, 'error': f'The calendar source did not answer ({exc}).'}), 503
+    out = {'ok': True, 'kind': kind, 'date': day.isoformat(), 'rows': rows,
+           'method': calendars.__doc__.split('Method (shown to the user as written here):')[1].strip()}
+    cache_set(key, out, 6 * 3600)
     return jsonify(out)
 
 

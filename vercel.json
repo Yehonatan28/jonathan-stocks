@@ -23,7 +23,8 @@
           "riskx.py",
           "strategylab.py",
           "relative.py",
-          "pages.py"
+          "pages.py",
+          "calendars.py"
         ]
       }
     }

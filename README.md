@@ -15,7 +15,7 @@ its inputs is a dash, never a guess), and **information, not advice** (no buy or
 | **Equity Research** | Company Research: five fiscal years and eight quarters from SEC XBRL filings with ratios and formulas. Stock Screener over the S&P 500 and Nasdaq-100 with presets, saved screens and CSV export. Compare & Correlate: up to eight symbols, indexed performance, volatility, drawdown, beta, correlation matrix and rolling correlation, filed fundamentals side by side. |
 | **Portfolio** | Holdings and watchlist. Transactions & P&L: buys, sells, dividends, cash, fees and splits with FIFO lots, realised and unrealised gains per currency, and time-weighted performance against SPY with Sharpe, Sortino, beta, alpha and drawdown (each only with enough history). |
 | **Quant & Risk** | Risk Engine (daily action plan for stops). Portfolio Risk: weights, open risk to the stops, sector limits, stop distance in ATR, correlation, position sizing for long and short. Strategy Lab: user-defined rules backtested with next-open fills, costs and no look-ahead. Gap detection, engine replay, price alerts. |
-| **Intelligence** | Market news from US and Israeli publishers (RSS), deduplicated, with per-symbol feeds. |
+| **Intelligence** | Market news from US and Israeli publishers (RSS), deduplicated, with per-symbol feeds. Calendar: earnings (with consensus estimates labelled), economic releases and dividends for ten trading days, holdings marked. |
 
 Every screen has an address (`#/research?t=MSFT`, `#/relative?s=AAPL,MSFT`), works at phone, tablet and
 desktop widths, and shows a provenance badge: source, *Delayed / End of day / As filed*, and retrieval time.

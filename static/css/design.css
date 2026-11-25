@@ -414,3 +414,14 @@ input, select, textarea { font-family: var(--ui); }
 .side-links a, .auth-note a { color: var(--tx3); text-decoration: underline; text-underline-offset: 3px; }
 .side-links a:hover, .auth-note a:hover { color: var(--tx); }
 @media (max-width: 1180px) { .side-links { display: none; } }
+
+/* ---- Calendar */
+.calw .ph h1 { margin: 0 0 4px; font-size: 22px; } .calw .ph p { margin: 0 0 14px; color: var(--tx2); font-size: 13.5px; }
+.cal-days { display: flex; gap: 6px; overflow-x: auto; margin: 4px 0 12px; scrollbar-width: none; }
+.cal-days button { flex: none; display: grid; gap: 2px; min-width: 70px; padding: 8px 10px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); color: var(--tx2); cursor: pointer; text-align: center; }
+.cal-days button b { font: 600 12px var(--ui); color: var(--tx); } .cal-days button span { font: 500 12px var(--mono); }
+.cal-days button.on { border-color: var(--accent); background: var(--accent-bg); }
+.cal-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.cal-filters label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.cal-filters select { background: var(--bg); color: var(--tx); border: 1px solid var(--line); border-radius: 4px; font: 500 12px var(--ui); }
+.mi-t tr.mine td { background: rgba(214, 170, 79, .08); } .mi-t tr.mine td.sticky { box-shadow: inset 3px 0 0 var(--gold); }

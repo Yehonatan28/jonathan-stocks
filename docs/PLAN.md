@@ -40,7 +40,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Comparison: up to eight symbols on shared days, indexed performance, period returns, volatility, drawdown, beta to SPY; filed fundamentals side by side for four (`relative.py`)
 - [ ] ETF research (holdings, sectors, expense ratio where available)
 - [x] Correlation: matrix of daily returns, 60-day rolling correlation for any pair, drawdown comparison (in Compare & Correlate)
-- [ ] Economic and earnings calendar (🔑 FRED / Finnhub for full coverage)
+- [x] Economic, earnings and dividend calendars from Nasdaq's public calendar (no key), ten trading days, holdings and watchlist marked, estimates labelled (`calendars.py`)
 - [ ] Alerts: price, %, RSI, MA cross, volume, earnings, stop proximity; history; server-side monitoring only if a scheduler is available, otherwise stated as "while open"
 
 ## Phase 4 · Intelligence layer

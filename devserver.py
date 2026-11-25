@@ -246,5 +246,27 @@ def _fake_facts(ticker):
 
 _fund.company_facts = _fake_facts
 
+# --- calendars, stubbed
+import calendars as _cal
+
+
+def _fake_cal(kind, day, get=None):
+    r = _r2.Random(kind + day.isoformat())
+    if kind == 'earnings':
+        names = [('AAPL', 'Apple'), ('MSFT', 'Microsoft'), ('NVDA', 'NVIDIA'), ('CRM', 'Salesforce'), ('ZS', 'Zscaler'), ('LULU', 'Lululemon'), ('AVGO', 'Broadcom')]
+        return [{'date': day.isoformat(), 'symbol': s, 'name': n, 'session': r.choice(['before the open', 'after the close', 'time not given']),
+                 'market_cap': r.uniform(5e9, 3e12), 'quarter': 'Oct/2026', 'eps_estimate': round(r.uniform(-0.2, 3), 2),
+                 'estimates': r.randint(2, 40), 'eps_last_year': round(r.uniform(-0.3, 2.8), 2), 'last_year_date': '12/01/2025'}
+                for s, n in r.sample(names, 4)]
+    if kind == 'economicevents':
+        ev = ['GDP (QoQ)', 'Initial Jobless Claims', 'ISM Manufacturing PMI', 'Core PCE (MoM)', 'Consumer Confidence']
+        return [{'date': day.isoformat(), 'time_gmt': f'{r.randint(12, 15)}:30', 'country': r.choice(['United States', 'Euro Zone', 'Japan']),
+                 'event': e, 'actual': None, 'consensus': f'{r.uniform(0, 3):.1f}%', 'previous': f'{r.uniform(0, 3):.1f}%'} for e in r.sample(ev, 3)]
+    return [{'date': day.isoformat(), 'symbol': s, 'name': s + ' Corp', 'ex_date': day.strftime('%m/%d/%Y'), 'record_date': day.strftime('%m/%d/%Y'),
+             'pay_date': '12/20/2026', 'amount': round(r.uniform(0.1, 1.2), 2), 'annual': round(r.uniform(0.4, 4.8), 2)} for s in ('KO', 'PG', 'JPM')]
+
+
+_cal.fetch = _fake_cal
+
 if __name__ == '__main__':
     A.app.run(host='127.0.0.1', port=5055, debug=False, use_reloader=False)
