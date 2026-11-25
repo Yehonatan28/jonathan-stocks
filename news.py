@@ -48,11 +48,15 @@ GLOBAL_FEEDS = [
 # Hebrew outlets: this is an Israeli portfolio, and TA names are barely covered
 # in the English press.
 ISRAEL_FEEDS = [
-    ('globes-capital', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=2', 'he', 'il'),
-    ('globes-main', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx?iID=1725', 'he', 'il'),
-    ('calcalist', 'Calcalist', 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml', 'he', 'il'),
-    ('themarker', 'TheMarker', 'https://www.themarker.com/srv/themarker---markets', 'he', 'il'),
-    ('bizportal', 'Bizportal', 'https://www.bizportal.co.il/rss', 'he', 'il'),
+    # Checked from a US data centre (where production runs) on 2026-11-25. Globes needs the
+    # /FeederNode path; without it the service answers with its WSDL page, not a feed.
+    # Calcalist refuses automated clients (403) and Bizportal has no RSS any more, so both are out.
+    ('globes-capital', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2', 'he', 'il'),
+    ('globes-main', 'Globes', 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=1725', 'he', 'il'),
+    ('themarker', 'TheMarker', 'https://www.themarker.com/srv/tm-markets', 'he', 'il'),
+    ('ynet-economy', 'Ynet', 'https://www.ynet.co.il/Integration/StoryRss6.xml', 'he', 'il'),
+    ('maariv-business', 'Maariv', 'https://www.maariv.co.il/Rss/RssFeedsKalkalaBeArez', 'he', 'il'),
+    ('ice', 'ice', 'https://www.ice.co.il/rss', 'he', 'il'),
 ]
 
 ALL_FEEDS = GLOBAL_FEEDS + ISRAEL_FEEDS
