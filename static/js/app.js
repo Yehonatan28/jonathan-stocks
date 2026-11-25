@@ -22,7 +22,11 @@ const sign=(v,d=2)=>v==null?'—':(v>=0?'+':'')+fmt(v,d);
 const cls=v=>v==null?'':v>=0?'up':'dn';
 /* design tokens for canvas charts, read at draw time so both themes draw correctly */
 const tok=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888';
-const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
+/* identical GET requests already in flight share one network call */
+const inflight=new Map();
+const api=(url,opt)=>{if(opt&&opt.method&&opt.method!=='GET')return api1(url,opt);
+ if(inflight.has(url))return inflight.get(url);const p=api1(url,opt).finally(()=>inflight.delete(url));inflight.set(url,p);return p};
+const api1=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});
  if(window.noteProv)window.noteProv(r);else(window.__provQ=window.__provQ||[]).push(r);  /* answered before shell.js loaded */
  let j={};try{j=await r.json()}catch(e){j={error:'The server returned an unexpected response.'}}
  if(!r.ok){if(r.status===404&&!j.error)j.error='Endpoint not found on the server.';throw j}return j};
@@ -463,9 +467,13 @@ function bollinger(closes,n=20,k=2){
   mid.push(m);up.push(m+k*sd);lo.push(m-k*sd)}
  return{up,lo,mid}}
 
+/* the price-chart library (160 KB) loads the first time a chart is opened, not with the page */
+let lwLoading=null;
+function needLW(){if(typeof LightweightCharts!=='undefined')return Promise.resolve();
+ return lwLoading=lwLoading||new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='/static/vendor/lightweight-charts-4.1.3.js';sc.onload=ok;sc.onerror=()=>{lwLoading=null;no()};document.head.appendChild(sc)})}
 function renderChart(){
  const d=S.chart.data;if(!d)return;
- if(typeof LightweightCharts==='undefined'){toast('Charting library failed to load — check your connection','err');return}
+ if(typeof LightweightCharts==='undefined'){needLW().then(renderChart).catch(()=>toast('Charting library failed to load — check your connection','err'));return}
  if(S.chart.lw){S.chart.lw.remove()}
  const el=$('lwChart');el.innerHTML='';
  const lw=LightweightCharts.createChart(el,{
@@ -1355,8 +1363,12 @@ document.addEventListener('DOMContentLoaded',()=>{
  const tb=document.querySelector('.h-board');
  if(tb)tb.addEventListener('toggle',()=>{if(tb.open&&!tb.dataset.loaded){tb.dataset.loaded='1';loadPreset('us',document.querySelector('#v-home .filters .btn'))}});
  initTape();
- setInterval(()=>{loadTapeAndBento();loadIndices()},60000);
- setInterval(loadFearGreed,900000);
- setInterval(()=>{if($('v-command').classList.contains('on'))loadPlan(false)},300000);
+ /* refresh only while the tab is visible; coming back after a minute or more refreshes at once */
+ let lastTick=Date.now();
+ const tick=()=>{if(document.hidden)return;lastTick=Date.now();loadTapeAndBento();loadIndices()};
+ setInterval(tick,60000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastTick>60000)tick()});
+ setInterval(()=>{if(!document.hidden)loadFearGreed()},900000);
+ setInterval(()=>{if(!document.hidden&&$('v-command').classList.contains('on'))loadPlan(false)},300000);
  if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 });

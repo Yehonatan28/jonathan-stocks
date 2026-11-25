@@ -7,27 +7,31 @@ Market context, company research, portfolio accounting and risk tools in one wor
 three rules: **every number shows its source and freshness**, **nothing is invented** (a figure without
 its inputs is a dash, never a guess), and **information, not advice** (no buy or sell calls).
 
-## Workspaces
+## Areas
 
-| Workspace | Modules |
+| Area | Tabs |
 |---|---|
-| **Market Intelligence** | Market Overview: breadth over all S&P 500 members (advance/decline, % above 50/200-day, near 52-week highs/lows, cap- vs equal-weighted move), 11 sector funds vs SPY over 1D–YTD, rates/FX/commodities/crypto, leaders and laggards, CNN Fear & Greed. Market Heatmap (sector treemap). |
-| **Equity Research** | Company Research: five fiscal years and eight quarters from SEC XBRL filings with ratios and formulas, and a printable A4 report saved as PDF. Stock Screener over the S&P 500 and Nasdaq-100 with presets, saved screens and CSV export. Compare & Correlate: up to eight symbols, indexed performance, volatility, drawdown, beta, correlation matrix and rolling correlation, filed fundamentals side by side. |
-| **Portfolio** | Holdings and watchlist. Transactions & P&L: buys, sells, dividends, cash, fees and splits with FIFO lots, realised and unrealised gains per currency, and time-weighted performance against SPY with Sharpe, Sortino, beta, alpha and drawdown (each only with enough history). |
-| **Quant & Risk** | Risk Engine (daily action plan for stops). Portfolio Risk: weights, open risk to the stops, sector limits, stop distance in ATR, correlation, position sizing for long and short. Strategy Lab: user-defined rules backtested with next-open fills, costs and no look-ahead. Gap detection, engine replay, price alerts. |
-| **Intelligence** | Research Assistant: questions answered by Gemini only from the site's data, with source ids and every number checked; holdings shared only with per-question consent. Market news from US and Israeli publishers (RSS), deduplicated, with per-symbol feeds. Calendar: earnings (with consensus estimates labelled), economic releases and dividends for ten trading days, holdings marked. |
+| **Market** | Overview (market now, today in brief with its basis, your names, breadth, sectors, cross-asset, Fear & Greed), Heatmap (sector treemap with find, sector isolate and table view), News, Calendar |
+| **Research** | Company (SEC filings, annual and quarterly, printable report), Screener, Compare (base 100 against SPY, risk, correlation), Trend view, Assistant |
+| **Portfolio** | Holdings (stops), Transactions (FIFO P&L and performance), Watchlist, Daily check (rules on the last close), Risk (exposure and limit breaches), Alerts |
+| **Lab** | Strategy Lab (rules against buy and hold, with costs), Engine replay, Gaps |
 
-Every screen has an address (`#/research?t=MSFT`, `#/relative?s=AAPL,MSFT`), works at phone, tablet and
-desktop widths, and shows a provenance badge: source, *Delayed / End of day / As filed*, and retrieval time.
+Every screen has a title, one sentence on what it is for and one primary action; global search (Ctrl K)
+finds companies and symbols from anywhere. Addresses are stable (`#/research?t=MSFT`, `#/relative?s=AAPL,MSFT`,
+`#/lab?t=NVDA`) and the last symbol follows you between tools. Every screen shows a provenance badge: source,
+status (*Delayed*, *End of day*, *As filed*, *As published*, *Schedule*, *Estimated*), the date the data is from
+and when it was retrieved. Display menu: dark or light theme, comfortable or compact density, English or Hebrew
+(right to left).
 
 ## Architecture
 
 ```
 Browser (vanilla JS, no framework)          Flask service (Vercel serverless)            Sources
-  shell.js   navigation, provenance   ──►    app.py         routes, security, cache  ──►  Yahoo Finance (per-symbol daily bars)
+  shell.js   areas, tabs, provenance  ──►    app.py         routes, security, cache  ──►  Yahoo Finance (per-symbol daily bars)
   market.js  screener.js research.js         provenance.py  X-Data-* headers              SEC EDGAR XBRL company facts
   ledger.js  risk.js lab.js relative.js      quant/         one indicator library         CNN Fear & Greed
-  app.js     legacy modules                  marketintel scanner fundamentals             Publisher RSS (CNBC, FT, Globes, ...)
+  search.js  chartframe.js prefs i18n          marketintel scanner fundamentals             Publisher RSS (CNBC, FT, Globes, ...)
+  app.js     legacy modules
                                              ledger performance riskx strategylab relative
                                              storage.py     Turso (libSQL over HTTP) / SQLite
 ```

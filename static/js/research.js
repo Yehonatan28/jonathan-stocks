@@ -138,12 +138,14 @@
   });
   document.addEventListener('themechange', () => { if (cur && root.classList.contains('on')) drawCharts(cur); });
 
+  let openSeq = 0;
   async function open(t) {
     t = (t || '').trim().toUpperCase();
     if (!t) return;
     document.getElementById('rsInput').value = t;
     if (location.hash !== '#/research?t=' + t) history.replaceState(null, '', '#/research?t=' + encodeURIComponent(t));
     body.innerHTML = '<div class="spinner"></div>';
+    const seq = ++openSeq;                    // a newer request wins; a slow older answer is dropped
     let d, q = null;
     try {
       [d, q] = await Promise.all([api('/api/company/' + encodeURIComponent(t)), api('/api/quotes?tickers=' + encodeURIComponent(t)).then((x) => x[0]).catch(() => null)]);
@@ -151,6 +153,7 @@
       body.innerHTML = `<div class="mi-empty">${e((err && err.error) || 'Financial statements are unavailable right now.')}</div>`;
       return;
     }
+    if (seq !== openSeq) return;
     const last = d.annual[d.annual.length - 1] || {};
     const cap = q && q.price && last.shares_diluted ? q.price * last.shares_diluted : null;
     const pe = q && q.price && last.eps_diluted > 0 ? q.price / last.eps_diluted : null;
