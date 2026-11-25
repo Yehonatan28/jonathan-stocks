@@ -19,7 +19,8 @@
           "scanner.py",
           "fundamentals.py",
           "ledger.py",
-          "performance.py"
+          "performance.py",
+          "riskx.py"
         ]
       }
     }

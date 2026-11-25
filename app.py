@@ -20,6 +20,8 @@ import scanner
 import fundamentals
 import ledger
 import performance
+import riskx
+from quant import indicators as _qi
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -1374,6 +1376,56 @@ def _clean_positions(raw):
             'target': _num(p.get('target')),
         })
     return out
+
+
+@app.route('/api/risk/review', methods=['POST'])
+def risk_review():
+    """Exposure, open risk, sector weights, stop quality and correlation of the holdings.
+    Signed in, holdings and equity come from the account; a guest posts them."""
+    d = request.get_json(silent=True) or {}
+    uid = current_user()
+    if uid:
+        conn = db()
+        positions = [dict(r) for r in conn.execute('SELECT * FROM portfolio WHERE user_id=?', (uid,))]
+        row = conn.execute('SELECT equity FROM settings WHERE user_id=?', (uid,)).fetchone()
+        conn.close()
+        equity = (dict(row) if row else {}).get('equity')
+    else:
+        positions = _clean_positions(d.get('positions'))
+        equity = _num((d.get('settings') or {}).get('equity'))
+    positions = positions[:25]
+    if not positions:
+        return jsonify({'ok': False, 'reason': 'No holdings yet. Add them under Portfolio > Holdings.'})
+
+    def pull(sym):
+        try:
+            return sym, yf_chart(sym, '1d', '6mo')
+        except Exception:                    # noqa: BLE001
+            return sym, None
+    with ThreadPoolExecutor(max_workers=10) as ex:
+        hist = dict(ex.map(pull, sorted({p['ticker'] for p in positions})))
+    prices, atrs, closes = {}, {}, {}
+    for t, df in hist.items():
+        if df is None or len(df) < 2:
+            continue
+        prices[t] = round(float(df['Close'].iloc[-1]), 2)
+        if len(df) >= 15:
+            atrs[t] = round(float(_qi.atr(df).iloc[-1]), 4)
+        closes[t] = marketintel.to_points(df)
+    sectors = {p['ticker']: (market._BY_TICKER.get(p['ticker']) or {}).get('sector') for p in positions}
+    out = riskx.review(positions, prices, atrs, sectors, equity, d.get('limits'), closes)
+    out['ok'] = True
+    return jsonify(out)
+
+
+@app.route('/api/risk/size', methods=['POST'])
+def risk_size():
+    d = request.get_json(silent=True) or {}
+    try:
+        return jsonify({'ok': True, **riskx.size(d.get('equity'), d.get('risk_pct'), d.get('entry'), d.get('stop'),
+                                                  d.get('max_position_pct'), 'short' if d.get('side') == 'short' else 'long')})
+    except (TypeError, ValueError) as exc:
+        return jsonify({'error': str(exc) if str(exc) else 'Enter equity, risk, entry and stop'}), 400
 
 
 @app.route('/api/engine/backtest/<ticker>')

@@ -36,6 +36,7 @@ DATASETS = [
     ('/api/company', 'company', 'Company financials', 'SEC EDGAR filings (10-K, 10-Q)', 'reported'),
     ('/api/ledger', 'ledger', 'Portfolio valuation', 'Your transactions, valued at Yahoo Finance prices', 'delayed'),
     ('/api/performance', 'performance', 'Portfolio performance', 'Your transactions, Yahoo Finance daily closes', 'eod'),
+    ('/api/risk/review', 'risk', 'Portfolio risk', 'Your holdings, Yahoo Finance daily bars', 'eod'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]

@@ -33,7 +33,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [ ] Charting: candles/OHLC/line/area, 1D–MAX, indicators with settings, crosshair, levels, markers, interpretation panel from actual values
 - [x] Portfolio accounting: transactions (buy/sell/dividend/deposit/withdrawal/fee/split), FIFO lots, realised/unrealised P&L, cash, per-currency totals without conversion, oversell rejected, history must balance on every write and delete; account or browser-only (guest, computed statelessly); CSV import/export; method on the page (`ledger.py`)
 - [x] Performance analytics: time-weighted return against SPY (deposits/withdrawals neutral), CAGR from 252 days, volatility/Sharpe/Sortino/beta/alpha from 60 days, max drawdown with dates, best/worst day; risk-free = average 13-week bill yield or zero (stated); split-adjusted closes handled; one currency at a time (`performance.py`)
-- [ ] Risk engine extension: long and short sizing, limits (per trade, portfolio, sector, single stock), concentration, correlation, unprotected positions, volatility-inconsistent stops
+- [x] Risk engine extension: Portfolio Risk review against the user's limits (largest position, sector, risk per trade, total open risk), unprotected positions, stops under 1 or over 4 ATR, 60-day correlation matrix and high pairs; long/short position sizing capped by the position limit (`riskx.py`)
 
 ## Phase 3 · Analytical differentiation
 - [ ] Backtesting lab: configurable entries/exits (RSI, MA, MACD, ATR), stops, targets, trailing, costs, slippage, next-bar execution (no look-ahead), equity/drawdown curves, monthly heatmap, benchmark
