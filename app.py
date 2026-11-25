@@ -28,6 +28,7 @@ import calendars
 import alertrules
 import digest
 import assistant
+import tone
 from quant import indicators as _qi
 
 import mimetypes
@@ -1944,6 +1945,7 @@ def methodology_page():
         ('Alerts', alertrules.__doc__.split('Method (shown to the user as written here):')[1]),
         ('Your names today', digest.__doc__.split('Method (shown to the user as written here):')[1]),
         ('Research assistant', assistant.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('News tone', tone.__doc__.split('Method (shown to the user as written here):')[1]),
     ]
     return _doc('Data & methodology', pages.methodology(provenance.catalogue(), sections),
                 'Where every number on Jonathan Stocks comes from and how each one is computed.')

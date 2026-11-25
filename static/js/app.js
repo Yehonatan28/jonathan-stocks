@@ -1043,9 +1043,13 @@ async function loadNews(scope,btn){
    $('newsFailed').innerHTML=`<div class="sub" style="margin-top:14px">Sources not responding right now: ${names.map(esc).join(' · ')}. The rest loaded normally.</div>`}}
  catch(e){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">⚠</div><h4>${esc(e.error||'Could not load the news')}</h4></div>`}}
 function filterNews(){renderNews()}
+function toneTag(n){const t=n.tone;if(!t||t.tone==='neutral')return'';
+ return `<span class="tone t-${t.tone}" title="Machine-labelled from wording: ${esc((t.words||[]).join(', '))}">${t.tone==='positive'?'▲ positive':'▼ negative'}</span>`}
 function renderNews(){
- const q=($('newsSearch').value||'').trim().toLowerCase();
- const list=q?newsCache.filter(n=>(n.title+' '+(n.summary||'')).toLowerCase().includes(q)):newsCache;
+ const q=($('newsSearch').value||'').trim().toLowerCase(),tf=($('newsTone')&&$('newsTone').value)||'';
+ const c={positive:0,negative:0,neutral:0};newsCache.forEach(n=>{const k=(n.tone&&n.tone.tone)||'neutral';c[k]=(c[k]||0)+1});
+ if($('newsToneSum'))$('newsToneSum').textContent=newsCache.length?`Wording: ${c.positive} positive · ${c.negative} negative · ${c.neutral} neutral`:'';
+ const list=newsCache.filter(n=>(!q||(n.title+' '+(n.summary||'')).toLowerCase().includes(q))&&(!tf||((n.tone&&n.tone.tone)||'neutral')===tf));
  if(!list.length){$('newsBox').innerHTML=`<div class="empty"><div class="e-ic">📰</div><h4>${q?'No headlines match that filter':'No news right now'}</h4></div>`;return}
  const[hero,...rest]=list;
  $('newsBox').innerHTML=`<div class="news-grid">
@@ -1054,12 +1058,12 @@ function renderNews(){
    <div class="nh-body"><span class="nh-kicker">${esc(hero.source||'')} · Top story</span>
     <div class="nh-title">${esc(hero.title)}</div>
     ${hero.summary?`<div class="nh-sum">${esc(hero.summary)}</div>`:''}
-    <div class="nh-meta">${timeAgo(hero.time)}</div></div></a>
+    <div class="nh-meta">${toneTag(hero)} ${timeAgo(hero.time)}</div></div></a>
   <div class="news-list">${rest.slice(0,14).map((n,i)=>`
    <a class="glass news-item" href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">
     ${newsVisual(n,96,70,'thumb')}
     <div style="flex:1;min-width:0"><div class="ni-title">${esc(n.title)}</div>
-     <div class="ni-meta"><span class="ni-num">${String(i+2).padStart(2,'0')}</span><span class="n-tag">${esc(n.source||'')}</span>${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}
+     <div class="ni-meta"><span class="ni-num">${String(i+2).padStart(2,'0')}</span><span class="n-tag">${esc(n.source||'')}</span>${toneTag(n)}${timeAgo(n.time)}</div></div></a>`).join('')}</div></div>`}
 
 /* ===================== gap detector ===================== */
 async function loadGaps(scope,btn){

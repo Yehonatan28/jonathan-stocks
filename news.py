@@ -16,6 +16,7 @@ without a network.
 
 import html
 import re
+import tone
 import time
 import provenance
 from concurrent.futures import ThreadPoolExecutor
@@ -384,6 +385,7 @@ def get_news(ticker=None, scope='all', limit=40, extra_tickers=None):
     tickers, names = _symbol_index()
     for it in items:
         it['art'] = classify(it['title'], it.get('summary', ''), tickers, names)
+        it['tone'] = tone.label(it['title'], it.get('summary', ''))
     return {'items': items, 'failed': failed}
 
 

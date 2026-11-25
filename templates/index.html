@@ -283,7 +283,9 @@
   <button class="btn btn-ghost btn-sm" data-scope="mine" onclick="loadNews('mine',this)">★ My stocks</button>
   <button class="btn btn-ghost btn-sm" data-scope="il" onclick="loadNews('il',this)">🇮🇱 Israel</button>
   <button class="btn btn-ghost btn-sm" data-scope="us" onclick="loadNews('us',this)">🇺🇸 US</button>
-  <input class="inp" id="newsSearch" placeholder="Filter headlines…" style="max-width:220px" oninput="filterNews()">
+  <input class="inp" id="newsSearch" placeholder="Filter headlines…" style="max-width:220px" oninput="filterNews()" aria-label="Filter headlines">
+  <select class="inp" id="newsTone" style="max-width:170px" onchange="filterNews()" aria-label="Tone"><option value="">Any tone</option><option value="positive">Positive wording</option><option value="negative">Negative wording</option><option value="neutral">Neutral</option></select>
+  <span class="tone-sum" id="newsToneSum" title="Machine-labelled from word lists; see Methodology"></span>
  </div>
  <div id="newsBox"></div>
  <div id="newsFailed"></div>

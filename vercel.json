@@ -27,7 +27,8 @@
           "calendars.py",
           "alertrules.py",
           "digest.py",
-          "assistant.py"
+          "assistant.py",
+          "tone.py"
         ]
       }
     }
