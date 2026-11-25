@@ -106,7 +106,10 @@
       const cw = b.cap_weighted_chg, ew = b.equal_weighted_chg;
       let gap = '';
       if (cw != null && ew != null && Math.abs(cw - ew) >= 0.3) gap = cw > ew ? ' The largest companies did better than the typical member.' : ' The typical member did better than the largest companies.';
+      const gapHe = gap ? (cw > ew ? ' לחברות הגדולות היו ביצועים טובים יותר מאשר לחברה הטיפוסית במדד.' : ' לחברה הטיפוסית במדד היו ביצועים טובים יותר מאשר לחברות הגדולות.') : '';
       if (sh != null) out.push({ k: 'Breadth', t: `${b.advancers} of ${tot} S&P 500 members rose today (${num(sh, 0)}%).${gap}`,
+        he: `${b.advancers} מתוך ${tot} חברות S&P 500 עלו היום (${num(sh, 0)}%).${gapHe}`,
+        bhe: `עולות ${b.advancers}, יורדות ${b.decliners}, ללא שינוי ${b.unchanged}, מתוך ${b.priced} חברות עם מחיר (מתוך ${b.members}). ממוצע משוקלל שווי <span dir="ltr">${pct(cw)}</span>, ממוצע שווה משקל <span dir="ltr">${pct(ew)}</span>.`,
         b: `Advancers ${b.advancers}, decliners ${b.decliners}, unchanged ${b.unchanged}, of ${b.priced} priced members out of ${b.members}. Cap-weighted average move ${pct(cw)}, equal-weighted ${pct(ew)}.`, src: basis(['breadth']) });
     }
     if (secData && secData.sectors && secData.sectors.length) {
@@ -114,20 +117,26 @@
       if (rows.length >= 2) {
         const hi = rows[0], lo = rows[rows.length - 1], sp = secData.benchmark.returns['1D'];
         out.push({ k: 'Sectors', t: `${hi.sector} led the sector funds (${pct(hi.returns['1D'])}); ${lo.sector} trailed (${pct(lo.returns['1D'])}). The S&P 500 fund moved ${pct(sp)}.`,
+          bhe: `השינוי היומי במחיר של 11 קרנות הסקטורים של SPDR (הגבוה <span dir="ltr">${hi.etf}</span>, הנמוך <span dir="ltr">${lo.etf}</span>) ושל SPY, עד הסגירה של <span dir="ltr">${e(rows[0].as_of || '')}</span>.`,
+          he: `<span dir="ltr">${e(hi.sector)}</span> הוביל את קרנות הסקטורים (<span dir="ltr">${pct(hi.returns['1D'])}</span>); <span dir="ltr">${e(lo.sector)}</span> פיגר (<span dir="ltr">${pct(lo.returns['1D'])}</span>). קרן S&P 500 זזה <span dir="ltr">${pct(sp)}</span>.`,
           b: `One-day price change of the 11 SPDR sector funds (${hi.etf} highest, ${lo.etf} lowest) and SPY, to the close of ${e(rows[0].as_of || 'the last session')}.`, src: basis(['sectors']) });
       }
     }
     const vix = (window.IDXQ || []).find((q) => q.ticker === '^VIX');
     if (vix && vix.price != null && vix.chg != null) {
       out.push({ k: 'Volatility', t: `The VIX ${vix.chg >= 0 ? 'rose' : 'fell'} ${num(Math.abs(vix.chg))}% to ${num(vix.price)}: options on the S&P 500 are pricing ${vix.chg >= 0 ? 'more' : 'less'} movement over the next 30 days than yesterday.`,
+        bhe: `מדד התנודתיות של CBOE: <span dir="ltr">${num(vix.price)}</span>, שינוי <span dir="ltr">${pct(vix.chg)}</span> מול הסגירה הקודמת. VIX גבוה יותר פירושו תנודות צפויות גדולות יותר לשני הכיוונים; הוא לא מנבא כיוון.`,
+        he: `מדד VIX ${vix.chg >= 0 ? 'עלה' : 'ירד'} ב־${num(Math.abs(vix.chg))}% ל־${num(vix.price)}: האופציות על S&P 500 מתמחרות תנועה ${vix.chg >= 0 ? 'גדולה' : 'קטנה'} יותר ב־30 הימים הבאים לעומת אתמול.`,
         b: `CBOE Volatility Index ${num(vix.price)}, change ${pct(vix.chg)} on the previous close. A higher VIX means larger expected swings in either direction; it is not a forecast of direction.`, src: basis(['quotes']) });
     } else if (snapData) {
       const y = snapData.find((r) => r.kind === 'yield' && r.chg_bp != null);
       if (y) out.push({ k: 'Rates', t: `${y.label} ${y.chg_bp >= 0 ? 'rose' : 'fell'} ${num(Math.abs(y.chg_bp), 1)} bp to ${num(y.price, 3)}%.`,
         b: `${y.label} (${y.symbol}) ${num(y.price, 3)}%, change ${num(y.chg_bp, 1)} basis points on the previous close.`, src: basis(['snapshot']) });
     }
-    box.innerHTML = out.length ? out.slice(0, 3).map((i) => `<li class="ins"><span class="ins-k">${i.k}</span><p>${i.t}</p>
-        <details><summary>Basis</summary><p>${i.b}</p>${i.src ? `<p class="muted">Source: ${e(i.src)}</p>` : ''}</details></li>`).join('')
+    const he = window.LANG && LANG() === 'he', T = window.T || String;
+    if (he) out.forEach((i) => { if (i.he) { i.t = i.he; i.b = i.bhe || i.b; } });
+    box.innerHTML = out.length ? out.slice(0, 3).map((i) => `<li class="ins"><span class="ins-k">${T(i.k)}</span><p>${i.t}</p>
+        <details><summary>${T('Basis')}</summary><p>${i.b}</p>${i.src ? `<p class="muted">${he ? 'מקור' : 'Source'}: <span dir="ltr">${e(i.src)}</span></p>` : ''}</details></li>`).join('')
       : '<li class="ins"><p class="muted">Not enough of today’s data has arrived to describe the session. The sections below show what is available.</p></li>';
   }
 
@@ -164,9 +173,10 @@
       if (!signed && body.watch) body.watch = body.watch.map((w) => (typeof w === 'string' ? w : w.ticker));
       const d = await api('/api/digest', { method: 'POST', body: JSON.stringify(body) });
       if (!d.symbols) {
-        box.innerHTML = `<div class="mi-empty h-cta"><p>Follow a few names and this space lists what is notable about them today: large moves, unusual volume, 52-week extremes, a stop nearby, a report this week.</p>
-          <div class="h-cta-b"><button type="button" class="btn btn-gold btn-sm" onclick="openSearch()">Find a company to follow</button>
-          <a class="btn btn-ghost btn-sm" href="#/portfolio">Add a holding</a></div></div>`;
+        const T = window.T || String;
+        box.innerHTML = `<div class="mi-empty h-cta"><p>${T('Follow a few names and this space lists what is notable about them today: large moves, unusual volume, 52-week extremes, a stop nearby, a report this week.')}</p>
+          <div class="h-cta-b"><button type="button" class="btn btn-gold btn-sm" onclick="openSearch()">${T('Find a company to follow')}</button>
+          <a class="btn btn-ghost btn-sm" href="#/portfolio">${T('Add a holding')}</a></div></div>`;
         el('dgNote').textContent = ''; return;
       }
       el('dgNote').textContent = `${d.symbols} names checked`;
@@ -182,8 +192,10 @@
     const box = el('hSession'); if (!box) return;
     const st = (el('mktTxt') || {}).textContent || '';
     const q = window.provOf && window.provOf('quotes');
-    box.textContent = [st, q ? `quotes ${STATUS[q.status] || q.status}, retrieved ${q.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''].filter(Boolean).join(' · ');
+    const he = window.LANG && LANG() === 'he', tm = q ? q.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    box.textContent = [st, q ? (he ? `מחירים ${q.status === 'delayed' ? 'מושהים' : 'סוף יום'}, נמשכו ב־${tm}` : `quotes ${STATUS[q.status] || q.status}, retrieved ${tm}`) : ''].filter(Boolean).join(' · ');
   }
+  document.addEventListener('langchange', () => { insights(); session(); digestLoad(); });
   document.addEventListener('prov', (ev) => { session(); if (['breadth', 'sectors', 'quotes', 'snapshot'].includes(ev.detail)) insights(); });
   setInterval(session, 30000);
   setTimeout(digestLoad, 400);

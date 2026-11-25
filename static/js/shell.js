@@ -46,6 +46,7 @@
   const byView = {};
   WORKSPACES.forEach((w) => w.modules.forEach((m) => { byView[m.v] = { ws: w, mod: m }; }));
   const $ = (id) => document.getElementById(id);
+  const T = (x) => (window.T ? window.T(x) : x);
 
   function renderSide() {
     const side = $('side');
@@ -53,9 +54,9 @@
     side.innerHTML =
       '<a class="side-brand" href="#/home" aria-label="Jonathan Stocks home"><span class="mark">JS</span>' +
       '<div><b>Jonathan Stocks</b><small>Financial intelligence</small></div></a>' +
-      WORKSPACES.map((w) => `<nav class="ws" data-ws="${w.id}" aria-label="${w.name}">
-        <div class="ws-h" title="${w.name}" data-first="${w.modules[0].v}">${svg(w.icon)}<span>${w.name}</span></div>
-        ${w.modules.map((m) => `<a href="#/${m.v}" data-v="${m.v}">${m.name}</a>`).join('')}</nav>`).join('') +
+      WORKSPACES.map((w) => `<nav class="ws" data-ws="${w.id}" aria-label="${T(w.name)}">
+        <div class="ws-h" title="${T(w.name)}" data-first="${w.modules[0].v}">${svg(w.icon)}<span>${T(w.name)}</span></div>
+        ${w.modules.map((m) => `<a href="#/${m.v}" data-v="${m.v}">${T(m.name)}</a>`).join('')}</nav>`).join('') +
       '<div class="side-foot">Market data: delayed or end-of-day unless marked live. Information only, not investment advice.' +
       '<nav class="side-links" aria-label="About"><a href="/about">About</a><a href="/methodology">Methodology</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div>';
     side.querySelectorAll('.ws-h').forEach((h) => h.addEventListener('click', () => { location.hash = '#/' + h.dataset.first; }));
@@ -64,7 +65,7 @@
   function renderTabbar() {
     const bar = $('tabbar');
     if (!bar) return;
-    bar.innerHTML = WORKSPACES.map((w) => `<button type="button" data-ws="${w.id}" aria-label="${w.name}">${svg(w.icon)}<span>${w.short}</span></button>`).join('');
+    bar.innerHTML = WORKSPACES.map((w) => `<button type="button" data-ws="${w.id}" aria-label="${T(w.name)}">${svg(w.icon)}<span>${T(w.short)}</span></button>`).join('');
     bar.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
       const w = WORKSPACES.find((x) => x.id === b.dataset.ws);
       if (w.modules.length === 1) { closeSheet(); location.hash = '#/' + w.modules[0].v; return; }
@@ -75,7 +76,7 @@
   function openSheet(w) {
     const sh = $('sheet');
     const cur = (location.hash.match(/^#\/([a-z]+)/) || [])[1];
-    sh.innerHTML = `<h4>${w.name}</h4>` + w.modules.map((m) => `<a href="#/${m.v}" class="${m.v === cur ? 'on' : ''}">${m.name}</a>`).join('');
+    sh.innerHTML = `<h4>${T(w.name)}</h4>` + w.modules.map((m) => `<a href="#/${m.v}" class="${m.v === cur ? 'on' : ''}">${T(m.name)}</a>`).join('');
     sh.classList.add('open');
     sh.querySelectorAll('a').forEach((a) => a.addEventListener('click', closeSheet));
   }
@@ -105,10 +106,10 @@
     const ph = $('pagehead'), hit = byView[v];
     if (!ph || !hit) return;
     const sym = readCtx(), { ws, mod } = hit;
-    ph.innerHTML = `<nav class="ph-tabs" aria-label="${ws.name} sections">${ws.modules.map((m) =>
-      `<a href="${hrefOf(m, sym)}"${m.v === v ? ' aria-current="page"' : ''}>${m.name}</a>`).join('')}</nav>
-      <div class="ph-row"><div class="ph-txt"><h1 id="pageTitle">${mod.title}</h1><p>${mod.desc}</p></div>
-      ${mod.act ? `<button type="button" class="btn btn-gold btn-sm ph-act">${mod.act[0]}</button>` : ''}</div>`;
+    ph.innerHTML = `<nav class="ph-tabs" aria-label="${T(ws.name)}">${ws.modules.map((m) =>
+      `<a href="${hrefOf(m, sym)}"${m.v === v ? ' aria-current="page"' : ''}>${T(m.name)}</a>`).join('')}</nav>
+      <div class="ph-row"><div class="ph-txt"><h1 id="pageTitle">${T(mod.title)}</h1><p>${T(mod.desc)}</p></div>
+      ${mod.act ? `<button type="button" class="btn btn-gold btn-sm ph-act">${T(mod.act[0])}</button>` : ''}</div>`;
     const b = ph.querySelector('.ph-act');
     if (b) b.addEventListener('click', () => runAct(mod.act[1]));
     ph.querySelectorAll('.ph-tabs a').forEach((a) => a.addEventListener('mousedown', () => {
@@ -124,8 +125,8 @@
     document.querySelectorAll('.ws').forEach((n) => n.classList.toggle('on', hit && n.dataset.ws === hit.ws.id));
     document.querySelectorAll('.tabbar button').forEach((b) => b.classList.toggle('on', hit && b.dataset.ws === hit.ws.id));
     const c = $('crumbs');
-    if (c && hit) c.innerHTML = `<span>${hit.ws.name}</span><i>/</i><b>${hit.mod.title}</b>`;
-    if (hit) document.title = `${hit.mod.title} · Jonathan Stocks`;
+    if (c && hit) c.innerHTML = `<span>${T(hit.ws.name)}</span><i>/</i><b>${T(hit.mod.title)}</b>`;
+    if (hit) document.title = `${T(hit.mod.title)} · Jonathan Stocks`;
     if (hit) { curView = v; renderProv(); }
   }
 
@@ -227,7 +228,17 @@
     if (sh && sh.classList.contains('open') && !sh.contains(e.target) && !e.target.closest('.tabbar')) closeSheet();
   });
 
+  // Section titles are drawn as styled divs by many modules; give them heading semantics (level 2,
+  // under the page's h1) so a screen reader can move through a screen by its sections.
+  const headify = (root) => root.querySelectorAll('.sec:not([role]), .b-label:not([role])').forEach((el) => {
+    if (el.closest('h1,h2,h3,h4,button,a,summary')) return;
+    el.setAttribute('role', 'heading'); el.setAttribute('aria-level', el.classList.contains('b-label') ? '3' : '2');
+  });
+  const content = $('content');
+  if (content) { headify(content); new MutationObserver(() => headify(content)).observe(content, { childList: true, subtree: true }); }
+
   renderSide();
   renderTabbar();
   if (!route()) mark('home');
+  document.addEventListener('langchange', () => { renderSide(); renderTabbar(); mark(curView); });
 })();

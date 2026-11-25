@@ -29,6 +29,14 @@ const api=async(url,opt)=>{const r=await fetch(url,{headers:{'Content-Type':'app
 function toast(msg,type='info'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;
  $('toasts').appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='.4s';setTimeout(()=>t.remove(),400)},4200)}
 
+/* ===================== dialogs and drawers =====================
+   Closed: inert and aria-hidden, so neither the keyboard nor a screen reader reaches them while
+   they sit off-screen. Open: focus moves inside; closing returns focus to what opened them. */
+const Dlg={open(el,sel){if(!el)return;if(el.getAttribute('aria-hidden')==='false')return;el._back=document.activeElement;el.removeAttribute('inert');el.setAttribute('aria-hidden','false');
+  setTimeout(()=>{const f=(sel&&el.querySelector(sel))||el.querySelector('button,[href],input,select,textarea');if(f)f.focus()},30)},
+ close(el){if(!el||el.getAttribute('aria-hidden')==='true')return;el.setAttribute('inert','');el.setAttribute('aria-hidden','true');
+  const b=el._back;el._back=null;if(b&&b.focus&&document.contains(b))b.focus()}};
+
 /* ===================== auth ===================== */
 function switchAuthTab(tab){const l=tab==='login';$('atLogin').classList.toggle('on',l);$('atReg').classList.toggle('on',!l);
  $('fLogin').style.display=l?'':'none';$('fReg').style.display=l?'none':''}
@@ -94,7 +102,7 @@ function tickClock(){const now=new Date();$('clockChip').textContent=now.toLocal
  const ny=new Date(now.toLocaleString('en-US',{timeZone:'America/New_York'}));
  const d=ny.getDay(),m=ny.getHours()*60+ny.getMinutes();const open=d>=1&&d<=5&&m>=570&&m<960;
  const c=$('mktChip');c.className='chip '+(open?'mkt-open':'mkt-closed');
- $('mktTxt').textContent=open?'US market open':'US market closed'}
+ $('mktTxt').textContent=(window.T||String)(open?'US market open':'US market closed')}
 
 function sparkline(canvas,data,color){if(!canvas||!data||data.length<2)return;
  const dpr=window.devicePixelRatio||1;const w=canvas.clientWidth||canvas.parentElement.clientWidth,h=+canvas.getAttribute('height')||52;
@@ -385,7 +393,7 @@ function toggleChartFull(){S.chart.full=!S.chart.full;$('chartShell').classList.
  setTimeout(()=>{if(S.chart.lw){const el=$('lwChart');S.chart.lw.applyOptions({width:el.clientWidth,height:el.clientHeight})}},60)}
 
 async function openChart(t){
- S.chart.tkr=t;S.chart.levels=null;$('chartModal').classList.add('open');
+ S.chart.tkr=t;S.chart.levels=null;$('chartModal').classList.add('open');Dlg.open($('chartModal'),'.x-btn');
  buildPeriods();$('chSym').textContent=t;$('chName').textContent='';
  $('chPrice').textContent='…';$('chChg').textContent='';$('chFoot').innerHTML='';$('chLegend').innerHTML='';
  loadChartLevels(t);
@@ -403,7 +411,7 @@ async function openChart(t){
    +f('52w range','$'+fmt(s.wk52_low)+' – $'+fmt(s.wk52_high));
  }).catch(()=>{})}
 
-function closeChart(){$('chartModal').classList.remove('open');
+function closeChart(){$('chartModal').classList.remove('open');Dlg.close($('chartModal'));
  if(S.chart.full)toggleChartFull();
  if(S.chart.lw){S.chart.lw.remove();S.chart.lw=null;S.chart.series=null}
  if(S.chart.rsiC){S.chart.rsiC.destroy();S.chart.rsiC=null}
@@ -635,7 +643,7 @@ function quickAdd(t,price){go('portfolio');$('pfTicker').value=t;$('pfEntry').va
 
 /* ===================== profile drawer ===================== */
 async function openProfile(t,fallbackName){
- $('proDrawer').classList.add('open');$('proName').textContent=fallbackName||t;$('proTkr').textContent=t;
+ $('proDrawer').classList.add('open');Dlg.open($('proDrawer'),'.x-btn');$('proName').textContent=fallbackName||t;$('proTkr').textContent=t;
  $('proBody').innerHTML='<div class="spinner"></div>';
  try{
   const[p,qs]=await Promise.all([api('/api/profile/'+encodeURIComponent(t)),
@@ -659,7 +667,7 @@ async function openProfile(t,fallbackName){
    ${p.summary?`<div class="pro-sum">${esc(p.summary)}</div>`:''}
    ${p.website?`<div style="margin-top:12px"><a href="${esc(p.website)}" target="_blank" rel="noopener noreferrer" style="color:var(--info);font-size:12px">${esc(p.website)}</a></div>`:''}`}
  catch(e){$('proBody').innerHTML='<div class="empty"><h4>Could not load this profile</h4></div>'}}
-function closeProfile(){$('proDrawer').classList.remove('open')}
+function closeProfile(){$('proDrawer').classList.remove('open');Dlg.close($('proDrawer'))}
 
 /* ===================== command palette ===================== */
 let cmdkTimer=null;
@@ -1288,7 +1296,7 @@ const GLOSSARY=[
 ];
 function buildGloss(){$('glBody').innerHTML=GLOSSARY.map(([t,he,def])=>
  `<div class="gl-item"><div class="gl-term">${t}</div><div class="gl-he">${he}</div><div class="gl-def">${def}</div></div>`).join('')}
-function toggleGloss(){$('gloss').classList.toggle('open')}
+function toggleGloss(){const g=$('gloss'),on=g.classList.toggle('open');if(on)Dlg.open(g,'.x-btn');else Dlg.close(g)}
 
 /* ===================== keyboard ===================== */
 const SHORTCUTS=[['Ctrl / ⌘ + K','Search any stock'],['1 – 9','Switch section'],
@@ -1304,7 +1312,7 @@ function toggleShortcuts(){
 
 document.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmdk();return}
- if(e.key==='Escape'){closeCmdk();closeChart();closeProfile();if(!$('authOverlay').classList.contains('hidden'))hideAuth();const s=$('shortcuts');if(s)s.remove();return}
+ if(e.key==='Escape'){closeCmdk();if($('chartModal').classList.contains('open'))closeChart();closeProfile();if($('gloss').classList.contains('open'))toggleGloss();if(!$('authOverlay').classList.contains('hidden'))hideAuth();const s=$('shortcuts');if(s)s.remove();return}
  /* Never steal a key while the user is typing. */
  const t=e.target,typing=t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
@@ -1326,18 +1334,18 @@ function initTape(){
  const set=(k,v)=>{try{localStorage.setItem(k,v?'1':'0')}catch(e){}};
  const reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
  const apply=()=>{const paused=get('js.tape.paused',reduced),hidden=get('js.tape.hidden',false);
-  w.classList.toggle('paused',paused);w.hidden=hidden;pb.textContent=paused?'Play':'Pause';
+  w.classList.toggle('paused',paused);w.hidden=hidden;pb.textContent=(window.T||String)(paused?'Play':'Pause');hb.textContent=(window.T||String)('Hide');const sh=$('tapeShow');if(sh)sh.textContent=(window.T||String)('Show tape');
   pb.setAttribute('aria-pressed',String(paused));pb.setAttribute('aria-label',paused?'Play the ticker tape':'Pause the ticker tape');
   const show=$('tapeShow');if(show)show.hidden=!hidden};
  pb.addEventListener('click',()=>{set('js.tape.paused',!w.classList.contains('paused'));apply()});
  hb.addEventListener('click',()=>{set('js.tape.hidden',true);apply();const s2=$('tapeShow');if(s2)s2.focus()});
  const show=$('tapeShow');if(show)show.addEventListener('click',()=>{set('js.tape.hidden',false);apply();pb.focus()});
- apply()}
+ apply();document.addEventListener('langchange',apply)}
 
 /* redraw what was painted on canvas with the previous theme's colours */
 document.addEventListener('themechange',()=>{loadTapeAndBento();if(S.fg)renderFearGreed(S.fg);
  if(S.hm&&$('v-heatmap').classList.contains('on'))renderHeatmap();
- if($('chartModal').classList.contains('open')&&S.chart&&S.chart.t)openChart(S.chart.t)});
+ if($('chartModal').classList.contains('open')&&S.chart&&S.chart.tkr)openChart(S.chart.tkr)});
 
 /* ===================== boot ===================== */
 document.addEventListener('DOMContentLoaded',()=>{

@@ -711,3 +711,26 @@ html[data-density="compact"] .scr-t td small { display: none; }   /* one line pe
 .rc p, .rc ul { margin: 8px 0 0; color: var(--tx2); } .rc ul { padding-inline-start: 18px; }
 .lab-asm { margin: 10px 0 0; padding: 10px 12px; border-inline-start: 3px solid var(--line2); background: var(--s1); color: var(--tx2); font-size: var(--fs-2); }
 .al-limit { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--warn-br); background: var(--warn-bg); border-radius: 6px; color: var(--tx); font-size: var(--fs-2); }
+
+/* ---- accessibility (R8) ---- */
+.skip { position: absolute; left: 12px; top: -60px; z-index: 1000; padding: 10px 14px; background: var(--gold-fill); color: var(--on-gold); border-radius: 6px; font-weight: 600; text-decoration: none; }
+.skip:focus { top: 10px; }
+#content:focus { outline: none; }
+.home .idx-card .cg small { opacity: 1; font-size: 12px; }
+.side-links a { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; }
+
+/* ---- right-to-left (Hebrew) ---- */
+html[dir="rtl"] body { font-family: "Heebo", var(--ui); }
+html[dir="rtl"] .n, html[dir="rtl"] td.n, html[dir="rtl"] .vl, html[dir="rtl"] .cg, html[dir="rtl"] .t-val, html[dir="rtl"] .b-big,
+html[dir="rtl"] .gs-sym, html[dir="rtl"] .tp, html[dir="rtl"] .mono, html[dir="rtl"] .fg-num, html[dir="rtl"] .cf-m { direction: ltr; unicode-bidi: isolate; }
+html[dir="rtl"] td.n, html[dir="rtl"] th.n { text-align: left; }
+html[dir="rtl"] .disp-pop { right: auto; left: 0; }
+html[dir="rtl"] .auth-x { right: auto; left: 10px; }
+html[dir="rtl"] .h-board > summary::before { content: '◂'; }
+html[dir="rtl"] .h-board[open] > summary::before { content: '▾'; }
+html[dir="rtl"] .profile:not(.open) { transform: translateX(-105%); }
+html[dir="rtl"] .gloss:not(.open) { transform: translateX(105%); }
+/* a closed drawer is not drawn at all once it has slid away (and is inert for keyboard and AT) */
+.profile, .gloss { transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s linear .28s; }
+.profile:not(.open), .gloss:not(.open) { visibility: hidden; }
+.profile.open, .gloss.open { visibility: visible; transition-delay: 0s; }

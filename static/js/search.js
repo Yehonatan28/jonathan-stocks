@@ -12,6 +12,7 @@
   const list = document.getElementById('gsList');
   const status = document.getElementById('gsStatus');
   const acts = document.getElementById('gsActs');
+  const T = (x) => (window.T ? window.T(x) : x);
   const e = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const RECENT = 'js.gs.recent';
   let items = [], sel = -1, ctrl = null, timer = null, back = null;
@@ -72,12 +73,12 @@
 
   function idle() {
     items = recent(); sel = items.length ? 0 : -1;
-    render('idle', items.length ? 'Recent' : 'Type a company name or a symbol. Tel Aviv listings end in .TA (e.g. TEVA.TA).');
+    render('idle', items.length ? T('Recent') : (window.LANG && LANG() === 'he' ? 'הקלידו שם חברה או סימול. מניות בתל אביב מסתיימות ב־‎.TA (למשל TEVA.TA).' : 'Type a company name or a symbol. Tel Aviv listings end in .TA (e.g. TEVA.TA).'));
   }
   async function query(q) {
     if (ctrl) ctrl.abort();
     ctrl = new AbortController();
-    status.textContent = 'Searching…'; status.className = 'gs-status';
+    status.textContent = T('Searching…'); status.className = 'gs-status';
     try {
       const r = await fetch('/api/search?q=' + encodeURIComponent(q), { signal: ctrl.signal });
       if (!r.ok) throw new Error('HTTP ' + r.status);

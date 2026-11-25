@@ -26,10 +26,12 @@
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('dispBtn'), pop = document.getElementById('dispPop');
     if (!btn || !pop) return;
-    const group = (key, label, opts) => `<fieldset><legend>${label}</legend>${opts.map(([v, l]) =>
-      `<label><input type="radio" name="d-${key}" value="${v}" ${window.Prefs.get(key) === v ? 'checked' : ''}> ${l}</label>`).join('')}</fieldset>`;
+    const t = (x) => (window.T ? window.T(x) : x);
+    const group = (key, label, opts, cur) => `<fieldset><legend>${t(label)}</legend>${opts.map(([v, l, lg]) =>
+      `<label${lg ? ` lang="${lg}"` : ''}><input type="radio" name="d-${key}" value="${v}" ${(cur || window.Prefs.get(key)) === v ? 'checked' : ''}> ${lg ? l : t(l)}</label>`).join('')}</fieldset>`;
     const render = () => {
-      pop.innerHTML = group('theme', 'Theme', [['dark', 'Dark'], ['light', 'Light'], ['system', 'Match the system']])
+      pop.innerHTML = group('lang', 'Language', [['en', 'English', 'en'], ['he', 'עברית', 'he']], window.LANG ? window.LANG() : 'en')
+        + group('theme', 'Theme', [['dark', 'Dark'], ['light', 'Light'], ['system', 'Match the system']])
         + group('density', 'Density', [['comfortable', 'Comfortable'], ['compact', 'Compact']]);
     };
     const open = (on) => {
@@ -37,7 +39,11 @@
       if (on) { render(); const f = pop.querySelector('input:checked'); if (f) f.focus(); }
     };
     btn.addEventListener('click', (e) => { e.stopPropagation(); open(pop.hidden); });
-    pop.addEventListener('change', (e) => { const i = e.target; if (i.name) window.Prefs.set(i.name.slice(2), i.value); });
+    pop.addEventListener('change', (e) => {
+      const i = e.target; if (!i.name) return;
+      if (i.name === 'd-lang') { if (window.setLang) window.setLang(i.value); render(); const f = pop.querySelector('input[name=d-lang]:checked'); if (f) f.focus(); return; }
+      window.Prefs.set(i.name.slice(2), i.value);
+    });
     document.addEventListener('click', (e) => { if (!pop.hidden && !e.target.closest('#dispPop')) open(false); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { open(false); btn.focus(); } });
     window.addEventListener('hashchange', () => open(false));
