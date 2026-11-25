@@ -239,7 +239,7 @@ async function loadHeatmap(index,btn){
 function renderHeatmap(){
  const d=S.hm;if(!d)return;
  const scale=parseFloat($('hmScale').value)||5;
- const showLogos=$('hmLogos').checked;
+ const showLogos=false; /* Clearbit's free logo service shut down in Dec 2025; tiles show the symbol */
  const board=$('hmBoard');
  const W=board.clientWidth||1200;
  /* 500 names need more canvas than 100, or the tail becomes unreadable
