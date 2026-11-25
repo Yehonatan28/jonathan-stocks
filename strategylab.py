@@ -13,6 +13,11 @@ Method (shown to the user as written here):
   entry and the exit. The whole account is invested in each trade; no leverage, no shorting.
 - Indicators: RSI(14) and ATR(14) use Wilder's smoothing, moving averages are simple, MACD is
   12/26/9 on exponential averages, all from the platform's indicator library.
+- Prices are daily bars adjusted for splits. Dividends are not included, so for a dividend payer
+  both the strategy and buy and hold understate the total return.
+- Only prices are used, so no figure is known before it was published (no point-in-time problem
+  with fundamentals). The symbol is chosen today: a company that later failed or left its index
+  cannot be tested here (survivorship).
 - Results are compared with buying and holding the same symbol over the same window.
 - A backtest describes the past under these assumptions; it does not predict results.
 """

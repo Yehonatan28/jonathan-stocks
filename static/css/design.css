@@ -705,3 +705,9 @@ html[data-density="compact"] .scr-t td small { display: none; }   /* one line pe
 .st-published i, .prov-pop i.st-published, .st-scheduled i, .prov-pop i.st-scheduled, .st-derived i, .prov-pop i.st-derived, .st-reference i, .prov-pop i.st-reference { background: var(--info); }
 .st-estimated i, .prov-pop i.st-estimated { background: var(--violet, #9b8cf0); }
 .mi-retry { margin-inline-start: 8px; }
+.rc { margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--s1); font-size: var(--fs-2); }
+.rc > summary { cursor: pointer; min-height: 32px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rc-s { color: var(--tx2); }
+.rc p, .rc ul { margin: 8px 0 0; color: var(--tx2); } .rc ul { padding-inline-start: 18px; }
+.lab-asm { margin: 10px 0 0; padding: 10px 12px; border-inline-start: 3px solid var(--line2); background: var(--s1); color: var(--tx2); font-size: var(--fs-2); }
+.al-limit { margin: 8px 0; padding: 8px 12px; border: 1px solid var(--warn-br); background: var(--warn-bg); border-radius: 6px; color: var(--tx); font-size: var(--fs-2); }

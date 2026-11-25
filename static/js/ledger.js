@@ -27,6 +27,7 @@
   root.innerHTML = `<div class="wrap ldg">
     <div class="ph"><h1>Transactions &amp; P&amp;L</h1><p>Record buys, sells, dividends, cash and splits. Positions, cost and gains are computed first-in, first-out.</p></div>
     <div class="lg-where" id="lgWhere"></div>
+    <div id="rcLedger"></div>
     <div id="lgTotals"></div>
     <div class="mi-block" id="lgPerfBox" hidden><div class="sec">Performance <span class="tag">TIME-WEIGHTED</span><span class="mi-note" id="lgPerfNote"></span></div>
       <div class="mi-two lg-perf"><div class="mi-card rs-chart"><canvas id="lgPerfChart" role="img" aria-label="Portfolio against the S&amp;P 500, indexed to 100"></canvas></div>
@@ -275,6 +276,7 @@
     if (await add(items)) { if (typeof toast === 'function') toast(`Imported ${items.length} transactions`, 'ok'); refresh(); }
   });
 
+  document.addEventListener('ledgerchange', () => { if (root.classList.contains('on')) refresh(); });
   let started = false;
   const start = () => { if (root.classList.contains('on')) { if (!started) started = true; refresh(); } };
   new MutationObserver(start).observe(root, { attributes: true, attributeFilter: ['class'] });

@@ -52,7 +52,7 @@
         ${tile('Largest position', t.largest_weight == null ? '—' : n2(t.largest_weight, 1) + '%', 'limit ' + d.limits.max_position_pct + '%', over(t.largest_weight, d.limits.max_position_pct))}
         ${tile('Without a stop', String(t.unprotected), t.unprotected ? 'loss not defined' : d.positions.length ? 'every priced position has one' : 'no positions', t.unprotected ? 'dn' : '')}
       </div>
-      <div class="mi-block"><div class="sec">Findings <span class="tag">${d.warnings.length}</span></div>
+      <div class="mi-block"><div class="sec">Limit breaches and notes <span class="tag">${d.warnings.length}</span><span class="mi-note">conditions against your own limits, not instructions</span></div>
         <div class="mi-card">${d.warnings.length ? `<ul class="rk-warn">${d.warnings.map((w) => `<li class="lv-${w.level}"><span>${LV[w.level]}</span>${e(w.message)}</li>`).join('')}</ul>` : (() => { const n = d.positions.length, un = d.positions.filter((p) => p.price == null).length;
           if (!n) return '<div class="mi-empty">No positions to check. Nothing was evaluated.</div>';
           if (un === n) return '<div class="mi-empty">Could not check: no current price for any position. This is not a clean result.</div>';

@@ -25,9 +25,11 @@
       <label>When<select name="kind">${KINDS.map(([k, l]) => `<option value="${k}">${e(l)}</option>`).join('')}</select></label>
       <label>Value<input name="value" type="number" step="any" required inputmode="decimal"></label>
       <div class="lg-act"><button class="btn btn-gold btn-sm" type="submit">Add alert</button><span class="auth-err" id="alxErr" role="alert"></span></div>
+      <p class="al-limit wide" id="alxLimit"><b>Limitation:</b> alerts are checked only while this site is open in a browser tab, on daily and delayed data. Nothing is sent by email or SMS, and an alert can fire after the move it describes.</p>
     </form>
     <div class="mi-block"><div class="sec">Your alerts <span class="mi-note" id="alxChecked"></span>
       <button class="btn btn-ghost btn-sm" id="alxNotify" type="button">Browser notifications</button><button class="btn btn-ghost btn-sm" id="alxCheck" type="button">Check now</button></div>
+      <p class="al-limit">Checked while this tab is open · daily and delayed data · no email or SMS.</p>
       <div class="mi-card scr-table" id="alxList"><div class="spinner"></div></div></div>
     <div class="mi-block"><div class="sec">Triggered <span class="mi-note">kept in this browser</span></div><div class="mi-card scr-table" id="alxHist"></div></div>
     <details class="rs-defs"><summary>How alerts are checked</summary><pre class="lg-pre" id="alxMethod"></pre></details>
