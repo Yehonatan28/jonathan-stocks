@@ -85,8 +85,8 @@ def breadth(rows):
         'leaders': [pick(r) for r in reversed(by_chg[-8:])],
         'laggards': [pick(r) for r in by_chg[:8]],
         'definitions': {
-            'near_52w_high': 'within 2% of the 52-week high',
-            'near_52w_low': 'within 2% of the 52-week low',
+            'near_52w_high': "within 2% of the 52-week high (the feed's range, or the highest close of the year when the feed has none)",
+            'near_52w_low': "within 2% of the 52-week low (the feed's range, or the lowest close of the year when the feed has none)",
             'above_50d': 'last price above the 50-day average',
             'above_200d': 'last price above the 200-day average',
         },

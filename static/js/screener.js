@@ -106,9 +106,10 @@
     const cov = st.data.coverage, n = st.data.rows.length;
     $s('scrFilters').innerHTML = st.data.fields.filter((f) => f.key !== 'price').map((f) => {
       const [lo, hi] = st.f[f.key] || [null, null];
-      return `<label class="flt" title="${e(f.help)}"><span>${e(f.label)} <small>${f.unit === '$B' ? '$B' : f.unit === '%' ? '%' : f.unit === 'x' ? '×' : ''} · ${cov[f.key]}/${n}</small></span>
-        <span class="mm"><input type="number" step="any" inputmode="decimal" placeholder="min" data-k="${f.key}" data-i="0" value="${lo ?? ''}" aria-label="${e(f.label)} minimum">
-        <input type="number" step="any" inputmode="decimal" placeholder="max" data-k="${f.key}" data-i="1" value="${hi ?? ''}" aria-label="${e(f.label)} maximum"></span></label>`;
+      const off = !cov[f.key];
+      return `<label class="flt ${off ? 'off' : ''}" title="${e(off ? 'The quote feed is not supplying this field right now' : f.help)}"><span>${e(f.label)} <small>${f.unit === '$B' ? '$B' : f.unit === '%' ? '%' : f.unit === 'x' ? '×' : ''} · ${off ? 'unavailable now' : cov[f.key] + '/' + n}</small></span>
+        <span class="mm"><input type="number" step="any" inputmode="decimal" placeholder="min" data-k="${f.key}" data-i="0" value="${lo ?? ''}" aria-label="${e(f.label)} minimum" ${off ? 'disabled' : ''}>
+        <input type="number" step="any" inputmode="decimal" placeholder="max" data-k="${f.key}" data-i="1" value="${hi ?? ''}" aria-label="${e(f.label)} maximum" ${off ? 'disabled' : ''}></span></label>`;
     }).join('');
     const active = Object.values(st.f).filter(([a, b]) => a != null || b != null).length + (st.sector ? 1 : 0);
     $s('scrActive').textContent = active ? `· ${active} active` : '';
@@ -118,10 +119,11 @@
   function renderTable() {
     if (!st.data) return;
     const rs = results();
-    const cols = st.data.fields.filter((f) => st.cols.includes(f.key));
+    const cols = st.data.fields.filter((f) => st.cols.includes(f.key) && st.data.coverage[f.key]);
     const arrow = (k) => (st.sort.key === k ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : '');
     const aria = (k) => (st.sort.key === k ? (st.sort.dir > 0 ? 'ascending' : 'descending') : 'none');
-    $s('scrCount').textContent = `${rs.length} of ${st.data.rows.length} stocks match`;
+    const missing = st.data.fields.filter((f) => !st.data.coverage[f.key]).map((f) => f.label);
+    $s('scrCount').textContent = `${rs.length} of ${st.data.rows.length} stocks match` + (missing.length ? ` · not available from the feed right now: ${missing.join(', ')}` : '');
     const shown = rs.slice(0, st.limit);
     $s('scrTable').innerHTML = rs.length ? `<table class="mi-t scr-t"><thead><tr>
       <th class="sticky" aria-sort="${aria('ticker')}"><button data-sort="ticker">Symbol${arrow('ticker')}</button></th>

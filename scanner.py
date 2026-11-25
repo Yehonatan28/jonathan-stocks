@@ -14,7 +14,7 @@ FIELDS = [
     ('div_yield', 'Yield', '%', 'Trailing twelve-month dividends over price'),
     ('vs50', 'vs 50d', '%', 'Distance of the price from its 50-day average'),
     ('vs200', 'vs 200d', '%', 'Distance of the price from its 200-day average'),
-    ('off_high', 'From 52w high', '%', 'Distance below the 52-week high (0 = at the high)'),
+    ('off_high', 'From 52w high', '%', "Distance below the 52-week high (0 = at the high); the feed's range, or the year's highest close"),
     ('range_pos', '52w range', '%', 'Where the price sits in its 52-week range (0 = low, 100 = high)'),
     ('rel_vol', 'Rel. volume', 'x', "Today's volume over the 3-month daily average; early in the session it is a partial day"),
 ]

@@ -635,21 +635,34 @@ def constituents(index='sp500'):
 _CRUMB = {'value': None, 'cookies': None, 'at': 0}
 
 
+# What the quote feed did most recently, for /api/health: which path answered and, when the
+# full quote endpoint failed, why. No user data; only HTTP statuses and counts.
+FEED = {'v7': 0, 'spark': 0, 'v7_error': None, 'crumb_error': None, 'at': None}
+
+
 def _crumb():
     """Yahoo's v7 quote endpoint wants a cookie plus a crumb. Fetched once an
-    hour; a failure here is not fatal because the caller falls back."""
+    hour; a failure here is not fatal because the caller falls back. Two cookie
+    pages and two hosts are tried, since data-centre addresses are often refused
+    by one and not the other."""
     if _CRUMB['value'] and time.time() - _CRUMB['at'] < 3600:
         return _CRUMB['value'], _CRUMB['cookies']
-    try:
-        s = requests.Session()
-        s.get('https://fc.yahoo.com', headers=HEADERS, timeout=8)
-        r = s.get('https://query2.finance.yahoo.com/v1/test/getcrumb',
-                  headers=HEADERS, timeout=8)
-        if r.ok and r.text and len(r.text) < 40:
-            _CRUMB.update(value=r.text.strip(), cookies=s.cookies, at=time.time())
-            return _CRUMB['value'], _CRUMB['cookies']
-    except Exception:
-        pass
+    errors = []
+    for cookie_url in ('https://fc.yahoo.com', 'https://finance.yahoo.com/quote/SPY/'):
+        for host in ('query1', 'query2'):
+            try:
+                s = requests.Session()
+                s.get(cookie_url, headers={**HEADERS, 'Accept': 'text/html'}, timeout=8, allow_redirects=True)
+                r = s.get(f'https://{host}.finance.yahoo.com/v1/test/getcrumb', headers=HEADERS, timeout=8)
+                txt = (r.text or '').strip()
+                if r.ok and txt and len(txt) < 40 and '<' not in txt and ' ' not in txt:
+                    _CRUMB.update(value=txt, cookies=s.cookies, at=time.time())
+                    FEED['crumb_error'] = None
+                    return _CRUMB['value'], _CRUMB['cookies']
+                errors.append(f'{cookie_url.split("/")[2]}>{host}: HTTP {r.status_code}')
+            except Exception as exc:          # noqa: BLE001
+                errors.append(f'{cookie_url.split("/")[2]}>{host}: {type(exc).__name__}')
+    FEED['crumb_error'] = '; '.join(errors)[:300]
     return None, None
 
 
@@ -669,6 +682,9 @@ def _quotes_v7(tickers):
                              headers=HEADERS, cookies=cookies, timeout=12,
                              params={'symbols': ','.join(group), 'crumb': crumb})
             if not r.ok:
+                FEED['v7_error'] = f'HTTP {r.status_code}'
+                if r.status_code in (401, 403):
+                    _CRUMB.update(value=None, at=0)       # a stale crumb; fetch a new one next time
                 continue
             for q in r.json().get('quoteResponse', {}).get('result', []):
                 sym = q.get('symbol')
@@ -716,36 +732,67 @@ def _quotes_v7(tickers):
     return out
 
 
-def _quotes_spark(tickers):
-    """Fallback: the spark endpoint takes many symbols and needs no crumb."""
+def _spark(symbols, range_):
+    """{symbol: (closes, meta)} from the spark endpoint. One unknown symbol can fail a whole
+    group, so a failed group is retried one symbol at a time (bounded)."""
     out = {}
-    for group in _chunks(tickers, 50):
+
+    def ask(group):
         try:
             r = requests.get('https://query1.finance.yahoo.com/v8/finance/spark',
                              headers=HEADERS, timeout=12,
-                             params={'symbols': ','.join(group),
-                                     'range': '5d', 'interval': '1d'})
-            if not r.ok:
-                continue
+                             params={'symbols': ','.join(group), 'range': range_, 'interval': '1d'})
+        except Exception:                     # noqa: BLE001
+            return None
+        if not r.ok:
+            return None
+        try:
             data = r.json()
-            items = data.get('spark', {}).get('result', data) if isinstance(data, dict) else {}
-            if isinstance(items, dict):
-                items = [{'symbol': k, 'response': [v]} for k, v in items.items()]
-            for it in items or []:
-                sym = it.get('symbol')
-                resp = (it.get('response') or [{}])[0]
-                closes = [c for c in ((resp.get('indicators', {})
-                          .get('quote', [{}])[0].get('close')) or []) if c is not None]
-                meta = resp.get('meta', {})
-                if not sym or len(closes) < 2:
-                    continue
-                price, prev = float(closes[-1]), float(closes[-2])
-                out[sym] = {'price': round(price, 2),
-                            'chg': round((price - prev) / prev * 100, 2) if prev else 0.0,
-                            'cap': None, 'open': None,
-                            'prev_close': round(prev, 2), 'volume': None, 'name': None}
-        except Exception:
+        except ValueError:
+            return None
+        items = data.get('spark', {}).get('result', data) if isinstance(data, dict) else {}
+        if isinstance(items, dict):
+            items = [{'symbol': k, 'response': [v]} for k, v in items.items()]
+        got = {}
+        for it in items or []:
+            sym = it.get('symbol')
+            resp = (it.get('response') or [{}])[0] or {}
+            closes = (resp.get('indicators', {}).get('quote', [{}])[0].get('close')) or []
+            if not closes and isinstance(resp.get('close'), list):          # the flat shape
+                closes = resp['close']
+            closes = [c for c in closes if c is not None]
+            if sym and closes:
+                got[sym] = (closes, resp.get('meta', {}) or {'previousClose': resp.get('chartPreviousClose')})
+        return got
+
+    retries = 0
+    for group in _chunks(list(symbols), 50):
+        got = ask(group)
+        if got is None and retries < 60:
+            got = {}
+            for sym in group:
+                if retries >= 60:
+                    break
+                retries += 1
+                one = ask([sym])
+                if one:
+                    got.update(one)
+        out.update(got or {})
+    return out
+
+
+def _quotes_spark(tickers):
+    """Fallback: the spark endpoint takes many symbols and needs no crumb."""
+    out = {}
+    for sym, (closes, meta) in _spark(tickers, '5d').items():
+        if len(closes) < 2:
             continue
+        price, prev = float(closes[-1]), float(closes[-2])
+        out[sym] = {'price': round(price, 2),
+                    'chg': round((price - prev) / prev * 100, 2) if prev else 0.0,
+                    'cap': None, 'open': None,
+                    'prev_close': round(prev, 2), 'volume': None, 'name': None,
+                    'market_time': meta.get('regularMarketTime')}
     return out
 
 
@@ -760,9 +807,13 @@ def batch_quotes(tickers, per_ticker_fallback=None):
     if not tickers:
         return {}
     out = _quotes_v7(tickers)
+    FEED['v7'] = len(out)
     missing = [t for t in tickers if t not in out]
     if missing:
-        out.update(_quotes_spark(missing))
+        sp = _quotes_spark(missing)
+        FEED['spark'] = len(sp)
+        out.update(sp)
+    FEED['at'] = int(time.time())
     missing = [t for t in tickers if t not in out]
     if missing and per_ticker_fallback:
         with ThreadPoolExecutor(max_workers=16) as ex:
@@ -859,3 +910,27 @@ def fear_greed():
         }
 
     return _cached('fg', 900, build)
+
+
+# ------------------------------------------- 4. trend fields from daily closes ---
+def trend_fields(tickers):
+    """50- and 200-day averages and the 52-week closing range, computed from a year of daily
+    closes. Used where the quote feed did not supply them, so breadth and the scanner do not
+    depend on the endpoint that needs a crumb. Closing range, not intraday: a 52-week high here
+    is the highest close."""
+    def build():
+        out = {}
+        for sym, (closes, _meta) in _spark(tickers, '1y').items():
+            c = [float(x) for x in closes]
+            f = {}
+            if len(c) >= 50:
+                f['dma50'] = round(sum(c[-50:]) / 50, 2)
+            if len(c) >= 200:
+                f['dma200'] = round(sum(c[-200:]) / 200, 2)
+            if len(c) >= 240:                       # close to a full year of sessions
+                f['hi52'], f['lo52'] = round(max(c[-252:]), 2), round(min(c[-252:]), 2)
+            if f:
+                out[sym] = f
+        return out
+    key = 'trend:' + str(hash(tuple(sorted(tickers))))
+    return _cached(key, 6 * 3600, build)

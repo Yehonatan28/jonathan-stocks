@@ -335,8 +335,10 @@ def health():
         conn.close()
     except Exception as exc:               # noqa: BLE001
         ok, err = False, type(exc).__name__
+    feed = dict(market.FEED)
     return jsonify({'storage': storage.backend(), 'storage_ok': ok, 'error': err,
                     'session_key': SESSION_KEY_SOURCE,
+                    'quote_feed': feed, 'sec_configured': '@' in os.environ.get('SEC_CONTACT', ''),
                     'host': 'vercel' if os.environ.get('VERCEL') else 'render' if os.environ.get('RENDER') else 'local'})
 
 
@@ -856,7 +858,19 @@ def index_quotes(index):
     if hit is not None:
         return hit
     rows = market.constituents(index)
-    quotes = market.batch_quotes([r['ticker'] for r in rows], per_ticker_fallback=quick_quote)
+    tickers = [r['ticker'] for r in rows]
+    quotes = market.batch_quotes(tickers, per_ticker_fallback=quick_quote)
+    # trend fields the quote feed did not supply come from a year of daily closes
+    lacking = [t for t, q in quotes.items() if q.get('dma200') is None or q.get('hi52') is None]
+    if lacking:
+        try:
+            trend = market.trend_fields(lacking)
+        except Exception:                    # noqa: BLE001
+            trend = {}
+        for t in lacking:
+            for k, v in (trend.get(t) or {}).items():
+                if quotes[t].get(k) is None:
+                    quotes[t][k] = v
     if quotes:
         cache_set(key, quotes, 120)
     return quotes

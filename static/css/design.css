@@ -324,3 +324,4 @@ input, select, textarea { font-family: var(--ui); }
 .rs-src p { font-size: 13px; color: var(--tx2); } .rs-src a { color: var(--accent); }
 .rs-src pre { white-space: pre-wrap; font: 12px/1.55 var(--mono); color: var(--tx3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; overflow-wrap: anywhere; }
 @media (max-width: 760px) { .rs-search input { flex: 1; width: auto; } .rs-kpis > div { flex: 1; min-width: 0; } .rs-defs dl { grid-template-columns: 1fr; } .rs-chart { height: 210px; } }
+.flt.off { opacity: .5; } .flt.off input { cursor: not-allowed; }
