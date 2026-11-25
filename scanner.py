@@ -39,6 +39,8 @@ def row(member, q):
         'cap_basis': q.get('cap_basis') if q.get('cap') is not None else 'static index-table estimate (Oct 2026)',
         # a negative trailing P/E means losses; it is not a cheap stock, so it is not reported as a P/E
         'pe': round(pe, 1) if pe is not None and pe > 0 else None,
+        # what the P/E is computed on: the feed's trailing twelve months, or the last fiscal year filed
+        'pe_basis': (q.get('pe_basis') or 'trailing twelve months (quote feed)') if pe is not None and pe > 0 else None,
         'fpe': round(q['fpe'], 1) if q.get('fpe') is not None and q['fpe'] > 0 else None,
         'pb': q.get('pb'),
         'div_yield': q.get('div_yield'),

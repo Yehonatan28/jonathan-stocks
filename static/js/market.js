@@ -10,7 +10,8 @@
   const pct = (v, d = 2) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, d) + '%');
   const pp = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + num(v, 1) + ' pp');
   const tone = (v) => (v == null || v === 0 ? '' : v > 0 ? 'up' : 'dn');
-  const unavailable = (box, msg) => { if (box) box.innerHTML = `<div class="mi-empty">${e(msg || 'Unavailable right now. Nothing is shown in its place.')}</div>`; };
+  const unavailable = (box, msg) => { if (box) box.innerHTML = `<div class="mi-empty" role="status">${e(msg || 'Unavailable right now. Nothing is shown in its place.')} <button type="button" class="btn btn-ghost btn-sm mi-retry">Retry</button></div>`; };
+  document.addEventListener('click', (ev) => { if (ev.target.closest('#v-home .mi-retry')) { ev.target.closest('.mi-empty').innerHTML = '<div class="spinner"></div>'; load(true); } });
 
   // ---- breadth
   function gauge(label, part, hint) {

@@ -134,6 +134,12 @@
     const nEst = st.cols.includes('cap') ? st.data.rows.filter((r) => r.cap_est).length : 0;
     $s('scrCount').textContent = `${rs.length} of ${st.data.rows.length} stocks match` + (missing.length ? ` · not available from the feed right now: ${missing.join(', ')}` : '')
       + (nEst ? ` · market cap marked est. for ${nEst}: a static index-table estimate (Oct 2026), not price × filed shares` : '');
+    // P/E basis, counted: last fiscal year (SEC) and trailing twelve months are different measures
+    if (st.cols.includes('pe')) {
+      const b = {}; st.data.rows.forEach((r) => { if (r.pe_basis) { const k = /SEC/.test(r.pe_basis) ? 'last fiscal year EPS (SEC filings)' : 'trailing twelve months'; b[k] = (b[k] || 0) + 1; } });
+      const parts = Object.entries(b).map(([k, n]) => `${n} on ${k}`);
+      if (parts.length) $s('scrCount').textContent += ` · P/E: ${parts.join(', ')}; forward P/E is an analysts' estimate`;
+    }
     const shown = rs.slice(0, st.limit);
     $s('scrTable').innerHTML = rs.length ? `<table class="mi-t scr-t"><thead><tr>
       <th class="sticky" aria-sort="${aria('ticker')}"><button data-sort="ticker">Symbol${arrow('ticker')}</button></th>
@@ -141,7 +147,7 @@
       ${cols.map((f) => `<th class="n" aria-sort="${aria(f.key)}" title="${e(f.help)}"><button data-sort="${f.key}">${e(f.label)}${arrow(f.key)}</button></th>`).join('')}
       </tr></thead><tbody>${shown.map((r) => `<tr data-t="${e(r.ticker)}" tabindex="0">
       <td class="sticky"><b>${e(r.ticker)}</b><small>${e(r.name || '')}</small></td><td class="sec-c">${e(r.sector || '')}</td>
-      ${cols.map((f) => `<td class="n ${toneOf(f.key, r[f.key])}">${fmtv(f.key, r[f.key])}${f.key === 'cap' && r.cap_est && r.cap != null ? ' <span class="est" title="Static index-table estimate, Oct 2026: no filed share count for this company">est.</span>' : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+      ${cols.map((f) => `<td class="n ${toneOf(f.key, r[f.key])}">${f.key === 'pe' && r.pe_basis ? `<span title="${e('P/E on ' + r.pe_basis)}">${fmtv(f.key, r[f.key])}</span>` : fmtv(f.key, r[f.key])}${f.key === 'cap' && r.cap_est && r.cap != null ? ' <span class="est" title="Static index-table estimate, Oct 2026: no filed share count for this company">est.</span>' : ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`
       : '<div class="mi-empty">No stock matches every filter. Loosen one, or clear them.</div>';
     $s('scrMore').innerHTML = rs.length > st.limit ? `<button class="btn btn-ghost btn-sm" id="scrMoreBtn">Show ${Math.min(100, rs.length - st.limit)} more</button>` : '';
   }

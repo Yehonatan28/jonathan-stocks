@@ -844,33 +844,43 @@ async function loadPortfolio(){
  try{S.pf=await store.getPf()}catch(e){S.pf=[]}
  if(!S.pf.length){
   $('pfBody').innerHTML='<tr><td colspan="9" style="text-align:center;padding:44px;color:var(--tx3)">No positions yet — add your first one below</td></tr>';
-  ['pfTotal','pfPnl'].forEach(i=>$(i).textContent='$0');$('pfRet').textContent='0%';$('pfN').textContent='0';
+  ['pfTotal','pfPnl','pfRet'].forEach(i=>$(i).textContent='—');$('pfN').textContent='0';
   if(pfPie){pfPie.destroy();pfPie=null}return}
  const tickers=[...new Set(S.pf.map(p=>p.ticker))];
  let quotes=[];try{quotes=await api('/api/quotes?tickers='+tickers.join(','))}catch(e){}
  const pmap=Object.fromEntries(quotes.map(q=>[q.ticker,q.price]));
- let total=0,cost=0;
+ /* Currency per listing: Tel Aviv prices are in agorot (ILA, 1/100 of a shekel). Totals are kept
+    per currency and never added across currencies; a position without a price is left out of the
+    totals and counted, never valued at zero. */
+ const curOf=t=>/\.TA$/i.test(t)?'ILA':'USD';
+ const money=(v,c)=>v==null?'—':c==='ILA'?fmt(v)+' ag.':'$'+fmt(v);
+ const signed=(v,c)=>v==null?'—':(v>=0?'+':'−')+money(Math.abs(v),c);
+ const tot={},unpriced=[];
  $('pfBody').innerHTML=S.pf.map(p=>{
-  const cur=pmap[p.ticker];const val=cur!=null?cur*p.qty:null;const c=p.entry*p.qty;
-  cost+=c;if(val!=null)total+=val;
-  const pnl=val!=null?val-c:null;const pct=pnl!=null?pnl/c*100:null;
-  const stopTxt=p.stop!=null&&p.stop!==''?`$${fmt(p.stop)}${p.stop_type==='trail'?' <small style="color:var(--info)">trail</small>':''}`
+  const ccy=curOf(p.ticker),cur=pmap[p.ticker];const val=cur!=null?cur*p.qty:null;const c=p.entry*p.qty;
+  if(val!=null){const t=tot[ccy]=tot[ccy]||{v:0,c:0};t.v+=val;t.c+=c}else unpriced.push(p.ticker);
+  const pnl=val!=null?val-c:null;const pct=pnl!=null&&c?pnl/c*100:null;
+  const stopTxt=p.stop!=null&&p.stop!==''?`${money(+p.stop,ccy)}${p.stop_type==='trail'?' <small style="color:var(--info)">trail</small>':''}`
    :'<small style="color:var(--dn)">no stop</small>';
-  return`<tr><td class="tkr-cell" onclick="openChart('${esc(p.ticker)}')">${esc(p.ticker)}</td>
-   <td>${fmt(p.qty,p.qty%1?3:0)}</td><td>$${fmt(p.entry)}</td><td>${cur!=null?'$'+fmt(cur):'—'}</td>
-   <td>${stopTxt}</td><td>${val!=null?'$'+fmt(val):'—'}</td>
-   <td class="${cls(pnl)}">${pnl!=null?(pnl>=0?'+':'−')+'$'+fmt(Math.abs(pnl)):'—'}</td>
+  return`<tr><td class="tkr-cell" onclick="openChart('${esc(p.ticker)}')">${esc(p.ticker)}${ccy==='ILA'?' <small>ILA</small>':''}</td>
+   <td>${fmt(p.qty,p.qty%1?3:0)}</td><td>${money(p.entry,ccy)}</td><td>${cur!=null?money(cur,ccy):'<span title="No price available right now">— <small>no price</small></span>'}</td>
+   <td>${stopTxt}</td><td>${money(val,ccy)}</td>
+   <td class="${cls(pnl)}">${signed(pnl,ccy)}</td>
    <td class="${cls(pct)}">${pct!=null?sign(pct)+'%':'—'}</td>
    <td><button class="iconbtn" onclick="delPosition(${p.id})" title="Remove" aria-label="Remove ${esc(p.ticker)}">${ICON('trash')}</button></td></tr>`}).join('');
- const pnl=total-cost;
- $('pfTotal').textContent='$'+fmt(total);
- $('pfPnl').textContent=(pnl>=0?'+':'−')+'$'+fmt(Math.abs(pnl));
- $('pfPnl').style.color=pnl>=0?'var(--up)':'var(--dn)';
- $('pfRet').textContent=cost?sign(pnl/cost*100)+'%':'0%';
- $('pfRet').style.color=pnl>=0?'var(--up)':'var(--dn)';
+ const show=(k,f)=>Object.keys(tot).length?Object.entries(tot).map(([c,t])=>f(c,t)).join('<br>'):'—';
+ $('pfTotal').innerHTML=show('v',(c,t)=>c==='ILA'?`₪${fmt(t.v/100)} <small>from agorot</small>`:'$'+fmt(t.v));
+ $('pfPnl').innerHTML=show('p',(c,t)=>{const p=t.v-t.c;return `<span class="${cls(p)}">${(p>=0?'+':'−')+(c==='ILA'?'₪'+fmt(Math.abs(p)/100):'$'+fmt(Math.abs(p)))}</span>`});
+ $('pfPnl').style.color='';
+ $('pfRet').innerHTML=show('r',(c,t)=>{const r=t.c?(t.v-t.c)/t.c*100:null;return `<span class="${cls(r)}">${r==null?'—':sign(r)+'%'}</span>${Object.keys(tot).length>1?' <small>'+(c==='ILA'?'ILS':'USD')+'</small>':''}`});
+ $('pfRet').style.color='';
+ const note=$('pfNote');if(note)note.textContent=(unpriced.length?`Not priced right now, left out of the totals: ${unpriced.join(', ')}. `:'')+(Object.keys(tot).length>1?'Totals are per currency and are not added together. ':'')+'Before fees and taxes.';
  $('pfN').textContent=S.pf.length;
  if(pfPie){pfPie.destroy();pfPie=null}
- const agg={};S.pf.forEach(p=>{const v=(pmap[p.ticker]||p.entry)*p.qty;agg[p.ticker]=(agg[p.ticker]||0)+v});
+ /* allocation within one currency (the one with most value), priced positions only */
+ const main=Object.entries(tot).sort((a,b)=>b[1].v-a[1].v)[0];
+ const agg={};S.pf.forEach(p=>{if(!main||curOf(p.ticker)!==main[0]||pmap[p.ticker]==null)return;agg[p.ticker]=(agg[p.ticker]||0)+pmap[p.ticker]*p.qty});
+ const pn=$('pfPieNote');if(pn)pn.textContent=main?`${main[0]==='ILA'?'Shekel (agorot)':'US dollar'} positions at current prices`+(Object.keys(tot).length>1?'; other currencies are not mixed in':'')+'.':'No priced positions.';
  if(typeof Chart!=='undefined')pfPie=new Chart($('pfPie'),{type:'doughnut',
   data:{labels:Object.keys(agg),datasets:[{data:Object.values(agg),
    backgroundColor:[tok('--gold'),tok('--info'),tok('--up'),'#a78bfa','#22d3ee',tok('--dn'),tok('--warn'),tok('--tx3')],

@@ -26,7 +26,7 @@ def test_cached_answer_reports_original_retrieval_time(monkeypatch):
     with A.app.test_request_context('/api/feargreed'):
         assert A.cache_get('fg') == {'score': 40}
         h = P.headers('/api/feargreed', 200, {'score': 40})
-    assert h['X-Data-Set'] == 'feargreed' and h['X-Data-Status'] == 'delayed'
+    assert h['X-Data-Set'] == 'feargreed' and h['X-Data-Status'] == 'published'
     assert h['X-Data-Retrieved'] == P.iso(t0)
 
 
@@ -44,5 +44,15 @@ def test_private_routes_carry_no_provenance():
 
 def test_sources_catalogue_is_honest():
     j = _client().get('/api/sources').get_json()
-    assert {d['status'] for d in j['datasets']} <= {'delayed', 'eod', 'reported'}
+    assert {d['status'] for d in j['datasets']} <= {'delayed', 'eod', 'reported', 'estimated', 'published', 'scheduled', 'derived', 'reference'}
+    # nothing about news or calendars is labelled as a delayed quote
+    st = {d['id']: d['status'] for d in j['datasets']}
+    assert st['news'] == 'published' and st['calendar'] == 'scheduled' and 'live' not in st.values()
     assert 'real-time' in j['note']
+
+
+def test_observed_time_is_the_oldest_date_in_the_answer():
+    import provenance as P
+    assert P.observed([{'as_of': '2026-11-24'}, {'as_of': '2026-11-21'}, {'x': 1}]) == '2026-11-21'
+    assert P.observed({'sectors': [{'as_of': '2026-11-24'}], 'ok': True}) == '2026-11-24'
+    assert P.observed({'ok': True}) is None

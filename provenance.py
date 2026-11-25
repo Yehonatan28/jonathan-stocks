@@ -5,7 +5,10 @@ response bodies changing shape:
 
     X-Data-Set        a short id (quotes, chart, news, ...)
     X-Data-Source     who publishes the numbers
-    X-Data-Status     delayed | eod | unavailable   (nothing here is a real-time feed)
+    X-Data-Status     delayed | eod | reported | estimated | published | scheduled | derived |
+                      reference | unavailable   (nothing here is a real-time feed)
+    X-Data-Observed   when the data itself is from, where the answer says so (the last session's date,
+                      the latest filing period): not the same as when it was retrieved
     X-Data-Retrieved  when this server fetched it from the source (ISO 8601, UTC); a cached
                       answer carries the time of the original fetch, not the time of the request
 
@@ -25,9 +28,9 @@ DATASETS = [
     ('/api/chart', 'chart', 'Price history', 'Yahoo Finance', 'delayed'),
     ('/api/stock', 'stock', 'Trend analysis', 'Yahoo Finance daily bars', 'eod'),
     ('/api/engine', 'engine', 'Risk engine', 'Yahoo Finance daily bars', 'eod'),
-    ('/api/feargreed', 'feargreed', 'Fear & Greed', 'CNN Business', 'delayed'),
-    ('/api/earnings', 'earnings', 'Earnings', 'Yahoo Finance', 'eod'),
-    ('/api/analyst', 'analyst', 'Analyst estimates', 'Yahoo Finance', 'eod'),
+    ('/api/feargreed', 'feargreed', 'Fear & Greed', 'CNN Business', 'published'),
+    ('/api/earnings', 'earnings', 'Earnings', 'Yahoo Finance', 'scheduled'),
+    ('/api/analyst', 'analyst', 'Analyst estimates', 'Yahoo Finance', 'estimated'),
     ('/api/profile', 'profile', 'Company profile', 'Yahoo Finance', 'eod'),
     ('/api/market/breadth', 'breadth', 'Market breadth', 'Yahoo Finance quotes', 'delayed'),
     ('/api/market/sectors', 'sectors', 'Sector performance', 'Yahoo Finance daily bars (SPDR sector funds)', 'eod'),
@@ -39,20 +42,49 @@ DATASETS = [
     ('/api/risk/review', 'risk', 'Portfolio risk', 'Your holdings, Yahoo Finance daily bars', 'eod'),
     ('/api/lab', 'lab', 'Strategy backtest', 'Yahoo Finance daily bars', 'eod'),
     ('/api/relative', 'relative', 'Comparison', 'Yahoo Finance daily closes', 'eod'),
-    ('/api/calendar', 'calendar', 'Calendar', 'Nasdaq calendars', 'delayed'),
+    ('/api/calendar', 'calendar', 'Calendar', 'Nasdaq calendars', 'scheduled'),
     ('/api/alerts/evaluate', 'alerts', 'Alerts', 'Yahoo Finance daily bars, Nasdaq earnings calendar', 'delayed'),
     ('/api/digest', 'digest', 'Your names today', 'Yahoo Finance daily bars, Nasdaq earnings calendar', 'delayed'),
-    ('/api/assistant', 'assistant', 'Research assistant', 'Platform data, written by Google Gemini', 'delayed'),
-    ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
-    ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
+    ('/api/assistant', 'assistant', 'Research assistant', 'Platform data, written by Google Gemini', 'derived'),
+    ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'published'),
+    ('/api/search', 'search', 'Symbol search', 'Index lists, SEC names, Yahoo Finance', 'reference'),
 ]
 
 STATUS_TEXT = {
     'delayed': 'Delayed: quotes may lag the exchange by 15 minutes or more',
     'eod': 'End of day: computed from daily closing bars',
     'reported': 'As reported: figures from the company\'s filings with the SEC, for the periods shown',
+    'estimated': 'Estimated: forecasts by analysts or a marked estimate, not reported results',
+    'published': 'As published: headlines or an index as the publisher released them; not price quotes',
+    'scheduled': 'Schedule: dates as announced; consensus figures in it are forecasts',
+    'derived': 'Written from this site\'s data: each number is checked against that data',
+    'reference': 'Reference list: symbols and names, no prices',
     'unavailable': 'Unavailable: the source did not answer; nothing is shown in its place',
 }
+
+
+def observed(body):
+    """The date the data is from, when the answer carries one: 'as_of' or 'observed_at' at the top,
+    in a list of rows, or in its 'sectors' / 'stocks' rows. The oldest date wins, so a mixed answer
+    never looks fresher than its stalest part."""
+    vals = []
+
+    def take(d):
+        if isinstance(d, dict):
+            for k in ('observed_at', 'as_of'):
+                v = d.get(k)
+                if isinstance(v, str) and len(v) >= 10:
+                    vals.append(v)
+    if isinstance(body, list):
+        for r in body[:200]:
+            take(r)
+    elif isinstance(body, dict):
+        take(body)
+        for k in ('sectors', 'stocks', 'rows', 'instruments'):
+            if isinstance(body.get(k), list):
+                for r in body[k][:600]:
+                    take(r)
+    return min(vals) if vals else None
 
 
 def match(path):
@@ -92,8 +124,12 @@ def headers(path, status_code, body_json):
         isinstance(body_json, dict) and (body_json.get('ok') is False or (body_json.get('error') and len(body_json) <= 2)))
     if failed:
         status = 'unavailable'
-    return {'X-Data-Set': ds['id'], 'X-Data-Source': ds['source'], 'X-Data-Status': status,
-            'X-Data-Retrieved': iso(as_of)}
+    out = {'X-Data-Set': ds['id'], 'X-Data-Source': ds['source'], 'X-Data-Status': status,
+           'X-Data-Retrieved': iso(as_of)}
+    obs = observed(body_json) if not failed else None
+    if obs:
+        out['X-Data-Observed'] = obs[:20]
+    return out
 
 
 def catalogue():

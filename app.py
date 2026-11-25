@@ -989,9 +989,14 @@ def quick_quote(ticker):
         close = hist['Close']
         price = round(float(close.iloc[-1]), 2)
         prev = round(float(close.iloc[-2]), 2)
+        try:
+            as_of = str(hist.index[-1])[:10]          # the session the last close belongs to
+        except Exception:                            # noqa: BLE001
+            as_of = None
         return {'ticker': ticker, 'price': price,
                 'chg': round((price - prev) / prev * 100, 2),
-                'spark': [round(float(p), 2) for p in close.tolist()]}
+                'spark': [round(float(p), 2) for p in close.tolist()], 'as_of': as_of,
+                'currency': 'ILA' if ticker.endswith('.TA') and not ticker.startswith('^') else None}
     except Exception:
         return {'ticker': ticker, 'price': None, 'chg': None, 'spark': []}
 

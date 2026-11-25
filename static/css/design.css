@@ -701,3 +701,7 @@ html[data-density="compact"] .scr-t td small { display: none; }   /* one line pe
 .scr-table { max-height: 72vh; overflow: auto; }
 .scr-t th { top: 0; z-index: 2; }
 .scr-t th.sticky, .scr-t td.sticky { position: sticky; left: 0; z-index: 3; background: var(--s1); }
+.st-stale i, .prov-pop i.st-stale { background: var(--dn); }
+.st-published i, .prov-pop i.st-published, .st-scheduled i, .prov-pop i.st-scheduled, .st-derived i, .prov-pop i.st-derived, .st-reference i, .prov-pop i.st-reference { background: var(--info); }
+.st-estimated i, .prov-pop i.st-estimated { background: var(--violet, #9b8cf0); }
+.mi-retry { margin-inline-start: 8px; }

@@ -158,8 +158,10 @@
     compare: ['stock', 'quotes', 'chart', 'profile'], portfolio: ['quotes'], watchlist: ['quotes'],
     command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'], screener: ['scan'], research: ['company', 'quotes'], ledger: ['ledger'], risk: ['risk'], lab: ['lab'], relative: ['relative', 'company'], calendar: ['calendar'], alertsx: ['alerts'], assistant: ['assistant'] };
   let curView = 'home';
-  const STATUS = { delayed: 'Delayed', eod: 'End of day', reported: 'As filed', unavailable: 'Unavailable', live: 'Live' };
-  const RANK = { unavailable: 0, delayed: 1, eod: 2, reported: 3, live: 4 };
+  const STATUS = { delayed: 'Delayed', eod: 'End of day', reported: 'As filed', estimated: 'Estimated', stale: 'Stale', published: 'As published',
+    scheduled: 'Schedule', derived: 'From site data', reference: 'Reference', unavailable: 'Unavailable', live: 'Live' };
+  // the badge shows the least fresh price status on the screen; non-price statuses rank after prices
+  const RANK = { unavailable: 0, stale: 0.5, estimated: 1, delayed: 2, eod: 3, reported: 4, published: 5, scheduled: 6, derived: 7, reference: 8, live: 9 };
   const NAMES = { quotes: 'Quotes', heatmap: 'Heatmap', treemap: 'Sector map', gaps: 'Gap scan', chart: 'Price history',
     stock: 'Trend analysis', engine: 'Risk engine', feargreed: 'Fear & Greed', earnings: 'Earnings',
     analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search',
@@ -177,7 +179,8 @@
     const id = r.headers.get('X-Data-Set');
     if (!id || id === 'search') return;
     const at = new Date(r.headers.get('X-Data-Retrieved') || Date.now());
-    PROV[id] = { source: r.headers.get('X-Data-Source') || '', status: r.headers.get('X-Data-Status') || 'delayed', at };
+    const ob = r.headers.get('X-Data-Observed');
+    PROV[id] = { source: r.headers.get('X-Data-Source') || '', status: r.headers.get('X-Data-Status') || 'delayed', at, observed: ob || null };
     renderProv();
     document.dispatchEvent(new CustomEvent('prov', { detail: id }));
   };
@@ -189,8 +192,11 @@
     const ids = (VIEW_DATA[curView] || []).filter((id) => PROV[id]);
     if (!ids.length) { btn.hidden = true; pop.classList.remove('open'); return; }
     const rows = ids.map((id) => ({ id, ...PROV[id] })).sort((a, b) => RANK[a.status] - RANK[b.status]);
-    const worst = rows[0].status;
+    let worst = rows[0].status;
     const oldest = rows.reduce((m, r) => (r.at < m ? r.at : m), rows[0].at);
+    // delayed quotes fetched more than 30 minutes ago are called stale, not delayed
+    const stale = rows.some((r) => r.status === 'delayed' && Date.now() - r.at.getTime() > 30 * 60000);
+    if (stale && worst !== 'unavailable') worst = 'stale';
     const sources = Array.from(new Set(rows.map((r) => r.source.replace(/ (quotes|daily bars)$/, ''))));
     btn.hidden = false;
     btn.className = 'prov st-' + worst;
@@ -199,9 +205,10 @@
     btn.setAttribute('aria-label', `Data status: ${STATUS[worst] || worst}, from ${sources.join(', ')}. Show details`);
     pop.innerHTML = '<h5>Data on this screen</h5>' + rows.map((r) =>
       `<div class="pr"><i class="st-${r.status}"></i><div><b>${NAMES[r.id] || esc(r.id)}</b><small>${esc(r.source)}</small></div>` +
-      `<div class="pr-r"><span>${STATUS[r.status] || esc(r.status)}</span><small>retrieved ${hhmm(r.at)} · ${age(r.at)}</small></div></div>`).join('') +
-      '<p>Nothing on this site is a real-time exchange feed. Delayed quotes may lag by 15 minutes or more; ' +
-      'end-of-day figures are computed from daily closing bars. Information only, not investment advice.</p>';
+      `<div class="pr-r"><span>${STATUS[r.status] || esc(r.status)}</span>${r.observed ? `<small>data from ${esc(r.observed.slice(0, 10))}</small>` : ''}<small>retrieved ${hhmm(r.at)} · ${age(r.at)}</small></div></div>`).join('') +
+      '<p><b>Data from</b> is the session or period the numbers belong to; <b>retrieved</b> is when this site fetched them. ' +
+      'Nothing here is a real-time exchange feed: delayed quotes may lag by 15 minutes or more, end-of-day figures come from daily closing bars, ' +
+      'news and calendars are shown as published. Information only, not investment advice.</p>';
   }
   function toggleProv(open) {
     const pop = $('provPop'), btn = $('prov');
