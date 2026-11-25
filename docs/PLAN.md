@@ -16,14 +16,14 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Audit (docs/AUDIT.md)
 - [x] Remove the buy/sell call and the invented "confidence" from the stock card; state the trend facts
 - [x] One indicator library (`quant/indicators.py`: SMA, EMA, Wilder RSI, MACD, true-range ATR, ADX, Bollinger, OBV, VWAP, stochastic) used by every route; remove the duplicate math in `/api/stock`
-- [ ] Data provenance envelope on every API response: `source`, `as_of`, `status` (live / delayed / end-of-day / historical / unavailable), `currency`, `tz`
-- [ ] Cache with explicit age; stale data is labelled, never shown as live
-- [ ] Storage adapter: SQLite locally, hosted libSQL/Postgres when configured (🔑); safe, versioned migrations
-- [ ] Security review: rate limits on data routes, security headers/CSP, input validation, secrets audit
-- [ ] Design system: dark tokens (charcoal/navy layers, restrained green/red), type scale, spacing, table/chart styles, focus states, reduced motion
-- [ ] Split `templates/index.html` into `static/css/*.css` and `static/js/*.js` modules
-- [ ] Navigation: five workspaces (Market Intelligence, Equity Research, Portfolio, Quant & Risk, Intelligence), persistent sidebar, global search, Ctrl/Cmd+K, breadcrumbs, separate phone layout
-- [ ] Retire Render (or limit it) after Vercel is confirmed as production
+- [x] Data provenance on every data answer: `X-Data-Set/Source/Status/Retrieved` headers (bodies unchanged, so no screen breaks), `/api/sources` catalogue, top-bar badge and panel per screen (`provenance.py`)
+- [x] Cache with explicit age: a cache hit reports the time of the original fetch; the panel shows "retrieved HH:MM · N min ago"; nothing is labelled live
+- [x] Storage adapter: SQLite locally, Turso (libSQL over HTTP) in production (`storage.py`), verified live; tables created idempotently
+- [x] Security: stable session key on serverless, CSP + frame/nosniff/referrer/permissions headers, HSTS, no-store on API, sign-in throttle shared through the database (hashed addresses), per-address API budget, 8-character passwords
+- [x] Design system: dark tokens (charcoal/navy layers, restrained green/red), type scale, spacing, table/chart styles, focus states, reduced motion
+- [x] Split `templates/index.html` into `static/css/*.css` and `static/js/*.js` modules
+- [x] Navigation: five workspaces, sidebar / tablet rail / phone tab bar with module sheet, breadcrumbs, an address per module (`#/<module>`), back button, Ctrl/Cmd+K search
+- [x] Retire Render: every request there is forwarded (301, path and query kept) to the Vercel site
 
 ## Phase 2 · Core financial product
 - [ ] Market Intelligence: index/rates/FX/commodities snapshot with status per instrument; real breadth over the S&P 500 (A/D, highs/lows, % above 50/200-day); 11 GICS sectors over 1D/1W/1M/YTD vs S&P 500; leaders/laggards; rotation view
