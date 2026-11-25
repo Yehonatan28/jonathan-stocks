@@ -15,7 +15,8 @@
           "news.py",
           "storage.py",
           "provenance.py",
-          "marketintel.py"
+          "marketintel.py",
+          "scanner.py"
         ]
       }
     }

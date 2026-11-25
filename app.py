@@ -16,6 +16,7 @@ import market
 import storage
 import provenance
 import marketintel
+import scanner
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -885,6 +886,38 @@ def market_breadth():
     if not rows:
         return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503
     out = {'ok': True, 'index': index, **marketintel.breadth(rows)}
+    cache_set(key, out, 120)
+    return jsonify(out)
+
+
+@app.route('/api/scan')
+def scan():
+    """Every member of the chosen universe with the scanner's fields; filtering is client-side."""
+    universe = request.args.get('universe', 'sp500').lower()
+    if universe not in ('sp500', 'ndx', 'all'):
+        return jsonify({'error': 'Unknown universe'}), 400
+    key = 'scan:' + universe
+    hit = cache_get(key)
+    if hit:
+        return jsonify(hit)
+    if universe == 'all':
+        seen, members, quotes = set(), [], {}
+        for ix in ('sp500', 'ndx'):
+            quotes.update(index_quotes(ix))
+            for m in market.constituents(ix):
+                if m['ticker'] not in seen:
+                    seen.add(m['ticker'])
+                    members.append(m)
+    else:
+        members, quotes = market.constituents(universe), index_quotes(universe)
+    rs = scanner.rows(members, quotes)
+    if not rs:
+        return jsonify({'ok': False, 'error': 'No quotes available right now'}), 503
+    out = {'ok': True, 'universe': universe, 'members': len(members), 'rows': rs,
+           'coverage': scanner.coverage(rs),
+           'fields': [{'key': k, 'label': l, 'unit': u, 'help': h} for k, l, u, h in scanner.FIELDS],
+           'note': 'Quotes are delayed. Valuation fields come from the same quote feed and are missing '
+                   'for some names; a missing value never passes a filter.'}
     cache_set(key, out, 120)
     return jsonify(out)
 

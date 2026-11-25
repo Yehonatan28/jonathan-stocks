@@ -26,10 +26,10 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Retire Render: every request there is forwarded (301, path and query kept) to the Vercel site
 
 ## Phase 2 · Core financial product
-- [ ] Market Intelligence: index/rates/FX/commodities snapshot with status per instrument; real breadth over the S&P 500 (A/D, highs/lows, % above 50/200-day); 11 GICS sectors over 1D/1W/1M/YTD vs S&P 500; leaders/laggards; rotation view
+- [x] Market Intelligence: rates/FX/commodities/crypto snapshot with status per instrument (yields in bp); real breadth over all S&P 500 members (A/D, near 52w highs/lows, % above 50/200-day, cap- vs equal-weighted) with denominators; 11 sector funds over 1D/1W/1M/3M/YTD vs SPY; leaders/laggards (`marketintel.py`, tests by hand calculation). Rotation view: later
 - [ ] "Market Opportunities & Alerts" centre built from watchlist, portfolio and filters, each item explained and linked
 - [ ] Company research terminal: overview; 5-year annual/quarterly statements from SEC XBRL; margins, growth, ROE, ROIC, FCF, cash conversion; valuation multiples with history; earnings (actual vs estimate, clearly separated); dividends; structured data-grounded summary
-- [ ] Stock scanner: fundamental + technical filters, sort, custom columns, saved screens, CSV export, transparent configurable multi-factor score (only with sufficient inputs)
+- [x] Stock scanner: S&P 500 / Nasdaq-100 / both; valuation, trend and activity fields with per-field coverage; presets, range filters, sector, sort, columns, saved screens (this browser), CSV export (`scanner.py`). Multi-factor score: later, only with sufficient inputs
 - [ ] Charting: candles/OHLC/line/area, 1D–MAX, indicators with settings, crosshair, levels, markers, interpretation panel from actual values
 - [ ] Portfolio accounting: transactions (buy/sell/dividend/deposit/withdrawal/fee/split), FIFO lots, realised/unrealised P&L, cash, currency; documented methodology
 - [ ] Performance analytics: cumulative return, benchmark, CAGR, volatility, Sharpe, Sortino, beta, alpha, max drawdown (only with enough history)

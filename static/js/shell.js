@@ -20,6 +20,7 @@
       { v: 'home', name: 'Market Overview' },
       { v: 'heatmap', name: 'Market Heatmap' } ] },
     { id: 'research', name: 'Equity Research', short: 'Research', modules: [
+      { v: 'screener', name: 'Stock Screener' },
       { v: 'compare', name: 'Stock Comparison' } ] },
     { id: 'portfolio', name: 'Portfolio', short: 'Portfolio', modules: [
       { v: 'portfolio', name: 'Holdings' },
@@ -105,7 +106,7 @@
   // which datasets each screen shows; a dataset appears once this browser has loaded it
   const VIEW_DATA = { home: ['quotes', 'feargreed', 'breadth', 'sectors', 'snapshot'], heatmap: ['heatmap', 'treemap'],
     compare: ['stock', 'quotes', 'chart', 'profile'], portfolio: ['quotes'], watchlist: ['quotes'],
-    command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'] };
+    command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'], screener: ['scan'] };
   let curView = 'home';
   const STATUS = { delayed: 'Delayed', eod: 'End of day', unavailable: 'Unavailable', live: 'Live' };
   const RANK = { unavailable: 0, delayed: 1, eod: 2, live: 3 };
