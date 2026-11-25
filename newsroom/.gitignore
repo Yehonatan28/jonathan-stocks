@@ -1,5 +1,0 @@
-__pycache__/
-*.py[cod]
-.pytest_cache/
-/state/
-/dashboard/public/data.json
