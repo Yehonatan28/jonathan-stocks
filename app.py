@@ -110,12 +110,39 @@ SECURITY_HEADERS = {
 }
 
 
+# Versioned static URLs: /static/<path>?v=<content hash>. A changed file gets a new URL, so the
+# browser may keep every version for a year without asking again.
+_ASSET_V = {}
+
+
+def asset(path):
+    full = os.path.join(app.static_folder, path)
+    try:
+        mtime = os.path.getmtime(full)
+    except OSError:
+        return '/static/' + path
+    hit = _ASSET_V.get(path)
+    if not hit or hit[0] != mtime:
+        with open(full, 'rb') as fh:
+            hit = (mtime, hashlib.sha256(fh.read()).hexdigest()[:10])
+        _ASSET_V[path] = hit
+    return f'/static/{path}?v={hit[1]}'
+
+
+app.jinja_env.globals['asset'] = asset
+
+
 @app.after_request
 def _security_headers(resp):
     for k, v in SECURITY_HEADERS.items():
         resp.headers.setdefault(k, v)
     if app.config['SESSION_COOKIE_SECURE']:
         resp.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    if request.path.startswith('/static/') and resp.status_code == 200:
+        if request.args.get('v') or request.path.startswith(('/static/fonts/', '/static/vendor/')):
+            resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        else:
+            resp.headers['Cache-Control'] = 'public, max-age=3600'
     if request.path.startswith('/api/'):
         resp.headers.setdefault('Cache-Control', 'no-store')
         if resp.is_json:

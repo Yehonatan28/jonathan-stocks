@@ -52,6 +52,6 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [ ] Public landing page with real screenshots, methodology, demo with clearly marked sample data
 - [x] Privacy policy (what is stored where, third parties), terms, financial disclaimer, data sources & methodology page assembled from the modules' own method texts; account deletion with password (`pages.py`)
 - [x] Metadata: favicon (SVG + PNG), app icons, social preview image (1200x630), Open Graph and Twitter tags, canonical URLs, robots rules (API not indexed), dark manifest
-- [~] Accessibility: axe-core (WCAG 2 A/AA) clean on all 17 screens and 5 public pages (contrast-checked heatmap scale and muted text, labelled controls, tab semantics). Performance and structured logging: next
+- [~] Accessibility: axe-core (WCAG 2 A/AA) clean on all 17 screens and 5 public pages (contrast-checked heatmap scale and muted text, labelled controls, tab semantics). Performance: content-hashed static URLs cached for a year (immutable), chart libraries moved out of the head so first paint is not blocked. Structured logging: next
 - [ ] Full test pass (financial, security, responsive, failure states), production deploy, rollback procedure
 - [x] Final reports: README (features, architecture, security, tests, run), docs/LIMITATIONS.md, docs/CV.md (CV, LinkedIn, Hebrew); methodology page for data documentation

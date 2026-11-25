@@ -37,3 +37,16 @@ def test_account_delete_needs_password_and_erases_rows(tmp_path, monkeypatch):
     assert counts == [0, 0, 0]
     assert c.get('/api/transactions').status_code == 401              # the session is gone too
     assert app.test_client().post('/api/auth/login', json={'email': 'del@x.com', 'password': 'secret123'}).status_code == 401
+
+
+def test_static_assets_are_versioned_and_cached(tmp_path, monkeypatch):
+    import re
+    c = setup(tmp_path, monkeypatch).test_client()
+    html = c.get('/').get_data(as_text=True)
+    urls = re.findall(r'/static/(?:js|css)/[a-z]+\.(?:js|css)\?v=[0-9a-f]{10}', html)
+    assert len(urls) >= 12
+    r = c.get(urls[0])
+    assert r.status_code == 200 and 'immutable' in r.headers['Cache-Control']
+    assert 'immutable' in c.get('/static/fonts/plex-sans-400.woff2').headers['Cache-Control']
+    assert c.get('/static/js/account.js').headers['Cache-Control'] == 'public, max-age=3600'
+    assert c.get('/api/health').headers['Cache-Control'] == 'no-store'
