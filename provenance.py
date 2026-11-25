@@ -38,6 +38,7 @@ DATASETS = [
     ('/api/performance', 'performance', 'Portfolio performance', 'Your transactions, Yahoo Finance daily closes', 'eod'),
     ('/api/risk/review', 'risk', 'Portfolio risk', 'Your holdings, Yahoo Finance daily bars', 'eod'),
     ('/api/lab', 'lab', 'Strategy backtest', 'Yahoo Finance daily bars', 'eod'),
+    ('/api/relative', 'relative', 'Comparison', 'Yahoo Finance daily closes', 'eod'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]

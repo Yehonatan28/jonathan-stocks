@@ -21,7 +21,8 @@
           "ledger.py",
           "performance.py",
           "riskx.py",
-          "strategylab.py"
+          "strategylab.py",
+          "relative.py"
         ]
       }
     }

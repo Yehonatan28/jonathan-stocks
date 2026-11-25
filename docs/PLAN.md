@@ -37,9 +37,9 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 
 ## Phase 3 · Analytical differentiation
 - [x] Backtesting lab (Strategy Lab): entries/exits from RSI, MA, MA cross, MACD cross, breakout, time; ATR stop, target and trailing stop checked intrabar with gap fills; commission and slippage both sides; next-open fills with a no-look-ahead test; equity vs buy-and-hold, drawdown, monthly heatmap, trade list; presets (`strategylab.py`)
-- [ ] Comparison of up to four companies, normalised charts
+- [x] Comparison: up to eight symbols on shared days, indexed performance, period returns, volatility, drawdown, beta to SPY; filed fundamentals side by side for four (`relative.py`)
 - [ ] ETF research (holdings, sectors, expense ratio where available)
-- [ ] Correlation lab: matrix, rolling correlation, volatility, drawdown comparison
+- [x] Correlation: matrix of daily returns, 60-day rolling correlation for any pair, drawdown comparison (in Compare & Correlate)
 - [ ] Economic and earnings calendar (🔑 FRED / Finnhub for full coverage)
 - [ ] Alerts: price, %, RSI, MA cross, volume, earnings, stop proximity; history; server-side monitoring only if a scheduler is available, otherwise stated as "while open"
 

@@ -22,7 +22,8 @@
     { id: 'research', name: 'Equity Research', short: 'Research', modules: [
       { v: 'research', name: 'Company Research' },
       { v: 'screener', name: 'Stock Screener' },
-      { v: 'compare', name: 'Stock Comparison' } ] },
+      { v: 'relative', name: 'Compare & Correlate' },
+      { v: 'compare', name: 'Trend Comparison' } ] },
     { id: 'portfolio', name: 'Portfolio', short: 'Portfolio', modules: [
       { v: 'portfolio', name: 'Holdings' },
       { v: 'ledger', name: 'Transactions & P&L' },
@@ -110,14 +111,14 @@
   // which datasets each screen shows; a dataset appears once this browser has loaded it
   const VIEW_DATA = { home: ['quotes', 'feargreed', 'breadth', 'sectors', 'snapshot'], heatmap: ['heatmap', 'treemap'],
     compare: ['stock', 'quotes', 'chart', 'profile'], portfolio: ['quotes'], watchlist: ['quotes'],
-    command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'], screener: ['scan'], research: ['company', 'quotes'], ledger: ['ledger'], risk: ['risk'], lab: ['lab'] };
+    command: ['engine', 'quotes'], gaps: ['gaps'], backtest: ['engine', 'chart'], alerts: ['quotes'], news: ['news'], screener: ['scan'], research: ['company', 'quotes'], ledger: ['ledger'], risk: ['risk'], lab: ['lab'], relative: ['relative', 'company'] };
   let curView = 'home';
   const STATUS = { delayed: 'Delayed', eod: 'End of day', reported: 'As filed', unavailable: 'Unavailable', live: 'Live' };
   const RANK = { unavailable: 0, delayed: 1, eod: 2, reported: 3, live: 4 };
   const NAMES = { quotes: 'Quotes', heatmap: 'Heatmap', treemap: 'Sector map', gaps: 'Gap scan', chart: 'Price history',
     stock: 'Trend analysis', engine: 'Risk engine', feargreed: 'Fear & Greed', earnings: 'Earnings',
     analyst: 'Analyst estimates', profile: 'Company profile', news: 'News', search: 'Symbol search',
-    company: 'Company financials', ledger: 'Portfolio valuation', risk: 'Holdings and daily bars', lab: 'Strategy backtest', breadth: 'Market breadth', sectors: 'Sector performance', snapshot: 'Rates, FX, commodities', scan: 'Stock scanner' };
+    company: 'Company financials', ledger: 'Portfolio valuation', risk: 'Holdings and daily bars', lab: 'Strategy backtest', relative: 'Comparison', breadth: 'Market breadth', sectors: 'Sector performance', snapshot: 'Rates, FX, commodities', scan: 'Stock scanner' };
   const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const hhmm = (d) => d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   function age(d) {

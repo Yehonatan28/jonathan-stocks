@@ -22,6 +22,7 @@ import ledger
 import performance
 import riskx
 import strategylab
+import relative
 from quant import indicators as _qi
 
 import mimetypes
@@ -1453,6 +1454,42 @@ def strategy_lab():
         return jsonify({'error': str(exc)}), 400
     out['ticker'] = t
     out['warmup_bars'] = start
+    return jsonify(out)
+
+
+@app.route('/api/relative')
+def relative_view():
+    """Up to 8 symbols compared on shared daily closes, with SPY as the benchmark."""
+    raw = [s.strip().upper() for s in (request.args.get('symbols') or '').split(',') if s.strip()]
+    syms = list(dict.fromkeys(s for s in raw if len(s) <= 15 and all(ch.isalnum() or ch in '.-^=' for ch in s)))[:8]
+    if len(syms) < 2:
+        return jsonify({'error': 'Enter at least two symbols'}), 400
+    rng = request.args.get('range', '1y')
+    if rng not in ('6mo', '1y', '2y', '5y'):
+        rng = '1y'
+
+    def pull(sym):
+        key = f'rel:{sym}:{rng}'
+        hit = cache_get(key)
+        if hit is not None:
+            return sym, hit
+        try:
+            p = marketintel.to_points(yf_chart(sym, '1d', rng))
+        except Exception:                    # noqa: BLE001
+            p = []
+        if p:
+            cache_set(key, p, 3 * 3600)
+        return sym, p
+    with ThreadPoolExecutor(max_workers=9) as ex:
+        series = dict(ex.map(pull, syms + (['SPY'] if 'SPY' not in syms else [])))
+    missing = [s for s in syms if not series.get(s)]
+    series = {s: p for s, p in series.items() if p}
+    out = relative.compare(series)
+    out['missing'] = missing
+    out['range'] = rng
+    pair = [s.strip().upper() for s in (request.args.get('pair') or '').split(',')][:2]
+    if out.get('ok') and len(pair) == 2 and all(p in series for p in pair) and pair[0] != pair[1]:
+        out['rolling'] = {'pair': pair, 'window': relative.ROLL, 'points': relative.rolling(series, *pair)}
     return jsonify(out)
 
 
