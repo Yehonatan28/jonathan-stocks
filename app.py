@@ -23,6 +23,7 @@ import performance
 import riskx
 import strategylab
 import relative
+import pages
 from quant import indicators as _qi
 
 import mimetypes
@@ -369,6 +370,29 @@ def sources():
     return jsonify({'datasets': provenance.catalogue(),
                     'note': 'No dataset here is a real-time exchange feed. Retrieval times are per answer, '
                             'in the X-Data-Retrieved header.'})
+
+
+@app.route('/api/account/delete', methods=['POST'])
+def account_delete():
+    """Erase the signed-in account and every row stored under it. The password is asked
+    again so a borrowed session cannot do it."""
+    uid = current_user()
+    if not uid:
+        return jsonify({'error': 'Sign in first, then delete the account.'}), 401
+    d = request.get_json(silent=True) or {}
+    conn = db()
+    try:
+        row = conn.execute('SELECT password_hash FROM users WHERE id=?', (uid,)).fetchone()
+        if not row or not verify_pw(d.get('password') or '', row['password_hash'])[0]:
+            return jsonify({'error': 'Wrong password'}), 403
+        for table in ('portfolio', 'watchlist', 'alerts', 'pf_history', 'settings', 'transactions'):
+            conn.execute(f'DELETE FROM {table} WHERE user_id=?', (uid,))
+        conn.execute('DELETE FROM users WHERE id=?', (uid,))
+        conn.commit()
+    finally:
+        conn.close()
+    session.clear()
+    return jsonify({'ok': True})
 
 
 @app.route('/api/auth/register', methods=['POST'])
@@ -1565,6 +1589,51 @@ def index():
 
 
 # ---------- PWA ----------
+
+def _doc(title, body, description, updated=True):
+    return render_template('page.html', **pages.page(title, body, request.path, description, updated))
+
+
+@app.route('/about')
+def about_page():
+    return _doc('About', pages.ABOUT, 'What Jonathan Stocks does, the principles behind it and how it is built.', updated=False)
+
+
+@app.route('/privacy')
+def privacy_page():
+    return _doc('Privacy', pages.PRIVACY, 'What Jonathan Stocks stores, where, and how to delete it.')
+
+
+@app.route('/terms')
+def terms_page():
+    return _doc('Terms of use', pages.TERMS, 'The terms for using Jonathan Stocks.')
+
+
+@app.route('/disclaimer')
+def disclaimer_page():
+    return _doc('Financial disclaimer', pages.DISCLAIMER, 'Information only, not investment advice.')
+
+
+@app.route('/methodology')
+def methodology_page():
+    sections = [
+        ('Market breadth and sectors', marketintel.breadth.__doc__ + '\n' + marketintel.returns.__doc__),
+        ('Company financials (SEC filings)', fundamentals.__doc__.split('What is extracted, and how:')[1]),
+        ('Stock screener', scanner.__doc__),
+        ('Transactions and P&L', ledger.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Portfolio performance', performance.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Portfolio risk and sizing', riskx.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Strategy Lab (backtesting)', strategylab.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Compare & Correlate', relative.__doc__.split('Method (shown to the user as written here):')[1]),
+    ]
+    return _doc('Data & methodology', pages.methodology(provenance.catalogue(), sections),
+                'Where every number on Jonathan Stocks comes from and how each one is computed.')
+
+
+@app.route('/robots.txt')
+def robots():
+    return Response('User-agent: *\nAllow: /\nAllow: /about\nAllow: /methodology\nDisallow: /api/\n', mimetype='text/plain')
+
 
 @app.route('/manifest.json')
 def manifest():

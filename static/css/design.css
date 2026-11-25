@@ -410,3 +410,7 @@ input, select, textarea { font-family: var(--ui); }
 @media (max-width: 1000px) { .lab-cols { grid-template-columns: minmax(0, 1fr); } }
 .mi-tile .t-val small { font-size: 12px; color: var(--tx3); font-weight: 500; }
 .cmpr .ph h1 { margin: 0 0 4px; font-size: 22px; } .cmpr .ph p { margin: 0 0 14px; color: var(--tx2); font-size: 13.5px; } .cmpr select, #relPair { background: var(--s2); color: var(--tx); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; font: 500 13px var(--ui); } #relPair { margin-left: auto; font-family: var(--mono); font-size: 12px; } @media (max-width: 760px) { #relInput { width: 100% !important; } }
+.side-links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+.side-links a, .auth-note a { color: var(--tx3); text-decoration: underline; text-underline-offset: 3px; }
+.side-links a:hover, .auth-note a:hover { color: var(--tx); }
+@media (max-width: 1180px) { .side-links { display: none; } }

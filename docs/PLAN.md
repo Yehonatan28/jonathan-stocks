@@ -50,8 +50,8 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 
 ## Phase 5 · Launch quality
 - [ ] Public landing page with real screenshots, methodology, demo with clearly marked sample data
-- [ ] Privacy policy, terms, financial disclaimer, data sources and methodology page
-- [ ] Metadata, favicon, social preview, robots rules (private pages not indexed)
+- [x] Privacy policy (what is stored where, third parties), terms, financial disclaimer, data sources & methodology page assembled from the modules' own method texts; account deletion with password (`pages.py`)
+- [~] Metadata and robots rules (API not indexed) done; favicon and social preview image: next
 - [ ] Performance (bundle, caching, chart rendering), accessibility (WCAG 2.2 AA targets), structured logging
 - [ ] Full test pass (financial, security, responsive, failure states), production deploy, rollback procedure
 - [ ] Final reports: features, data documentation, testing, known limitations, CV/LinkedIn description

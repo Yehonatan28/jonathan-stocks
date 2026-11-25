@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="{{ description }}">
+<meta name="theme-color" content="#0a0d13">
+<title>{{ title }} · Jonathan Stocks</title>
+<link rel="preload" href="/static/fonts/plex-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/css/terminal.css">
+<link rel="stylesheet" href="/static/css/design.css">
+<link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body class="doc">
+<header class="doc-top"><a class="side-brand" href="/" aria-label="Jonathan Stocks home"><span class="mark">JS</span><div><b>Jonathan Stocks</b><small>Financial intelligence</small></div></a>
+<nav aria-label="Pages">{% for href, label in nav %}<a href="{{ href }}" {% if href == path %}aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav></header>
+<main class="doc-body">
+<h1>{{ title }}</h1>
+{% if updated %}<p class="doc-meta">Last updated {{ updated }}</p>{% endif %}
+{{ body|safe }}
+</main>
+<footer class="doc-foot">Jonathan Stocks is a personal portfolio project. Information only: not investment advice, not a broker, not a licensed adviser. Market data is delayed or end-of-day.</footer>
+</body>
+</html>

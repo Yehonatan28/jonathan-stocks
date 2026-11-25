@@ -51,7 +51,8 @@
       WORKSPACES.map((w) => `<nav class="ws" data-ws="${w.id}" aria-label="${w.name}">
         <div class="ws-h" title="${w.name}" data-first="${w.modules[0].v}">${svg(w.id)}<span>${w.name}</span></div>
         ${w.modules.map((m) => `<a href="#/${m.v}" data-v="${m.v}">${m.name}</a>`).join('')}</nav>`).join('') +
-      '<div class="side-foot">Market data: delayed or end-of-day unless marked live. Information only, not investment advice.</div>';
+      '<div class="side-foot">Market data: delayed or end-of-day unless marked live. Information only, not investment advice.' +
+      '<nav class="side-links" aria-label="About"><a href="/about">About</a><a href="/methodology">Methodology</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></nav></div>';
     side.querySelectorAll('.ws-h').forEach((h) => h.addEventListener('click', () => { location.hash = '#/' + h.dataset.first; }));
   }
 
