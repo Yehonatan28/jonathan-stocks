@@ -81,8 +81,9 @@ SEC requires in the User-Agent), optional `SECRET_KEY`. Nothing secret lives in 
 
 ## Known limitations
 
-See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: quotes are delayed; valuation multiples (P/E,
-yield) are unavailable while Yahoo refuses the batch quote endpoint to the host; Tel Aviv listings have no SEC
+See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: quotes are delayed; the screener's P/E and yield use
+the last full year's EPS and dividends from SEC filings (not trailing twelve months); forward P/E and P/B are
+unavailable while Yahoo refuses its batch quote endpoint to the host; Tel Aviv listings have no SEC
 filings; performance is measured one currency at a time; backtests are long-only with full allocation.
 
 ## Documents

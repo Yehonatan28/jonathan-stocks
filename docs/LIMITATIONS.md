@@ -5,9 +5,11 @@ Stated plainly, so nothing on the site implies more than it does.
 ## Data
 - **Delayed, not real time.** Quotes come from Yahoo Finance's public endpoints and may lag the exchange by
   15 minutes or more; analysis uses daily bars. No screen is labelled live.
-- **Valuation multiples.** P/E, forward P/E, P/B and dividend yield come from Yahoo's batch quote endpoint,
-  which refuses the production host (HTTP 429 on its crumb). While that holds, those screener columns are
-  hidden and marked unavailable. Trend and range fields are computed from daily bars instead and are present.
+- **Valuation multiples.** Yahoo's batch quote endpoint refuses the production host (HTTP 429 on its crumb),
+  so the screener's P/E is price over the **last full calendar year's diluted EPS** and the yield is that
+  year's **dividends declared** over price, both from the SEC's cross-company frames (about 450 of 506 names
+  have a P/E; loss-makers have none). These are not trailing-twelve-month figures. Forward P/E and P/B have no
+  source that answers from the host and are hidden. Trend and range fields come from daily bars.
 - **Market capitalisation** in the screener is the feed's figure when available, otherwise the index table's
   estimate, which can be weeks old (stated in the field's description).
 - **SEC filings** cover US filers. Funds, foreign private issuers (20-F) and Tel Aviv listings have no 10-K
