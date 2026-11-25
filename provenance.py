@@ -35,6 +35,7 @@ DATASETS = [
     ('/api/scan', 'scan', 'Stock scanner', 'Yahoo Finance quotes', 'delayed'),
     ('/api/company', 'company', 'Company financials', 'SEC EDGAR filings (10-K, 10-Q)', 'reported'),
     ('/api/ledger', 'ledger', 'Portfolio valuation', 'Your transactions, valued at Yahoo Finance prices', 'delayed'),
+    ('/api/performance', 'performance', 'Portfolio performance', 'Your transactions, Yahoo Finance daily closes', 'eod'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]

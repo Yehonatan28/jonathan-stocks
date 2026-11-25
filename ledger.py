@@ -150,7 +150,8 @@ def compute(transactions, prices=None):
         })
     holdings.sort(key=lambda h: -(h['value'] if h['value'] is not None else h['cost']))
 
-    currencies = sorted(set(cash) | {h['currency'] for h in holdings} | {s['currency'] for s in sales} | {c for _s, c in income})
+    currencies = sorted(set(cash) | {h['currency'] for h in holdings} | {s['currency'] for s in sales} | {c for _s, c in income},
+                        key=lambda c: (c != 'USD', c))
     totals = {}
     for cur in currencies:
         hs = [h for h in holdings if h['currency'] == cur]

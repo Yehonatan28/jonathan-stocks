@@ -18,7 +18,8 @@
           "marketintel.py",
           "scanner.py",
           "fundamentals.py",
-          "ledger.py"
+          "ledger.py",
+          "performance.py"
         ]
       }
     }

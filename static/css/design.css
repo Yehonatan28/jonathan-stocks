@@ -350,3 +350,7 @@ input, select, textarea { font-family: var(--ui); }
 .mi-two > .mi-block { min-width: 0; }
 #lgSales { overflow-x: auto; }
 .ldg .mi-tiles { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+.lg-perf { align-items: stretch; } .lg-perf .rs-chart { height: 300px; }
+.lg-perf .mi-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+.lg-pre { white-space: pre-wrap; font: 12px/1.55 var(--mono); color: var(--tx3); background: var(--s1); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+.mi-tile .muted { color: var(--tx3); }

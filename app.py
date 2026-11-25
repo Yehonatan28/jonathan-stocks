@@ -19,6 +19,7 @@ import marketintel
 import scanner
 import fundamentals
 import ledger
+import performance
 
 import mimetypes
 mimetypes.add_type('font/woff2', '.woff2')     # some hosts' tables lack it and serve octet-stream
@@ -538,6 +539,71 @@ def ledger_view():
     except ledger.LedgerError as exc:
         return jsonify({'error': str(exc)}), 400
     out['ok'] = True
+    return jsonify(out)
+
+
+def _range_for(start):
+    span = (datetime.utcnow().date() - start).days
+    return '1y' if span <= 350 else '2y' if span <= 715 else '5y' if span <= 1800 else '10y' if span <= 3600 else 'max'
+
+
+@app.route('/api/performance', methods=['GET', 'POST'])
+def performance_view():
+    """Time-weighted performance of the account currency against SPY. GET for the account,
+    POST for a guest's transactions (computed, not stored)."""
+    if request.method == 'GET':
+        uid = current_user()
+        if not uid:
+            return jsonify({'error': 'Not logged in'}), 401
+        conn = db()
+        txs = _user_txs(conn, uid)
+        conn.close()
+        currency = request.args.get('currency', 'USD')
+    else:
+        d = request.get_json(silent=True) or {}
+        txs, currency = d.get('transactions'), d.get('currency', 'USD')
+        if not isinstance(txs, list) or len(txs) > LEDGER_MAX:
+            return jsonify({'error': f'Send a list of at most {LEDGER_MAX} transactions'}), 400
+    currency = str(currency or 'USD').upper()[:3]
+    try:
+        cleaned = [ledger.clean(t) for t in txs]
+    except ledger.LedgerError as exc:
+        return jsonify({'error': str(exc)}), 400
+    mine = [t for t in cleaned if t['currency'] == currency]
+    if not mine:
+        return jsonify({'ok': False, 'reason': f'No {currency} transactions yet.'})
+    start = min(datetime.strptime(t['date'], '%Y-%m-%d').date() for t in mine)
+    rng = _range_for(start)
+    symbols = sorted({t['ticker'] for t in mine if t.get('ticker') and t['type'] in ('buy', 'sell')})[:30]
+
+    def pull(sym):
+        key = f'perf:{sym}:{rng}'
+        hit = cache_get(key)
+        if hit is not None:
+            return sym, hit
+        try:
+            pts = marketintel.to_points(yf_chart(sym, '1d', rng))
+        except Exception:                    # noqa: BLE001
+            pts = []
+        if pts:
+            cache_set(key, pts, 3 * 3600)
+        return sym, pts
+    with ThreadPoolExecutor(max_workers=12) as ex:
+        got = dict(ex.map(pull, symbols + ['SPY', '^IRX']))
+    bench, irx = got.pop('SPY'), got.pop('^IRX')
+    if not bench:
+        return jsonify({'ok': False, 'reason': 'Benchmark history is unavailable right now.'}), 503
+    in_period = [c for d_, c in irx if d_ >= start]
+    rf = round(sum(in_period) / len(in_period), 3) if in_period else None
+    if rf is not None and not 0 <= rf <= 25:
+        rf = None                            # not a plausible bill yield in percent; do not use it
+    try:
+        out = performance.compute(txs, got, bench, currency=currency, rf_annual=rf)
+    except ledger.LedgerError as exc:
+        return jsonify({'error': str(exc)}), 400
+    out['benchmark'] = 'SPY (S&P 500 fund)'
+    out['rf_source'] = ('average 13-week US Treasury bill yield over the period' if rf is not None
+                        else 'not available, so zero')
     return jsonify(out)
 
 

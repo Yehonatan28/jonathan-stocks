@@ -28,6 +28,10 @@
     <div class="ph"><h1>Transactions &amp; P&amp;L</h1><p>Record buys, sells, dividends, cash and splits. Positions, cost and gains are computed first-in, first-out.</p></div>
     <div class="lg-where" id="lgWhere"></div>
     <div id="lgTotals"></div>
+    <div class="mi-block" id="lgPerfBox" hidden><div class="sec">Performance <span class="tag">TIME-WEIGHTED</span><span class="mi-note" id="lgPerfNote"></span></div>
+      <div class="mi-two lg-perf"><div class="mi-card rs-chart"><canvas id="lgPerfChart" role="img" aria-label="Portfolio against the S&amp;P 500, indexed to 100"></canvas></div>
+      <div class="mi-tiles" id="lgPerfStats"></div></div>
+      <details class="rs-defs"><summary>How performance is measured</summary><pre id="lgPerfMethod" class="lg-pre"></pre></details></div>
     <div class="mi-two">
       <div class="mi-block"><div class="sec">Add a transaction</div>
         <form class="lg-form mi-card" id="lgForm" autocomplete="off">
@@ -83,8 +87,54 @@
     if (!led) return;
     $l('lgMethod').textContent = led.method;
     renderTotals(led.totals);
+    perf(list, Object.keys(led.totals));
     renderHoldings(led.holdings);
     renderSales(led.sales);
+  }
+
+  let perfChart = null;
+  async function perf(list, currencies) {
+    const box = $l('lgPerfBox');
+    if (!list.length || !currencies.length) { box.hidden = true; return; }
+    const cur = currencies.includes('USD') ? 'USD' : currencies[0];
+    let p;
+    try {
+      p = signedIn() ? await api('/api/performance?currency=' + cur)
+        : await api('/api/performance', { method: 'POST', body: JSON.stringify({ transactions: list, currency: cur }) });
+    } catch (err) { p = { ok: false, reason: (err && (err.reason || err.error)) || 'Performance is unavailable right now.' }; }
+    box.hidden = false;
+    if (!p.ok) {
+      $l('lgPerfStats').innerHTML = `<div class="mi-empty">${e(p.reason)}</div>`;
+      $l('lgPerfNote').textContent = '';
+      if (perfChart) { perfChart.destroy(); perfChart = null; }
+      return;
+    }
+    const s = p.stats;
+    $l('lgPerfNote').textContent = `${p.currency} account · ${p.start} to ${p.end} · ${p.days} trading days` +
+      (p.skipped_other_currency ? ` · ${p.skipped_other_currency} transactions in other currencies left out` : '') +
+      (p.unpriced.length ? ` · no history for ${p.unpriced.join(', ')}` : '');
+    const need = (v, n) => (v == null ? `<span class="muted">needs ${n} trading days</span>` : '');
+    const tile = (lab, v, fmt, cls, sub) => `<div class="mi-tile"><div class="t-lab">${lab}</div><div class="t-val ${cls || ''}">${v == null ? '—' : fmt(v)}</div><div class="t-sub">${sub || ''}</div></div>`;
+    const pctf = (v) => (v > 0 ? '+' : '') + n2(v) + '%';
+    $l('lgPerfStats').innerHTML =
+      tile('Return', s.total_return, pctf, tone(s.total_return), 'S&P 500 (SPY) ' + (s.benchmark_return == null ? '—' : pctf(s.benchmark_return))) +
+      tile('Annualised', s.cagr, pctf, tone(s.cagr), need(s.cagr, 252)) +
+      tile('Volatility', s.volatility, (v) => n2(v) + '%', '', s.volatility == null ? need(null, 60) : 'annualised') +
+      tile('Sharpe / Sortino', s.sharpe, (v) => n2(v) + ' / ' + (s.sortino == null ? '—' : n2(s.sortino)), '', s.sharpe == null ? need(null, 60) : 'risk-free: ' + e(p.rf_source)) +
+      tile('Beta / alpha', s.beta, (v) => n2(v) + ' / ' + (s.alpha == null ? '—' : pctf(s.alpha)), '', s.beta == null ? need(null, 60) : 'vs SPY, alpha annualised') +
+      tile('Max drawdown', s.max_drawdown, (v) => n2(v) + '%', s.max_drawdown < 0 ? 'dn' : '', s.max_drawdown_peak ? `${s.max_drawdown_peak} → ${s.max_drawdown_trough}` : 'no fall from a peak');
+    $l('lgPerfMethod').textContent = p.method;
+    if (perfChart) perfChart.destroy();
+    if (typeof Chart === 'undefined') return;
+    const css = getComputedStyle(document.documentElement);
+    const c = (n, fb) => (css.getPropertyValue(n) || fb).trim();
+    perfChart = new Chart($l('lgPerfChart'), { type: 'line', data: { labels: p.series.map((x) => x.date), datasets: [
+      { label: 'Portfolio', data: p.series.map((x) => x.portfolio), borderColor: c('--accent', '#5b8def'), pointRadius: 0, borderWidth: 2, tension: 0 },
+      { label: 'S&P 500 (SPY)', data: p.series.map((x) => x.benchmark), borderColor: c('--tx3', '#889'), pointRadius: 0, borderWidth: 1.5, borderDash: [4, 3], tension: 0 }] },
+      options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: c('--tx3', '#889'), boxWidth: 10, font: { size: 11 } } } },
+        scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 6 }, grid: { display: false } },
+          y: { ticks: { color: c('--tx3', '#889') }, grid: { color: c('--line', '#222') }, title: { display: true, text: 'indexed to 100', color: c('--tx3', '#889') } } } } });
   }
 
   function renderTotals(totals) {
