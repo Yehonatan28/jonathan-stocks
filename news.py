@@ -37,7 +37,11 @@ GLOBAL_FEEDS = [
     ('cnbc-top', 'CNBC', 'https://www.cnbc.com/id/100003114/device/rss/rss.html', 'en', 'us'),
     ('marketwatch', 'MarketWatch', 'https://feeds.content.dowjones.io/public/rss/mw_topstories', 'en', 'us'),
     ('investing', 'Investing.com', 'https://www.investing.com/rss/news_25.rss', 'en', 'us'),
-    ('yahoo-market', 'Yahoo Finance', 'https://finance.yahoo.com/news/rssindex', 'en', 'us'),
+    # Yahoo's market-wide RSS (finance.yahoo.com/news/rssindex) answers 404 since 2026; its
+    # per-symbol headline feed below still works.
+    ('marketwatch-pulse', 'MarketWatch', 'https://feeds.content.dowjones.io/public/rss/mw_marketpulse', 'en', 'us'),
+    ('nasdaq-markets', 'Nasdaq', 'https://www.nasdaq.com/feed/rssoutbound?category=Markets', 'en', 'us'),
+    ('sa-currents', 'Seeking Alpha', 'https://seekingalpha.com/market_currents.xml', 'en', 'us'),
     ('ft-markets', 'Financial Times', 'https://www.ft.com/markets?format=rss', 'en', 'us'),
 ]
 
