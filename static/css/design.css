@@ -734,3 +734,13 @@ html[dir="rtl"] .gloss:not(.open) { transform: translateX(105%); }
 .profile, .gloss { transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s linear .28s; }
 .profile:not(.open), .gloss:not(.open) { visibility: hidden; }
 .profile.open, .gloss.open { visibility: visible; transition-delay: 0s; }
+
+/* narrow screens: the page title in the top bar gives way, tables scroll inside their card */
+.topbar .crumbs { min-width: 0; flex: 0 1 auto; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.topbar .crumbs b { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 860px) { .topbar .crumbs span, .topbar .crumbs i { display: none; } .topbar .spacer { flex: 1 1 0; min-width: 0; } }
+@media (max-width: 420px) { .topbar .crumbs { max-width: 34vw; } }
+.pf-layout > * { min-width: 0; }
+.tbl-wrap { overflow-x: auto; }
+/* short viewports (200% zoom, phones in landscape): only the bottom tab bar stays fixed */
+@media (max-height: 520px) { .topbar, .tape-wrap { position: static !important; } html { scroll-padding-top: 12px; } }
