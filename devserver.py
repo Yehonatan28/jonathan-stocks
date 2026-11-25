@@ -268,5 +268,25 @@ def _fake_cal(kind, day, get=None):
 
 _cal.fetch = _fake_cal
 
+# --- assistant: a stand-in model that writes from the context (and slips one wrong number in)
+import assistant as _as
+
+
+def _fake_model(question, context, key, post=None, models=None, timeout=25):
+    ids = [k for k in context if k.startswith('SEC:')][-1:] or list(context)[:1]
+    if not ids:
+        return {'answer': 'The data does not contain an answer to that.', 'sources': [], 'model': 'dev-stand-in'}
+    k = ids[0]
+    row = context[k]
+    om = row.get('operating_margin')
+    text = (f"Operating margin was {om}% [{k}]. " if om is not None else '') + \
+           (f"Revenue growth was {row.get('revenue_growth')}% [{k}]. " if row.get('revenue_growth') is not None else '') + \
+           "Analysts expect 31.7% next year."
+    return {'answer': text, 'sources': [k], 'model': 'dev-stand-in'}
+
+
+_as.ask_model = _fake_model
+os.environ.setdefault('GEMINI_API_KEY', 'dev-only')
+
 if __name__ == '__main__':
     A.app.run(host='127.0.0.1', port=5055, debug=False, use_reloader=False)

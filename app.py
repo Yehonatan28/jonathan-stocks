@@ -27,6 +27,7 @@ import pages
 import calendars
 import alertrules
 import digest
+import assistant
 from quant import indicators as _qi
 
 import mimetypes
@@ -1757,6 +1758,80 @@ def digest_view():
                     'method': digest.__doc__.split('Method (shown to the user as written here):')[1].strip()})
 
 
+_ASK_HITS = {}
+ASK_LIMIT, ASK_WINDOW = 10, 600
+
+
+def _assistant_context(question, positions, consent):
+    """The data the question needs, each item under a source id."""
+    ctx = {}
+    known = set(market._BY_TICKER) | {p['ticker'] for p in positions} | {
+        'SPY', 'QQQ', 'DIA', 'IWM', 'GLD', 'TLT'} | {s for _n, s in marketintel.SECTOR_ETFS}
+    for t in assistant.tickers_in(question, known):
+        q = member_quote(t)
+        if q.get('price') is not None:
+            ctx[f'PRICE:{t}'] = {'source': 'Yahoo Finance daily bars, delayed', **{k: q.get(k) for k in (
+                'price', 'chg', 'dma50', 'dma200', 'hi52', 'lo52', 'volume', 'avg_vol')}}
+        try:
+            rep = fundamentals.report(t)
+        except fundamentals.Unavailable:
+            rep = None
+        if rep:
+            keep = ('fiscal_year', 'period_end', 'revenue', 'revenue_growth', 'gross_margin', 'operating_margin',
+                    'net_margin', 'net_income', 'eps_diluted', 'eps_growth', 'fcf', 'fcf_margin', 'roe', 'roic',
+                    'debt_to_equity', 'cash', 'debt')
+            for row in rep['annual'][-3:]:
+                ctx[f"SEC:{t}:FY{row['fiscal_year']}"] = {'source': f"{rep['name']} 10-K (SEC EDGAR)",
+                                                         **{k: row.get(k) for k in keep}}
+    if assistant.wants_market(question) or not ctx:
+        try:
+            b = marketintel.breadth(index_rows('sp500'))
+            ctx['BREADTH:SP500'] = {'source': 'S&P 500 members, delayed quotes', **{k: b[k] for k in (
+                'advancers', 'decliners', 'above_50d', 'above_200d', 'near_52w_high', 'near_52w_low',
+                'cap_weighted_chg', 'equal_weighted_chg')}}
+        except Exception:                    # noqa: BLE001
+            pass
+        sec = cache_get('sectors')
+        if sec:
+            ctx['SECTORS'] = {'source': 'SPDR sector funds vs SPY, closing prices',
+                              'benchmark': sec['benchmark']['returns'],
+                              'sectors': {s['sector']: s['returns'] for s in sec['sectors']}}
+    if consent and positions:
+        ctx['PORTFOLIO'] = {'source': 'your holdings (shared with your consent for this question)',
+                            'positions': [{k: p.get(k) for k in ('ticker', 'qty', 'entry', 'stop')} for p in positions[:25]]}
+    return ctx
+
+
+@app.route('/api/assistant', methods=['POST'])
+def assistant_view():
+    d = request.get_json(silent=True) or {}
+    question = str(d.get('question') or '').strip()
+    if not 3 <= len(question) <= 500:
+        return jsonify({'error': 'Ask a question of up to 500 characters.'}), 400
+    ip, now = _client_ip(), time.time()
+    hits = [t for t in _ASK_HITS.get(ip, []) if t > now - ASK_WINDOW]
+    if len(hits) >= ASK_LIMIT:
+        return jsonify({'error': 'Ten questions per ten minutes. Try again shortly.'}), 429
+    _ASK_HITS[ip] = hits + [now]
+    consent = d.get('consent') is True
+    positions = []
+    if consent:
+        uid = current_user()
+        if uid:
+            conn = db()
+            positions = [dict(r) for r in conn.execute('SELECT ticker, qty, entry, stop FROM portfolio WHERE user_id=?', (uid,))]
+            conn.close()
+        else:
+            positions = _clean_positions(d.get('positions'))
+    ctx = _assistant_context(question, positions, consent)
+    try:
+        out = assistant.answer(question, ctx)
+    except assistant.AssistantError as exc:
+        return jsonify({'ok': False, 'error': f'The assistant is unavailable right now ({exc}).'}), 503
+    return jsonify({'ok': True, **out, 'context_ids': list(ctx), 'portfolio_shared': 'PORTFOLIO' in ctx,
+                    'method': assistant.__doc__.split('Method (shown to the user as written here):')[1].strip()})
+
+
 @app.route('/api/risk/size', methods=['POST'])
 def risk_size():
     d = request.get_json(silent=True) or {}
@@ -1865,6 +1940,10 @@ def methodology_page():
         ('Portfolio risk and sizing', riskx.__doc__.split('Method (shown to the user as written here):')[1]),
         ('Strategy Lab (backtesting)', strategylab.__doc__.split('Method (shown to the user as written here):')[1]),
         ('Compare & Correlate', relative.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Calendars', calendars.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Alerts', alertrules.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Your names today', digest.__doc__.split('Method (shown to the user as written here):')[1]),
+        ('Research assistant', assistant.__doc__.split('Method (shown to the user as written here):')[1]),
     ]
     return _doc('Data & methodology', pages.methodology(provenance.catalogue(), sections),
                 'Where every number on Jonathan Stocks comes from and how each one is computed.')

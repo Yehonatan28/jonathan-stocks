@@ -26,7 +26,8 @@
           "pages.py",
           "calendars.py",
           "alertrules.py",
-          "digest.py"
+          "digest.py",
+          "assistant.py"
         ]
       }
     }

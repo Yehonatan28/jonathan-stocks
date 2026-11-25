@@ -53,8 +53,11 @@ memory and returned; they are not written to the database or to logs by this ser
 <li><strong>Market and company data:</strong> the server, not your browser, asks Yahoo Finance, SEC EDGAR, CNN and news publishers. No personal data is included in those requests.</li>
 <li><strong>Fonts:</strong> the Hebrew typeface is loaded from Google Fonts, which receives your browser's address when it does. All other fonts are served by this site.</li>
 <li><strong>News images</strong> load from the publishers' own servers when you open the news screen.</li>
+<li><strong>Research assistant:</strong> a question you ask there is sent to Google (Gemini) with the market and company data
+needed to answer it. Your holdings are added only if you tick the consent box for that question. Google's terms for the Gemini
+API apply to what is sent. Do not type personal information into questions.</li>
 </ul>
-<p>There is no advertising, no analytics service and no sale or sharing of data.</p>
+<p>There is no advertising, no analytics service and no sale of data. Data leaves the service only as listed above.</p>
 <h2>Your choices</h2>
 <ul>
 <li>Use guest mode and nothing about you is stored on the server.</li>

@@ -44,7 +44,7 @@ Legend: [ ] to do · [~] in progress · [x] done · 🔑 needs an external crede
 - [x] Alerts: price, day change, RSI, MA cross, relative volume, earnings within N days, distance to stop; evaluated by the server on daily bars while the app is open (stated), history and optional browser notifications (`alertrules.py`)
 
 ## Phase 4 · Intelligence layer
-- [ ] AI research assistant grounded in platform data, with sources, periods, facts vs estimates, a number validator, explicit consent before any private portfolio data leaves the server (🔑)
+- [x] Research assistant (Gemini) grounded only in platform data: server-chosen context with source ids, citations, estimates kept apart, no recommendations, every number checked against the context and unverified ones marked, holdings only with per-question consent, 10 questions per 10 minutes (`assistant.py`)
 - [ ] Research report generator with PDF export
 - [ ] News as a research layer: per company, portfolio and watchlist feeds, deduplication, machine-labelled sentiment
 

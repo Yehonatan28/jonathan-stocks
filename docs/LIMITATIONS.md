@@ -29,5 +29,4 @@ Stated plainly, so nothing on the site implies more than it does.
 
 ## Not built (yet)
 - ETF holdings research (needs a holdings source that answers from the host).
-- An AI research assistant (needs an API key and explicit consent before any portfolio data leaves the server).
 - Server-side alert monitoring (alerts are checked while the app is open).

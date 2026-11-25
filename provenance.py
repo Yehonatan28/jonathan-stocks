@@ -42,6 +42,7 @@ DATASETS = [
     ('/api/calendar', 'calendar', 'Calendar', 'Nasdaq calendars', 'delayed'),
     ('/api/alerts/evaluate', 'alerts', 'Alerts', 'Yahoo Finance daily bars, Nasdaq earnings calendar', 'delayed'),
     ('/api/digest', 'digest', 'Your names today', 'Yahoo Finance daily bars, Nasdaq earnings calendar', 'delayed'),
+    ('/api/assistant', 'assistant', 'Research assistant', 'Platform data, written by Google Gemini', 'delayed'),
     ('/api/news', 'news', 'News', 'Publisher RSS feeds', 'delayed'),
     ('/api/search', 'search', 'Symbol search', 'Yahoo Finance', 'delayed'),
 ]
