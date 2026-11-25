@@ -65,32 +65,78 @@
       <div class="mi-card rs-tbl"><table class="mi-t"><thead><tr><th>Quarter ending</th>${cols}</tr></thead><tbody>
       ${line('revenue', 'Revenue', money)}${line('gross_profit', 'Gross profit', money)}${line('operating_income', 'Operating income', money)}
       ${line('net_income', 'Net income', money)}${line('eps_diluted', 'EPS (diluted)', (v) => (v == null ? '—' : v.toFixed(2)))}
-      ${line('operating_margin', 'Operating margin', pct)}</tbody></table></div>
-      <p class="mi-foot">Companies do not file a fourth quarter on its own. "Derived Q4" is the fiscal year minus the first three quarters; its EPS is left empty because share counts differ between quarters.</p></div>`;
+      ${line('operating_margin', 'Operating margin', pct)}
+      <tr><td class="nm">Revenue, change on a year earlier</td>${qs.map((q, i) => { const p = qs[i - 4]; const v = p && p.revenue && q.revenue != null ? (q.revenue / p.revenue - 1) * 100 : null; return `<td class="n ${tone(v)}">${v == null ? '—' : sgn(v)}</td>`; }).join('')}</tr></tbody></table></div>
+      <p class="mi-foot">Companies do not file a fourth quarter on its own. "Derived Q4" is the fiscal year minus the first three quarters; its EPS is left empty because share counts differ between quarters. The change on a year earlier compares a quarter with the one four quarters before it.</p></div>`;
   }
 
+  /* Charts: annual or quarterly, each in a frame with its metric, units, range and source, a
+     keyboard legend and a table view that also gives the change on a year earlier. A derived Q4
+     (fiscal year minus three filed quarters) is marked in its label. */
+  let per = 'annual', cur = null;
+  // change on a year earlier; undefined (a dash) when the earlier figure is zero or negative
+  const yoy = (vals, lag) => vals.map((v, i) => (i >= lag && v != null && vals[i - lag] > 0 ? (v / vals[i - lag] - 1) * 100 : null));
+  function series(d) {
+    if (per === 'annual') {
+      const r = d.annual;
+      return { labels: r.map((x) => 'FY' + x.fiscal_year), lag: 1, range: r.length ? `FY${r[0].fiscal_year} to FY${r[r.length - 1].fiscal_year}` : '',
+        money: [['Revenue', r.map((x) => x.revenue), '--accent'], ['Net income', r.map((x) => x.net_income), '--up'], ['Free cash flow', r.map((x) => x.fcf), '--violet']],
+        margin: [['Gross margin', r.map((x) => x.gross_margin), '--accent'], ['Operating margin', r.map((x) => x.operating_margin), '--up'], ['Net margin', r.map((x) => x.net_margin), '--gold']],
+        derived: false };
+    }
+    const q = d.quarterly;
+    return { labels: q.map((x) => x.period_end.slice(0, 7) + (x.derived ? ' Q4*' : '')), lag: 4, range: q.length ? `quarters ending ${q[0].period_end} to ${q[q.length - 1].period_end}` : '',
+      money: [['Revenue', q.map((x) => x.revenue), '--accent'], ['Net income', q.map((x) => x.net_income), '--up']],
+      margin: [['Gross margin', q.map((x) => x.gross_margin), '--accent'], ['Operating margin', q.map((x) => x.operating_margin), '--up'],
+        ['Net margin', q.map((x) => (x.revenue && x.net_income != null ? x.net_income / x.revenue * 100 : null)), '--gold']],
+      derived: q.some((x) => x.derived) };
+  }
+  function chartsHtml(d) {
+    const sr = series(d);
+    const note = (sr.derived ? '* Q4 derived: fiscal year minus the three filed quarters. ' : '') + (per === 'quarterly' ? 'Free cash flow is reported for full years only. ' : '') + 'The table view adds the change on a year earlier.';
+    const asOf = per === 'annual' ? (d.annual[d.annual.length - 1] || {}).period_end : (d.quarterly[d.quarterly.length - 1] || {}).period_end;
+    return `<div class="rs-per seg" role="group" aria-label="Period of the charts">
+        <button type="button" data-per="annual" aria-pressed="${per === 'annual'}" class="${per === 'annual' ? 'on' : ''}">Annual</button>
+        <button type="button" data-per="quarterly" aria-pressed="${per === 'quarterly'}" class="${per === 'quarterly' ? 'on' : ''}">Quarterly</button></div>
+      <div class="mi-two">
+        ${ChartFrame.html({ id: 'rsA', title: 'Revenue, net income and free cash flow', metric: 'As reported', units: 'US dollars', range: sr.range, source: 'SEC filings (XBRL)', asOf, note })}
+        ${ChartFrame.html({ id: 'rsB', title: 'Margins', metric: 'Profit as a share of revenue', units: '%', range: sr.range, source: 'computed from SEC filings', asOf, note: per === 'quarterly' ? 'Quarterly net margin is computed here as net income over revenue.' : '' })}
+      </div>`;
+  }
   function drawCharts(d) {
+    cur = d;
     charts.forEach((c) => c.destroy()); charts = [];
     if (typeof Chart === 'undefined') return;
     const css = getComputedStyle(document.documentElement);
     const c = (n, fb) => (css.getPropertyValue(n) || fb).trim();
-    const grid = c('--line', '#222'), tx = c('--tx3', '#889');
-    const labels = d.annual.map((r) => 'FY' + r.fiscal_year);
-    const base = { responsive: true, maintainAspectRatio: false, animation: false,
-      plugins: { legend: { labels: { color: tx, boxWidth: 10, font: { size: 11 } } } },
-      scales: { x: { grid: { display: false }, ticks: { color: tx } }, y: { grid: { color: grid }, ticks: { color: tx } } } };
-    const a = document.getElementById('rsChartA'), b = document.getElementById('rsChartB');
-    if (a) charts.push(new Chart(a, { type: 'bar', data: { labels, datasets: [
-      { label: 'Revenue', data: d.annual.map((r) => r.revenue), backgroundColor: c('--accent', '#5b8def') },
-      { label: 'Net income', data: d.annual.map((r) => r.net_income), backgroundColor: c('--up', '#2fb67c') },
-      { label: 'Free cash flow', data: d.annual.map((r) => r.fcf), backgroundColor: '#8a7fd6' }] },
-      options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { color: tx, callback: (v) => money(v) } } } } }));
-    if (b) charts.push(new Chart(b, { type: 'line', data: { labels, datasets: [
-      { label: 'Gross margin', data: d.annual.map((r) => r.gross_margin), borderColor: c('--accent', '#5b8def'), tension: 0, spanGaps: false },
-      { label: 'Operating margin', data: d.annual.map((r) => r.operating_margin), borderColor: c('--up', '#2fb67c'), tension: 0 },
-      { label: 'Net margin', data: d.annual.map((r) => r.net_margin), borderColor: c('--gold', '#d6aa4f'), tension: 0 }] },
-      options: { ...base, scales: { ...base.scales, y: { ...base.scales.y, ticks: { color: tx, callback: (v) => v + '%' } } } } }));
+    const sr = series(d);
+    const a = document.getElementById('rsA-c'), b = document.getElementById('rsB-c');
+    const pctF = (v) => (v == null ? '—' : Number(v).toFixed(1) + '%');
+    const chgF = (v) => (v == null ? '—' : (v > 0 ? '+' : '') + Number(v).toFixed(1) + '%');
+    const yoyRows = (list, fmt) => list.flatMap(([label, vals]) => [{ label, values: vals, fmt },
+      { label: `${label}, change on a year earlier`, values: yoy(vals, sr.lag), fmt: chgF }]);
+    if (a) {
+      const ch = new Chart(a, { type: 'bar', data: { labels: sr.labels, datasets: sr.money.map(([label, data, tk]) => ({ label, data, backgroundColor: c(tk, '#5b8def') })) },
+        options: ChartFrame.base((v) => money(v)) });
+      charts.push(ch);
+      ChartFrame.fill('rsA', ch, sr.labels, yoyRows(sr.money, money));
+    }
+    if (b) {
+      const ch = new Chart(b, { type: 'line', data: { labels: sr.labels, datasets: sr.margin.map(([label, data, tk]) => ({ label, data, borderColor: c(tk, '#5b8def'), backgroundColor: c(tk, '#5b8def'), tension: 0, spanGaps: false, pointRadius: 3 })) },
+        options: ChartFrame.base(pctF) });
+      charts.push(ch);
+      ChartFrame.fill('rsB', ch, sr.labels, sr.margin.map(([label, vals]) => ({ label, values: vals, fmt: pctF })));
+    }
   }
+  root.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-per]');
+    if (!b || !cur) return;
+    per = b.dataset.per;
+    document.getElementById('rsCharts').innerHTML = chartsHtml(cur);
+    drawCharts(cur);
+    const f = document.querySelector(`[data-per="${per}"]`); if (f) f.focus();
+  });
+  document.addEventListener('themechange', () => { if (cur && root.classList.contains('on')) drawCharts(cur); });
 
   async function open(t) {
     t = (t || '').trim().toUpperCase();
@@ -120,10 +166,7 @@
       </div>
       <div class="rs-summary"><h3>From the filings</h3>${d.summary.length ? '<ul>' + d.summary.map((s) => `<li>${e(s)}</li>`).join('') + '</ul>' : '<p>Not enough reported figures for a summary.</p>'}
         <p class="mi-foot">Built only from the reported numbers below. Not a forecast, and not investment advice.</p></div>
-      <div class="mi-two">
-        <div class="mi-block"><div class="sec">Revenue, profit and cash</div><div class="mi-card rs-chart"><canvas id="rsChartA" aria-label="Revenue, net income and free cash flow by fiscal year" role="img"></canvas></div></div>
-        <div class="mi-block"><div class="sec">Margins</div><div class="mi-card rs-chart"><canvas id="rsChartB" aria-label="Gross, operating and net margin by fiscal year" role="img"></canvas></div></div>
-      </div>
+      <div class="mi-block" id="rsCharts">${chartsHtml(d)}</div>
       ${ratiosTable(d)}
       ${table('Income statement', d.annual, [['revenue', 'Revenue'], ['gross_profit', 'Gross profit'], ['rnd', 'Research & development'], ['operating_income', 'Operating income', null, 'em'], ['pretax_income', 'Income before tax'], ['income_tax', 'Income tax'], ['net_income', 'Net income', null, 'em'], ['eps_diluted', 'EPS (diluted)', (v) => (v == null ? '—' : v.toFixed(2))], ['shares_diluted', 'Diluted shares', money], ['dps', 'Dividends per share', (v) => (v == null ? '—' : v.toFixed(2))]], money)}
       ${table('Balance sheet', d.annual, [['cash', 'Cash & equivalents'], ['total_assets', 'Total assets', null, 'em'], ['total_liabilities', 'Total liabilities'], ['debt', 'Reported debt'], ['equity', "Shareholders' equity", null, 'em']], money, 'At fiscal year end')}

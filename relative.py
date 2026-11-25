@@ -93,6 +93,10 @@ def compare(series, benchmark='SPY'):
                     'drawdown': dd}
     out['stats'] = stats
     out['benchmark'] = benchmark if benchmark in px else None
+    if benchmark in px and benchmark not in syms:     # the benchmark on the same base, for the chart
+        out['benchmark_indexed'] = [round(v / px[benchmark][0] * 100, 3) for v in px[benchmark]]
+        b = px[benchmark]
+        out['benchmark_total'] = round((b[-1] / b[0] - 1) * 100, 2)
     m = [[(1.0 if a == b else (round(_corr(rets[a], rets[b]), 2) if _corr(rets[a], rets[b]) is not None else None))
           for b in syms] for a in syms]
     out['correlation'] = m

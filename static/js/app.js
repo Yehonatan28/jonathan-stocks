@@ -240,12 +240,39 @@ async function loadHeatmap(index,btn){
  if(btn)btn.className=btn.className.replace('btn-ghost','btn-gold');
  $('hmBoard').innerHTML='<div class="sk" style="height:460px;border-radius:var(--r)"></div>';
  $('hmSummary').innerHTML='';
- try{S.hm=await api('/api/heatmap/'+index);renderHeatmap();
+ try{S.hm=await api('/api/heatmap/'+index);$('hmSector').innerHTML='<option value="">All sectors</option>';renderHeatmap();
   $('hmStamp').textContent=`${S.hm.stocks.length} companies · ${fmtCap(S.hm.total_cap*1e9)} total · updated ${new Date(S.hm.generated_at*1000).toLocaleTimeString('en-GB')}`}
  catch(e){$('hmBoard').innerHTML=`<div class="empty"><div class="e-ic">${ICON('map')}</div><h4>${esc(e.error||'Could not load the heatmap')}</h4></div>`}}
 
+/* heatmap tools: one sector, find a company, the same data as a table */
+let hmView='map',hmSort={k:'cap',dir:-1};
+function hmSetView(v){hmView=v;document.querySelectorAll('[data-hv]').forEach(b=>{const on=b.dataset.hv===v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on))});
+ $('hmBoard').hidden=v!=='map';$('hmLegend').hidden=v!=='map';$('hmTable').hidden=v!=='table';renderHeatmap()}
+function hmData(){const d0=S.hm;if(!d0)return null;const sec=$('hmSector').value;
+ return sec?{...d0,sectors:d0.sectors.filter(s=>s.sector===sec),stocks:d0.stocks.filter(s=>s.sector===sec)}:d0}
+function hmFindRun(){const q=($('hmFind').value||'').trim().toLowerCase();
+ document.querySelectorAll('.hm-cell.hit').forEach(c=>c.classList.remove('hit'));
+ if(hmView==='table'){renderHmTable();return}
+ if(!q||!S.hm)return;
+ const m=S.hm.stocks.filter(s=>s.ticker.toLowerCase()===q||s.ticker.toLowerCase().startsWith(q)||(s.name||'').toLowerCase().includes(q)).slice(0,5);
+ m.forEach(s=>{const c=document.querySelector(`.hm-cell[data-t="${CSS.escape(s.ticker)}"]`);if(c)c.classList.add('hit')});
+ $('hmCov').textContent=m.length?`Found: ${m.map(s=>`${s.ticker} ${sign(s.chg)}%`).join(' · ')}`:`No member matches “${$('hmFind').value}”${$('hmSector').value?' in this sector':''}.`}
+function renderHmTable(){const d=hmData();if(!d)return;const q=($('hmFind').value||'').trim().toLowerCase();
+ const tot=d.stocks.reduce((a,s)=>a+(s.cap||0),0)||1;
+ const rows=d.stocks.filter(s=>!q||s.ticker.toLowerCase().includes(q)||(s.name||'').toLowerCase().includes(q))
+  .sort((a,b)=>{const x=a[hmSort.k],y=b[hmSort.k];return typeof x==='string'?hmSort.dir*x.localeCompare(y):hmSort.dir*((x??-1e18)-(y??-1e18))});
+ const th=(k,l,n)=>`<th class="${n?'n':''}" aria-sort="${hmSort.k===k?(hmSort.dir>0?'ascending':'descending'):'none'}"><button type="button" onclick="hmSort={k:'${k}',dir:hmSort.k==='${k}'?-hmSort.dir:-1};renderHmTable()">${l}${hmSort.k===k?(hmSort.dir>0?' ▲':' ▼'):''}</button></th>`;
+ $('hmTable').innerHTML=`<table class="mi-t scr-t"><caption class="sr-only">Index members by market value and today's change</caption><thead><tr>${th('ticker','Symbol')}${th('sector','Sector')}${th('price','Price',1)}${th('chg','Change',1)}${th('cap','Market value',1)}<th class="n">Share of shown</th></tr></thead><tbody>
+  ${rows.slice(0,600).map(s=>`<tr data-t="${esc(s.ticker)}" tabindex="0" onclick="openChart('${esc(s.ticker)}')" onkeydown="if(event.key==='Enter')openChart('${esc(s.ticker)}')"><td class="sticky"><b>${esc(s.ticker)}</b><small>${esc(s.name||'')}</small></td><td>${esc(s.sector)}</td>
+  <td class="n">${fmt(s.price)}</td><td class="n ${cls(s.chg)}">${s.chg==null?'—':sign(s.chg)+'%'}</td><td class="n">${fmtCap(s.cap*1e9)}${s.cap_est?' <span class="est" title="Static index-table estimate, Oct 2026">est.</span>':''}</td><td class="n">${(s.cap/tot*100).toFixed(2)}%</td></tr>`).join('')}</tbody></table>`}
+
 function renderHeatmap(){
- const d=S.hm;if(!d)return;
+ if(!S.hm)return;
+ const sel=$('hmSector');if(sel&&sel.options.length<=1)sel.innerHTML='<option value="">All sectors</option>'+S.hm.sectors.map(s=>`<option>${esc(s.sector)}</option>`).join('');
+ const d0=S.hm;
+ $('hmCov').textContent=`${d0.covered||d0.stocks.length} of ${d0.listed||d0.stocks.length} members priced`+(d0.cap_estimated?` · market value is a marked static estimate for ${d0.cap_estimated}`:'')+'. Block size is computed here, not the official index weight.';
+ if(hmView==='table'){renderHmTable();return}
+ const d=hmData();
  const scale=parseFloat($('hmScale').value)||5;
  const showLogos=false; /* Clearbit's free logo service shut down in Dec 2025; tiles show the symbol */
  const board=$('hmBoard');
@@ -298,6 +325,7 @@ function renderHeatmap(){
    ${HEAD?`<div class="hm-head"><b>${esc(b.sector)}</b><span class="${cls(b.chg)}">${sign(b.chg)}%</span></div>`:''}
    ${cells}</div>`});
  board.innerHTML=html;
+ if(($('hmFind').value||'').trim())hmFindRun();
 
  $('hmSummary').innerHTML=d.sectors.map(s=>`
   <div class="hm-s" onclick="document.getElementById('hmBoard').scrollIntoView({behavior:'smooth',block:'center'})">

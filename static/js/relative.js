@@ -34,11 +34,14 @@
     if (typeof Chart === 'undefined') return;
     const css = getComputedStyle(document.documentElement);
     const c = (n, fb) => (css.getPropertyValue(n) || fb).trim();
-    charts.push(new Chart(el, { type: 'line', data: { labels, datasets: sets.map((s) => ({ pointRadius: 0, borderWidth: 1.8, tension: 0, ...s })) },
+    if (!el) return null;
+    const ch = new Chart(el, { type: 'line', data: { labels, datasets: sets.map((s) => ({ pointRadius: 0, borderWidth: 1.8, tension: 0, ...s })) },
       options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
-        plugins: { legend: { display: legend, labels: { color: c('--tx3', '#889'), boxWidth: 10, font: { size: 11 } } } },
         scales: { x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 7 }, grid: { display: false } },
-          y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--line', '#222') } } } } }));
+          y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--grid', '#222') } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (x) => `${x.dataset.label}: ${x.parsed.y == null ? '—' : fmt(x.parsed.y)}` } } } } });
+    charts.push(ch);
+    return ch;
   }
 
   async function fundamentals(syms) {
@@ -47,14 +50,14 @@
     const res = await Promise.all(take.map((s) => api('/api/company/' + encodeURIComponent(s)).catch(() => null)));
     const have = take.map((s, i) => [s, res[i]]).filter(([, r]) => r && r.annual && r.annual.length);
     if (!have.length) { box.innerHTML = '<div class="mi-empty">No SEC filings for these symbols (funds and non-US issuers do not file 10-Ks).</div>'; return; }
-    const rows = [['fiscal_year', 'Fiscal year', (v) => (v == null ? '—' : 'FY' + v)], ['revenue', 'Revenue', (v) => (v == null ? '—' : '$' + (v / 1e9).toFixed(1) + 'B')],
+    const rows = [['fiscal_year', 'Fiscal year', (v) => (v == null ? '—' : 'FY' + v)], ['period_end', 'Fiscal year ended', (v) => (v == null ? '—' : v)], ['revenue', 'Revenue', (v) => (v == null ? '—' : '$' + (v / 1e9).toFixed(1) + 'B')],
       ['revenue_growth', 'Revenue growth', pc], ['gross_margin', 'Gross margin', (v) => (v == null ? '—' : n2(v, 1) + '%')],
       ['operating_margin', 'Operating margin', (v) => (v == null ? '—' : n2(v, 1) + '%')], ['net_margin', 'Net margin', (v) => (v == null ? '—' : n2(v, 1) + '%')],
       ['fcf_margin', 'FCF margin', (v) => (v == null ? '—' : n2(v, 1) + '%')], ['roe', 'Return on equity', (v) => (v == null ? '—' : n2(v, 1) + '%')],
       ['roic', 'Return on invested capital', (v) => (v == null ? '—' : n2(v, 1) + '%')], ['debt_to_equity', 'Debt / equity', (v) => (v == null ? '—' : n2(v) + '×')]];
     box.innerHTML = `<table class="mi-t scr-t"><thead><tr><th class="sticky">Latest fiscal year</th>${have.map(([s]) => `<th class="n">${e(s)}</th>`).join('')}</tr></thead><tbody>
       ${rows.map(([k, l, f]) => `<tr><td class="sticky">${l}</td>${have.map(([, r]) => `<td class="n">${f(r.annual[r.annual.length - 1][k])}</td>`).join('')}</tr>`).join('')}</tbody></table>
-      <p class="mi-foot" style="padding:0 12px 10px">From each company's latest 10-K (fiscal years end on different dates). Open one in Company Research for five years and the formulas.</p>`;
+      <p class="mi-foot" style="padding:0 12px 10px">From each company's latest 10-K. Fiscal years end on different dates (row two), so the columns can cover different twelve months. Open one in Company Research for five years and the formulas.</p>`;
   }
 
   function render(d) {
@@ -65,8 +68,7 @@
     for (let i = 0; i < syms.length; i++) for (let j = i + 1; j < syms.length; j++) pairOpts.push(`${syms[i]},${syms[j]}`);
     $c('relOut').innerHTML = `
       ${d.missing && d.missing.length ? `<p class="mi-foot">No history for ${e(d.missing.join(', '))}; left out.</p>` : ''}
-      <div class="mi-block"><div class="sec">Performance <span class="tag">INDEXED TO 100</span><span class="mi-note">${e(d.start)} to ${e(d.end)} · ${d.days} shared days</span></div>
-        <div class="mi-card rs-chart lab-chart"><canvas id="relIdx" role="img" aria-label="Indexed performance"></canvas></div></div>
+      <div class="mi-block">${ChartFrame.html({ id: 'relIdx', title: 'Performance from 100', metric: 'Price return (dividends not included), every series = 100 on the first shared day', units: 'index points', range: `${d.start} to ${d.end}, ${d.days} shared trading days`, source: 'Yahoo Finance daily closes', asOf: d.end, note: d.benchmark_indexed ? `Dashed: ${d.benchmark}, the benchmark, on the same base (${pc(d.benchmark_total)} over the window).` : '', height: 300 })}</div>
       <div class="mi-block"><div class="mi-card scr-table"><table class="mi-t scr-t"><thead><tr><th class="sticky">Symbol</th><th class="n">1M</th><th class="n">3M</th><th class="n">6M</th><th class="n">1Y</th><th class="n">YTD</th>
         <th class="n">Volatility</th><th class="n">Max drawdown</th><th class="n">Beta to SPY</th></tr></thead><tbody>
         ${syms.map((s, i) => { const t = d.stats[s]; return `<tr data-t="${e(s)}" tabindex="0"><td class="sticky"><b style="color:${color(i)}">${e(s)}</b></td>
@@ -75,27 +77,38 @@
       </tbody></table></div>
         <p class="mi-foot">Price return on shared trading days; dividends are not included. ${(() => { const w = (d.stats[syms[0]].windows || {})['1Y']; return w && w.from ? `1Y runs from ${e(w.from)} (${w.sessions} sessions).` : w ? `1Y: ${e(w.reason)}.` : ''; })()} A dash means the shared history is too short for that window.</p></div>
       <div class="mi-two">
-        <div class="mi-block"><div class="sec">Drawdown from peak</div><div class="mi-card rs-chart"><canvas id="relDd" role="img" aria-label="Drawdown from peak"></canvas></div></div>
+        <div class="mi-block">${ChartFrame.html({ id: 'relDd', title: 'Drawdown from peak', metric: 'Fall from the highest close so far in the window', units: '%', range: `${d.start} to ${d.end}`, source: 'Yahoo Finance daily closes', asOf: d.end })}</div>
         <div class="mi-block"><div class="sec">Correlation of daily returns</div><div class="mi-card scr-table"><table class="mi-t rk-corr"><thead><tr><th></th>${syms.map((s) => `<th class="n">${e(s)}</th>`).join('')}</tr></thead><tbody>
           ${syms.map((a, i) => `<tr><th>${e(a)}</th>${d.correlation[i].map((v) => (v == null ? '<td class="n muted">—</td>' : `<td class="n cc" style="--c:${Math.max(0, v).toFixed(2)};--n:${Math.max(0, -v).toFixed(2)}">${v.toFixed(2)}</td>`)).join('')}</tr>`).join('')}
           </tbody></table></div></div>
       </div>
       <div class="mi-block"><div class="sec">Rolling correlation <span class="tag">60 DAYS</span>
         <select id="relPair" aria-label="Pair">${pairOpts.map((p) => `<option ${d.rolling && d.rolling.pair.join(',') === p ? 'selected' : ''}>${p}</option>`).join('')}</select></div>
-        <div class="mi-card rs-chart lab-dd"><canvas id="relRoll" role="img" aria-label="Rolling 60-day correlation"></canvas></div></div>
+        ${ChartFrame.html({ id: 'relRoll', title: 'Rolling correlation', metric: 'Pearson correlation of daily returns over the trailing 60 sessions (-1 to 1)', units: 'coefficient', range: d.rolling && d.rolling.points.length ? `${d.rolling.points[0].date} to ${d.rolling.points[d.rolling.points.length - 1].date}` : '', source: 'computed from daily closes', asOf: d.end, height: 200 })}</div>
       <div class="mi-block"><div class="sec">Fundamentals side by side <span class="tag">SEC FILINGS</span></div><div class="mi-card scr-table" id="relFund"><div class="spinner"></div></div></div>`;
     $c('relMethod').textContent = d.method;
     const labels = d.indexed.map((x) => x.date);
-    lineChart($c('relIdx'), labels, syms.map((s, i) => ({ label: s, data: d.indexed.map((x) => x[s]), borderColor: color(i) })), (v) => v);
-    lineChart($c('relDd'), d.dates, syms.map((s, i) => ({ label: s, data: d.stats[s].drawdown, borderColor: color(i), borderWidth: 1.3 })), (v) => v + '%');
+    const css = getComputedStyle(document.documentElement);
+    const idxSets = syms.map((s, i) => ({ label: s, data: d.indexed.map((x) => x[s]), borderColor: color(i) }));
+    if (d.benchmark_indexed) idxSets.push({ label: d.benchmark + ' (benchmark)', data: d.benchmark_indexed, borderColor: (css.getPropertyValue('--tx3') || '#889').trim(), borderDash: [5, 4], borderWidth: 1.4 });
+    const f1 = (v) => Number(v).toFixed(1), f2 = (v) => Number(v).toFixed(2) + '%', f3 = (v) => Number(v).toFixed(2);
+    const sample = (lab, sets, fmt) => { const ix = ChartFrame.monthly(lab); return [ix.map((i) => lab[i]), sets.map((st) => ({ label: st.label, values: ix.map((i) => st.data[i]), fmt }))]; };
+    const ci = lineChart($c('relIdx-c'), labels, idxSets, f1);
+    ChartFrame.fill('relIdx', ci, ...sample(labels, idxSets, f1));
+    const ddSets = syms.map((s, i) => ({ label: s, data: d.stats[s].drawdown, borderColor: color(i), borderWidth: 1.3 }));
+    const cd = lineChart($c('relDd-c'), d.dates, ddSets, f2);
+    ChartFrame.fill('relDd', cd, ...sample(d.dates, ddSets, f2));
     if (d.rolling) {
-      lineChart($c('relRoll'), d.rolling.points.map((x) => x.date), [{ label: d.rolling.pair.join(' vs '), data: d.rolling.points.map((x) => x.corr), borderColor: COLORS[0] }], (v) => v, false);
+      const rl = d.rolling.points.map((x) => x.date), rs = [{ label: d.rolling.pair.join(' vs '), data: d.rolling.points.map((x) => x.corr), borderColor: COLORS[0] }];
+      const cr = lineChart($c('relRoll-c'), rl, rs, f3);
+      ChartFrame.fill('relRoll', cr, ...sample(rl, rs, f3));
     }
     fundamentals(syms);
   }
 
   async function run(symbols, pair) {
     const list = symbols.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean).slice(0, 8);
+    if (list.length === 1 && list[0] !== 'SPY') list.push('SPY');          // one symbol: against the benchmark
     if (list.length < 2) { $c('relOut').innerHTML = '<div class="mi-empty">Enter at least two symbols.</div>'; return; }
     $c('relInput').value = list.join(', ');
     const p = pair || `${list[0]},${list[1]}`;

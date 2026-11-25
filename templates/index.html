@@ -154,17 +154,22 @@
   <div class="sec" style="margin:0;flex:1">Market heatmap <span class="tag">BY SECTOR</span></div>
   <span class="cc-stamp" id="hmStamp"></span>
  </div>
- <div class="sub">Every block is a company. <b>Size is market capitalisation</b>, <b>colour is today's move</b>, and blocks are grouped into sectors — so one glance shows both what moved and how much of the index it actually represents. Larger blocks add the change; hover or tap any block for its name and price. Darker colour means a smaller move, brighter a larger one; the scale sets where the brightest shade starts.</div>
+ <p class="sub hm-explain"><b>Size</b>: market value (price × shares outstanding from filings; a few are a marked estimate). Not the official index weight. <b>Colour</b>: today’s price change; the brightest shade starts at the chosen scale. Sectors are grouped.</p>
  <div class="hm-bar">
   <button class="btn btn-gold btn-sm" data-idx="sp500" onclick="loadHeatmap('sp500',this)">S&amp;P 500</button>
   <button class="btn btn-ghost btn-sm" data-idx="ndx" onclick="loadHeatmap('ndx',this)">Nasdaq 100</button>
+  <label class="hm-find"><span class="sr-only">Find a company on the map</span><input class="inp" id="hmFind" type="search" placeholder="Find symbol or name" autocomplete="off" oninput="hmFindRun()"></label>
+  <select class="inp" id="hmSector" aria-label="Show one sector" style="max-width:220px" onchange="renderHeatmap()"><option value="">All sectors</option></select>
+  <div class="seg hm-view" role="group" aria-label="View"><button type="button" data-hv="map" aria-pressed="true" class="on" onclick="hmSetView('map')">Map</button><button type="button" data-hv="table" aria-pressed="false" onclick="hmSetView('table')">Table</button></div>
   <span style="flex:1"></span>
   <select class="inp" id="hmScale" aria-label="Colour scale" style="max-width:150px" onchange="renderHeatmap()">
    <option value="3">Scale ±3%</option><option value="5" selected>Scale ±5%</option><option value="8">Scale ±8%</option>
   </select>
  </div>
+ <p class="hm-cov" id="hmCov" aria-live="polite"></p>
  <div class="hm-sum" id="hmSummary"></div>
- <div class="hm-board" id="hmBoard"></div>
+ <div class="hm-board" id="hmBoard" role="img" aria-label="Treemap of index members by sector. Use the Table view for the same data."></div>
+ <div class="hm-table scr-table" id="hmTable" hidden></div>
  <div class="hm-legend" id="hmLegend"></div>
  <div class="hm-tip" id="hmTip"></div>
 </div></section>
@@ -411,6 +416,7 @@
 <script src="/static/vendor/lightweight-charts-4.1.3.js"></script>
 <script src="/static/vendor/chart-4.4.1.umd.js"></script>
 <script src="{{ asset('js/icons.js') }}"></script>
+<script src="{{ asset('js/chartframe.js') }}"></script>
 <script src="{{ asset('js/app.js') }}"></script>
 <script src="{{ asset('js/market.js') }}"></script>
 <script src="{{ asset('js/screener.js') }}"></script>

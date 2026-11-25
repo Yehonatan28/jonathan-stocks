@@ -93,9 +93,8 @@
         ${tile('Time in the market', s.exposure_pct == null ? '—' : n2(s.exposure_pct, 1) + '%', 'Sharpe ' + (s.sharpe == null ? '—' : n2(s.sharpe)))}
       </div></div>
       ${r.open_trade ? `<p class="mi-foot">Still in a trade at the end: entered ${e(r.open_trade.entry_date)} at ${n2(r.open_trade.entry)}, ${pc(r.open_trade.unrealised_pct)} open. It is in the return, not in the trade list.</p>` : ''}
-      <div class="mi-block"><div class="sec">Equity and drawdown <span class="tag">INDEXED TO 100</span></div>
-        <div class="mi-card rs-chart lab-chart"><canvas id="labEq" role="img" aria-label="Strategy against buy and hold"></canvas></div>
-        <div class="mi-card rs-chart lab-dd"><canvas id="labDd" role="img" aria-label="Strategy drawdown"></canvas></div></div>
+      <div class="mi-block">${ChartFrame.html({ id: 'labEq', title: 'Strategy against buy and hold', metric: 'Account value with costs, = 100 at the start', units: 'index points', range: `${r.curve.length ? r.curve[0].date + ' to ' + r.curve[r.curve.length - 1].date : ''}`, source: 'Yahoo Finance daily bars', asOf: r.curve.length ? r.curve[r.curve.length - 1].date : '', note: 'Buy and hold: bought at the first open, same costs, held to the end. Price data adjusted for splits; dividends are not reinvested.', height: 300 })}</div>
+      <div class="mi-block">${ChartFrame.html({ id: 'labDd', title: 'Strategy drawdown', metric: 'Fall from the highest account value so far', units: '%', range: '', source: 'computed from the equity curve', height: 180 })}</div>
       <div class="mi-block"><div class="sec">Monthly returns</div><div class="mi-card scr-table"><table class="mi-t lab-heat"><thead><tr><th>Year</th>
         ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => `<th class="n">${m}</th>`).join('')}</tr></thead><tbody>
         ${years.map((y) => `<tr><th>${y}</th>${Array.from({ length: 12 }, (_, i) => { const v = r.monthly[`${y}-${String(i + 1).padStart(2, '0')}`]; return `<td class="n" ${heat(v)}>${v == null ? '' : n2(v, 1)}</td>`; }).join('')}</tr>`).join('')}
@@ -112,16 +111,21 @@
     const c = (n, fb) => (css.getPropertyValue(n) || fb).trim();
     const labels = r.curve.map((x) => x.date);
     const axes = (fmt) => ({ x: { ticks: { color: c('--tx3', '#889'), maxTicksLimit: 7 }, grid: { display: false } },
-      y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--line', '#222') } } });
+      y: { ticks: { color: c('--tx3', '#889'), callback: fmt }, grid: { color: c('--grid', '#222') } } });
     const base = { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
       plugins: { legend: { labels: { color: c('--tx3', '#889'), boxWidth: 10, font: { size: 11 } } } } };
-    charts.push(new Chart($b('labEq'), { type: 'line', data: { labels, datasets: [
+    const ce = new Chart($b('labEq-c'), { type: 'line', data: { labels, datasets: [
       { label: 'Strategy', data: r.curve.map((x) => x.strategy), borderColor: c('--accent', '#5b8def'), pointRadius: 0, borderWidth: 2, tension: 0 },
       { label: 'Buy and hold ' + r.ticker, data: r.curve.map((x) => x.buy_hold), borderColor: c('--tx3', '#889'), borderDash: [4, 3], pointRadius: 0, borderWidth: 1.5, tension: 0 }] },
-      options: { ...base, scales: axes((v) => v) } }));
-    charts.push(new Chart($b('labDd'), { type: 'line', data: { labels, datasets: [
-      { label: 'Drawdown', data: r.curve.map((x) => x.drawdown), borderColor: c('--dn', '#e5566c'), backgroundColor: 'rgba(229,86,108,.15)', fill: true, pointRadius: 0, borderWidth: 1, tension: 0 }] },
-      options: { ...base, plugins: { legend: { display: false } }, scales: axes((v) => v + '%') } }));
+      options: { ...base, plugins: { legend: { display: false } }, scales: axes((v) => v) } });
+    const cd = new Chart($b('labDd-c'), { type: 'line', data: { labels, datasets: [
+      { label: 'Drawdown', data: r.curve.map((x) => x.drawdown), borderColor: c('--dn', '#e5566c'), fill: false, pointRadius: 0, borderWidth: 1, tension: 0 }] },
+      options: { ...base, plugins: { legend: { display: false } }, scales: axes((v) => v + '%') } });
+    charts.push(ce, cd);
+    const ix = ChartFrame.monthly(labels), f1 = (v) => Number(v).toFixed(1), f2 = (v) => Number(v).toFixed(2) + '%';
+    const pick = (arr) => ix.map((i) => arr[i]);
+    ChartFrame.fill('labEq', ce, pick(labels), [{ label: 'Strategy', values: pick(r.curve.map((x) => x.strategy)), fmt: f1 }, { label: 'Buy and hold ' + r.ticker, values: pick(r.curve.map((x) => x.buy_hold)), fmt: f1 }]);
+    ChartFrame.fill('labDd', cd, pick(labels), [{ label: 'Drawdown', values: pick(r.curve.map((x) => x.drawdown)), fmt: f2 }]);
   }
 
   // a symbol carried in the address (#/lab?t=MSFT) fills the form

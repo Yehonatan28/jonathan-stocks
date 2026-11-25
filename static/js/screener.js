@@ -51,6 +51,7 @@
     <div class="scr-saved" id="scrSaved"></div>
     <details class="scr-filters" id="scrFiltersBox"><summary>Filters <span id="scrActive"></span></summary><div class="scr-grid" id="scrFilters"></div>
       <div class="scr-frow"><button class="btn btn-ghost btn-sm" id="scrClear">Clear filters</button></div></details>
+    <div class="scr-chips" id="scrChips" role="group" aria-label="Active filters"></div>
     <div class="scr-cols" id="scrCols" hidden></div>
     <div class="scr-count" id="scrCount" aria-live="polite"></div>
     <div class="scr-table" id="scrTable"><div class="spinner"></div></div>
@@ -113,6 +114,13 @@
     }).join('');
     const active = Object.values(st.f).filter(([a, b]) => a != null || b != null).length + (st.sector ? 1 : 0);
     $s('scrActive').textContent = active ? `· ${active} active` : '';
+    // every active filter as a chip that removes just that filter, plus one reset
+    const lbl = (k) => (fieldOf(k) || {}).label || k;
+    const val = (k, v) => fmtv(k, v);
+    const chips = Object.entries(st.f).filter(([, [a, b]]) => a != null || b != null).map(([k, [a, b]]) =>
+      `<button type="button" class="chip-btn on" data-unf="${e(k)}" aria-label="Remove filter ${e(lbl(k))}">${e(lbl(k))} ${a != null && b != null ? val(k, a) + ' to ' + val(k, b) : a != null ? '≥ ' + val(k, a) : '≤ ' + val(k, b)} <span aria-hidden="true">×</span></button>`);
+    if (st.sector) chips.unshift(`<button type="button" class="chip-btn on" data-unsec="1" aria-label="Remove sector filter ${e(st.sector)}">${e(st.sector)} <span aria-hidden="true">×</span></button>`);
+    $s('scrChips').innerHTML = chips.length ? chips.join('') + '<button type="button" class="btn btn-ghost btn-sm" id="scrReset">Reset all filters</button>' : '';
     $s('scrCols').innerHTML = st.data.fields.map((f) => `<label><input type="checkbox" data-c="${f.key}" ${st.cols.includes(f.key) ? 'checked' : ''}> ${e(f.label)}</label>`).join('');
   }
 
@@ -167,7 +175,10 @@
     const so = t.closest('[data-sort]');
     if (so) { const k = so.dataset.sort; st.sort = { key: k, dir: st.sort.key === k ? -st.sort.dir : (k === 'ticker' || k === 'sector' ? 1 : -1) }; store.set('js.scr.sort', st.sort); renderTable(); return; }
     if (t.id === 'scrMoreBtn') { st.limit += 100; renderTable(); return; }
-    if (t.id === 'scrClear') { st.f = {}; st.sector = ''; st.preset = 'all'; render(); return; }
+    if (t.id === 'scrClear' || t.id === 'scrReset') { st.f = {}; st.sector = ''; st.preset = 'all'; render(); const c = $s('scrCount'); if (c) c.focus && c.setAttribute('tabindex', '-1'); if (c) c.focus(); return; }
+    const uf = t.closest('[data-unf]');
+    if (uf) { delete st.f[uf.dataset.unf]; st.preset = ''; render(); return; }
+    if (t.closest('[data-unsec]')) { st.sector = ''; render(); return; }
     if (t.id === 'scrColsBtn') { const box = $s('scrCols'); box.hidden = !box.hidden; t.setAttribute('aria-expanded', String(!box.hidden)); return; }
     if (t.id === 'scrSave') {
       const name = (prompt('Name this screen') || '').trim().slice(0, 40);
@@ -206,6 +217,13 @@
       root.querySelectorAll('#scrPresets .chip-btn').forEach((b) => b.classList.remove('on'));
       const active = Object.values(st.f).filter(([a, b]) => a != null || b != null).length + (st.sector ? 1 : 0);
       $s('scrActive').textContent = active ? `· ${active} active` : '';
+    // every active filter as a chip that removes just that filter, plus one reset
+    const lbl = (k) => (fieldOf(k) || {}).label || k;
+    const val = (k, v) => fmtv(k, v);
+    const chips = Object.entries(st.f).filter(([, [a, b]]) => a != null || b != null).map(([k, [a, b]]) =>
+      `<button type="button" class="chip-btn on" data-unf="${e(k)}" aria-label="Remove filter ${e(lbl(k))}">${e(lbl(k))} ${a != null && b != null ? val(k, a) + ' to ' + val(k, b) : a != null ? '≥ ' + val(k, a) : '≤ ' + val(k, b)} <span aria-hidden="true">×</span></button>`);
+    if (st.sector) chips.unshift(`<button type="button" class="chip-btn on" data-unsec="1" aria-label="Remove sector filter ${e(st.sector)}">${e(st.sector)} <span aria-hidden="true">×</span></button>`);
+    $s('scrChips').innerHTML = chips.length ? chips.join('') + '<button type="button" class="btn btn-ghost btn-sm" id="scrReset">Reset all filters</button>' : '';
     }, 180);
   });
 
